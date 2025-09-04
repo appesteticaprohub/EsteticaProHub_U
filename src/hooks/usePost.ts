@@ -9,6 +9,8 @@ interface PostWithCategory {
   author_id: string;
   created_at: string;
   views_count: number;
+  likes_count: number;
+  comments_count: number;
   categories: {
     id: number;
     name: string;
@@ -61,10 +63,28 @@ export function usePost(postId: string | null) {
 
   const incrementViews = async (postId: string) => {
     try {
-      await supabase
+      // Primero obtener el valor actual
+      const { data: currentPost } = await supabase
         .from('posts')
-        .update({ views_count: (post?.views_count || 0) + 1 })
-        .eq('id', postId);
+        .select('views_count')
+        .eq('id', postId)
+        .single();
+      
+      if (currentPost) {
+        // Incrementar en la base de datos
+        await supabase
+          .from('posts')
+          .update({ views_count: currentPost.views_count + 1 })
+          .eq('id', postId);
+        
+        // Actualizar el estado local inmediatamente
+        if (post) {
+          setPost({
+            ...post,
+            views_count: currentPost.views_count + 1
+          });
+        }
+      }
     } catch (error) {
       console.error('Error incrementing views:', error);
     }
