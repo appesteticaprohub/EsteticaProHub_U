@@ -8,6 +8,7 @@ interface PostWithCategory {
   category_id: number;
   author_id: string;
   created_at: string;
+  views_count: number;
   categories: {
     id: number;
     name: string;
@@ -58,5 +59,16 @@ export function usePost(postId: string | null) {
     fetchPost();
   }, [postId]);
 
-  return { post, loading, error };
+  const incrementViews = async (postId: string) => {
+    try {
+      await supabase
+        .from('posts')
+        .update({ views_count: (post?.views_count || 0) + 1 })
+        .eq('id', postId);
+    } catch (error) {
+      console.error('Error incrementing views:', error);
+    }
+  };
+
+  return { post, loading, error, incrementViews };
 }

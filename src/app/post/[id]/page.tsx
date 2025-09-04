@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect } from 'react';
 import { usePost } from '@/hooks/usePost';
 
 interface PostPageProps {
@@ -11,7 +11,14 @@ interface PostPageProps {
 
 export default function PostPage({ params }: PostPageProps) {
   const resolvedParams = use(params);
-  const { post, loading, error } = usePost(resolvedParams.id);
+  const { post, loading, error, incrementViews } = usePost(resolvedParams.id);
+
+  // Incrementar vistas cuando el post se carga exitosamente
+  useEffect(() => {
+    if (post && !loading && !error) {
+      incrementViews(resolvedParams.id);
+    }
+  }, [post, loading, error, incrementViews, resolvedParams.id]);
 
   if (loading) {
     return (
