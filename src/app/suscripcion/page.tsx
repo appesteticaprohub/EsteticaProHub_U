@@ -1,4 +1,14 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+
 export default function Suscripcion() {
+  const router = useRouter();
+
+  const handleSuscripcion = () => {
+    router.push('/pago');
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
       <div className="max-w-4xl mx-auto">
@@ -92,7 +102,10 @@ export default function Suscripcion() {
           </div>
 
           {/* Botón llamativo */}
-          <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-8 rounded-xl text-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+          <button 
+            onClick={handleSuscripcion}
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-8 rounded-xl text-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+          >
             🚀 Suscribirse Ahora
           </button>
           
