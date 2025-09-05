@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Header() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
 
   return (
     <div className="w-full bg-white shadow-sm flex justify-between items-center h-16 py-4 px-6">
@@ -15,11 +15,19 @@ export default function Header() {
             Cargando...
           </div>
         ) : user ? (
-          <Link href="/perfil">
-            <button className="bg-blue-500 text-white px-4 py-2 rounded-lg">
-              Mi Perfil
+          <div className="flex space-x-2">
+            <Link href="/perfil">
+              <button className="bg-blue-500 text-white px-4 py-2 rounded-lg">
+                Mi Perfil
+              </button>
+            </Link>
+            <button 
+              onClick={() => signOut()}
+              className="bg-red-500 text-white px-4 py-2 rounded-lg"
+            >
+              Cerrar Sesión
             </button>
-          </Link>
+          </div>
         ) : (
           <Link href="/login">
             <button className="bg-blue-500 text-white px-4 py-2 rounded-lg">
