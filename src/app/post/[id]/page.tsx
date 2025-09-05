@@ -11,7 +11,7 @@ interface PostPageProps {
 
 export default function PostPage({ params }: PostPageProps) {
   const resolvedParams = use(params);
-  const { post, loading, error, incrementViews } = usePost(resolvedParams.id);
+  const { post, loading, error, incrementViews, toggleLike, openCommentModal } = usePost(resolvedParams.id);
   const hasIncrementedViews = useRef(false);
 
   // Incrementar vistas cuando el post se carga exitosamente (solo una vez)
@@ -93,7 +93,7 @@ export default function PostPage({ params }: PostPageProps) {
             </div>
           </div>
           <footer className="mt-8 pt-6 border-t border-gray-200">
-            <div className="flex items-center gap-6 text-sm text-gray-600">
+            <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
               <div className="flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -115,6 +115,25 @@ export default function PostPage({ params }: PostPageProps) {
                 </svg>
                 <span>{post.comments_count} comentarios</span>
               </div>
+            </div>
+            
+            {/* Botones de interacción */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => toggleLike(post.id)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors duration-200 border border-red-200 hover:border-red-300"
+              >
+                <span className="text-lg">❤️</span>
+                <span className="text-sm font-medium">Me gusta</span>
+              </button>
+              
+              <button
+                onClick={openCommentModal}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors duration-200 border border-blue-200 hover:border-blue-300"
+              >
+                <span className="text-lg">💬</span>
+                <span className="text-sm font-medium">Comentar</span>
+              </button>
             </div>
           </footer>
         </article>
