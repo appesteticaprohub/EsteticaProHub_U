@@ -90,42 +90,16 @@ export function usePost(postId: string | null) {
     }
   };
 
-  const toggleLike = async (postId: string) => {
-    try {
-      if (!post) return;
-      
-      // Obtener el valor actual
-      const { data: currentPost } = await supabase
-        .from('posts')
-        .select('likes_count')
-        .eq('id', postId)
-        .single();
-      
-      if (currentPost) {
-        // Incrementar likes (por ahora solo suma, después implementaremos la lógica de toggle real)
-        const newLikesCount = currentPost.likes_count + 1;
-        
-        await supabase
-          .from('posts')
-          .update({ likes_count: newLikesCount })
-          .eq('id', postId);
-        
-        // Actualizar estado local
-        setPost({
-          ...post,
-          likes_count: newLikesCount
-        });
-      }
-    } catch (error) {
-      console.error('Error toggling like:', error);
-    }
+  const handleLikeClick = () => {
+    // Esta función será manejada desde el componente para abrir el modal
+    return;
   };
 
-  const openCommentModal = () => {
-    // Por ahora solo un placeholder, después implementaremos el modal
-    alert('Función de comentarios - próximamente');
+  const handleCommentClick = () => {
+    // Esta función será manejada desde el componente para abrir el modal
+    return;
   };
 
-  return { post, loading, error, incrementViews, toggleLike, openCommentModal };
+  return { post, loading, error, incrementViews, handleLikeClick, handleCommentClick };
 
 }

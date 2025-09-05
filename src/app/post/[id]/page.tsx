@@ -1,7 +1,9 @@
 'use client';
 
-import { use, useEffect, useRef } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { usePost } from '@/hooks/usePost';
+import Modal from '@/components/Modal';
 
 interface PostPageProps {
   params: Promise<{
@@ -11,8 +13,22 @@ interface PostPageProps {
 
 export default function PostPage({ params }: PostPageProps) {
   const resolvedParams = use(params);
-  const { post, loading, error, incrementViews, toggleLike, openCommentModal } = usePost(resolvedParams.id);
+  const { post, loading, error, incrementViews, handleLikeClick, handleCommentClick } = usePost(resolvedParams.id);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
   const hasIncrementedViews = useRef(false);
+
+  const openSubscriptionModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const goToSubscription = () => {
+    router.push('/suscripcion');
+  };
 
   // Incrementar vistas cuando el post se carga exitosamente (solo una vez)
   useEffect(() => {
@@ -120,7 +136,7 @@ export default function PostPage({ params }: PostPageProps) {
             {/* Botones de interacción */}
             <div className="flex items-center gap-4">
               <button
-                onClick={() => toggleLike(post.id)}
+                onClick={openSubscriptionModal}
                 className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors duration-200 border border-red-200 hover:border-red-300"
               >
                 <span className="text-lg">❤️</span>
@@ -128,7 +144,7 @@ export default function PostPage({ params }: PostPageProps) {
               </button>
               
               <button
-                onClick={openCommentModal}
+                onClick={openSubscriptionModal}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors duration-200 border border-blue-200 hover:border-blue-300"
               >
                 <span className="text-lg">💬</span>
@@ -138,6 +154,37 @@ export default function PostPage({ params }: PostPageProps) {
           </footer>
         </article>
       </div>
+
+      {/* Modal de suscripción */}
+      <Modal isOpen={isModalOpen} onClose={closeModal}>
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
+            <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Suscripción Premium Requerida
+          </h3>
+          <p className="text-sm text-gray-500 mb-6">
+            Necesitas suscripción premium para interactuar con los posts
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={closeModal}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={goToSubscription}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200"
+            >
+              Suscribirse
+            </button>
+          </div>
+        </div>
+      </Modal>
     </main>
   );
 }
