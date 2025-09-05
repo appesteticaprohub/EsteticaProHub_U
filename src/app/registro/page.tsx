@@ -42,7 +42,7 @@ export default function Registro() {
       } else {
         setMessage({
           type: 'success',
-          text: '¡Registro exitoso! Revisa tu email para confirmar tu cuenta.'
+          text: '¡Registro exitoso!'
         });
         // Limpiar el formulario
         setFormData({
