@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase'
 interface AuthContextType {
   user: User | null
   session: Session | null
+  userType: string | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userType, setUserType] = useState<string | null>(null)
 
   useEffect(() => {
     // Get initial session
@@ -27,9 +29,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession()
       setSession(session)
       setUser(session?.user ?? null)
+      
+      if (session?.user) {
+        // Obtener el tipo de usuario desde la tabla profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('user_type')
+          .eq('id', session.user.id)
+          .single()
+        
+        setUserType(profile?.user_type || 'anonymous')
+      } else {
+        setUserType('anonymous')
+      }
+      
       setLoading(false)
     }
-
     getSession()
 
     // Listen for auth changes
@@ -37,6 +52,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         setSession(session)
         setUser(session?.user ?? null)
+        
+        if (session?.user) {
+          // Obtener el tipo de usuario desde la tabla profiles
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_type')
+            .eq('id', session.user.id)
+            .single()
+          
+          setUserType(profile?.user_type || 'anonymous')
+        } else {
+          setUserType('anonymous')
+        }
+        
         setLoading(false)
       }
     )
@@ -72,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = {
     user,
     session,
+    userType,
     loading,
     signIn,
     signUp,

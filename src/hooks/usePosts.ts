@@ -10,7 +10,7 @@ interface Post {
   created_at: string;
 }
 
-export function usePosts(categoryId?: number) {
+export function usePosts(categoryId?: number, limit?: number) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +29,11 @@ export function usePosts(categoryId?: number) {
         // Si se proporciona categoryId, filtrar por esa categoría
         if (categoryId !== undefined) {
           query = query.eq('category_id', categoryId);
+        }
+
+        // Si se proporciona limit, limitar la cantidad de posts
+        if (limit !== undefined) {
+          query = query.limit(limit);
         }
 
         const { data, error } = await query;

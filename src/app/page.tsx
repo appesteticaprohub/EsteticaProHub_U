@@ -3,9 +3,17 @@
 import { useCategories } from '@/hooks/useCategories';
 import Link from 'next/link';
 import { usePosts } from '@/hooks/usePosts';
+import { useAuth } from '@/contexts/AuthContext';
 
 function CategoryCard({ category }: { category: any }) {
-  const { posts, loading } = usePosts(category.id);
+  const { userType } = useAuth();
+
+  // Determinar límite de posts según tipo de usuario
+  // Si no hay usuario autenticado, es anónimo (1 post)
+  // Solo usuarios premium ven todos los posts
+  const postLimit = (!userType || userType !== 'premium') ? 1 : undefined;
+  
+  const { posts, loading } = usePosts(category.id, postLimit);
   const latestPost = posts.length > 0 ? posts[0] : null;
 
   return (
@@ -44,13 +52,21 @@ function CategoryCard({ category }: { category: any }) {
         </div>
       )}
 
-      {/* Botón Ver más posts deshabilitado */}
-      <button 
-        disabled 
-        className="text-sm text-gray-400 cursor-not-allowed"
-      >
-        Ver más posts
-      </button>
+      {/* Botón según tipo de usuario */}
+      {userType === 'premium' ? (
+        <button 
+          className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+        >
+          Ver todos los posts
+        </button>
+      ) : (
+        <button 
+          disabled 
+          className="text-sm text-gray-400 cursor-not-allowed"
+        >
+          Ver más posts
+        </button>
+      )}
 
       <div className="mt-4 flex items-center text-xs text-gray-400">
         <span>Creada: {new Date(category.created_at).toLocaleDateString('es-CO')}</span>

@@ -61,7 +61,7 @@ export async function middleware(request: NextRequest) {
   console.log('Usuario en middleware:', user?.email || 'No autenticado')
 
   // Definir rutas protegidas
-  const protectedRoutes = ['/perfil', '/pago']
+  const protectedRoutes = ['/perfil']
   const authRoutes = ['/login', '/registro', '/suscripcion']
   
   const isProtectedRoute = protectedRoutes.some(route => 
