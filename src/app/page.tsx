@@ -54,11 +54,12 @@ function CategoryCard({ category }: { category: any }) {
 
       {/* Botón según tipo de usuario */}
       {userType === 'premium' ? (
-        <button 
+        <Link 
+          href={`/categoria/${category.id}`}
           className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
         >
           Ver todos los posts
-        </button>
+        </Link>
       ) : (
         <button 
           disabled 
