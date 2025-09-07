@@ -13,7 +13,7 @@ function CategoryCard({ category }: { category: any }) {
   // Solo usuarios premium ven todos los posts
   const postLimit = (!userType || userType !== 'premium') ? 1 : undefined;
   
-  const { posts, loading } = usePosts(category.id, postLimit);
+  const { posts, totalCount, loading } = usePosts(category.id, postLimit);
   const latestPost = posts.length > 0 ? posts[0] : null;
 
   return (
@@ -23,7 +23,7 @@ function CategoryCard({ category }: { category: any }) {
       <h3 className="font-semibold text-lg text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">
         {category.name}
       </h3>
-      <p className="text-sm text-gray-500 mb-2">{posts.length} posts</p>
+      <p className="text-sm text-gray-500 mb-2">{totalCount} posts</p>
       
       {category.description && (
         <p className="text-gray-600 text-sm leading-relaxed mb-4">
