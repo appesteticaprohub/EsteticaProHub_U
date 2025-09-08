@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   userType: string | null
+  subscriptionStatus: string | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [userType, setUserType] = useState<string | null>(null)
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
 
   useEffect(() => {
     // Get initial session
@@ -34,11 +36,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Obtener el tipo de usuario desde la tabla profiles
         const { data: profile } = await supabase
           .from('profiles')
-          .select('user_type')
+          .select('user_type, subscription_status')
           .eq('id', session.user.id)
           .single()
         
         setUserType(profile?.user_type || 'anonymous')
+        setSubscriptionStatus(profile?.subscription_status || null)
       } else {
         setUserType('anonymous')
       }
@@ -57,11 +60,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Obtener el tipo de usuario desde la tabla profiles
           const { data: profile } = await supabase
             .from('profiles')
-            .select('user_type')
+            .select('user_type, subscription_status')
             .eq('id', session.user.id)
             .single()
           
           setUserType(profile?.user_type || 'anonymous')
+          setSubscriptionStatus(profile?.subscription_status || null)
         } else {
           setUserType('anonymous')
         }
@@ -102,6 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     session,
     userType,
+    subscriptionStatus,
     loading,
     signIn,
     signUp,

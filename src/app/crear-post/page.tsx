@@ -8,9 +8,11 @@ import Modal from '@/components/Modal';
 import { createPost } from '@/lib/supabase';
 
 export default function CrearPost() {
-  const { user, loading } = useAuth();
+  const { user, session, userType, subscriptionStatus, loading } = useAuth();
   const router = useRouter();
-  const [showModal, setShowModal] = useState(!user && !loading);
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalButtons, setModalButtons] = useState<'subscription' | 'login' | 'renew' | 'cancelled'>('subscription');
   const [categoria, setCategoria] = useState('');
   const [titulo, setTitulo] = useState('');
   const [contenido, setContenido] = useState('');
@@ -28,11 +30,38 @@ export default function CrearPost() {
   ];
 
   useEffect(() => {
-    // Mostrar modal solo si no hay usuario y ya terminó de cargar
     if (!loading) {
-      setShowModal(!user);
+      // Situación 1: Usuario anónimo o sin sesión
+      if (!session || userType === 'anonymous') {
+        setModalMessage('Necesitas una suscripción');
+        setModalButtons('subscription');
+        setShowModal(true);
+        return;
+      }
+
+      // Situación 2: Usuario premium con estado Active y logueado - puede crear post
+      if (session && userType === 'premium' && subscriptionStatus === 'Active') {
+        setShowModal(false);
+        return;
+      }
+
+      // Situación 3: Usuario premium con estado Expired
+      if (session && userType === 'premium' && subscriptionStatus === 'Expired') {
+        setModalMessage('Necesitas renovar tu suscripción');
+        setModalButtons('renew');
+        setShowModal(true);
+        return;
+      }
+
+      // Situación 4: Usuario premium con estado Cancelled
+      if (session && userType === 'premium' && subscriptionStatus === 'Cancelled') {
+        setModalMessage('Tu suscripción ha sido cancelada por violar las normas de este sitio');
+        setModalButtons('cancelled');
+        setShowModal(true);
+        return;
+      }
     }
-  }, [user, loading]);
+  }, [session, userType, subscriptionStatus, loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -90,22 +119,43 @@ export default function CrearPost() {
             Acceso Restringido
           </h3>
           <p className="text-gray-600 mb-6">
-            Para crear posts necesitas una suscripción activa. Si ya tienes una suscripción, inicia sesión para continuar.
+            {modalMessage}
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={handleGoToLogin}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors"
-            >
-              Iniciar Sesión
-            </button>
-            <button
-              onClick={handleGoToSubscription}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md transition-colors"
-            >
-              Ver Suscripciones
-            </button>
-          </div>
+          
+          {/* Botones según el tipo de situación */}
+          {modalButtons === 'subscription' && (
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={handleGoToSubscription}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md transition-colors"
+              >
+                Ver Suscripciones
+              </button>
+            </div>
+          )}
+
+          {modalButtons === 'renew' && (
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={handleGoToSubscription}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md transition-colors"
+              >
+                Renovar Suscripción
+              </button>
+            </div>
+          )}
+
+          {modalButtons === 'cancelled' && (
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={handleGoToSubscription}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-md transition-colors"
+              >
+                Contactar Soporte
+              </button>
+            </div>
+          )}
+
           <button
             onClick={handleCloseModal}
             className="mt-4 text-gray-500 hover:text-gray-700 text-sm"
