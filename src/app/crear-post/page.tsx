@@ -1,9 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import Modal from '@/components/Modal';
 
 export default function CrearPost() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [showModal, setShowModal] = useState(!user && !loading);
   const [categoria, setCategoria] = useState('');
   const [titulo, setTitulo] = useState('');
   const [contenido, setContenido] = useState('');
@@ -20,14 +26,70 @@ export default function CrearPost() {
     { value: 'experiencias', label: 'Experiencias y Casos' }
   ];
 
+  useEffect(() => {
+    // Mostrar modal solo si no hay usuario y ya terminó de cargar
+    if (!loading) {
+      setShowModal(!user);
+    }
+  }, [user, loading]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Por ahora solo mostrar en consola
     console.log({ categoria, titulo, contenido });
   };
 
+  const handleCloseModal = () => {
+    setShowModal(false);
+    // Redirigir al inicio después de cerrar el modal
+    router.push('/');
+  };
+
+  const handleGoToLogin = () => {
+    setShowModal(false);
+    router.push('/login');
+  };
+
+  const handleGoToSubscription = () => {
+    setShowModal(false);
+    router.push('/suscripcion');
+  };
+
+  // Mostrar contenido directamente, el modal se maneja por estado
   return (
     <main className="p-6 max-w-4xl mx-auto">
+      {/* Modal de protección */}
+      <Modal isOpen={showModal} onClose={handleCloseModal}>
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Acceso Restringido
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Para crear posts necesitas una suscripción activa. Si ya tienes una suscripción, inicia sesión para continuar.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={handleGoToLogin}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors"
+            >
+              Iniciar Sesión
+            </button>
+            <button
+              onClick={handleGoToSubscription}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md transition-colors"
+            >
+              Ver Suscripciones
+            </button>
+          </div>
+          <button
+            onClick={handleCloseModal}
+            className="mt-4 text-gray-500 hover:text-gray-700 text-sm"
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </Modal>
+
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">
           <Link 
