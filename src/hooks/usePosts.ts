@@ -12,7 +12,6 @@ interface Post {
 
 export function usePosts(categoryId?: number, limit?: number) {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [totalCount, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,24 +21,6 @@ export function usePosts(categoryId?: number, limit?: number) {
         setLoading(true);
         setError(null);
         
-        // Primero obtener el conteo total sin límites
-        let countQuery = supabase
-          .from('posts')
-          .select('*', { count: 'exact', head: true });
-
-        if (categoryId !== undefined) {
-          countQuery = countQuery.eq('category_id', categoryId);
-        }
-
-        const { count, error: countError } = await countQuery;
-
-        if (countError) {
-          setError(countError.message);
-          return;
-        }
-
-        setTotalCount(count || 0);
-
         // Luego obtener los posts con límite si es necesario
         let query = supabase
           .from('posts')
@@ -71,5 +52,5 @@ export function usePosts(categoryId?: number, limit?: number) {
     fetchPosts();
   }, [categoryId, limit]);
 
-  return { posts, totalCount, loading, error };
+  return { posts, loading, error };
 }
