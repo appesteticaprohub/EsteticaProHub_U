@@ -90,9 +90,6 @@ export default function PostPage({ params }: PostPageProps) {
               {post.title}
             </h1>
             <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                {post.categories.name}
-              </span>
               <span>
                 {new Date(post.created_at).toLocaleDateString('es-ES', {
                   year: 'numeric',

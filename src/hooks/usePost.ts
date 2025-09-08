@@ -1,24 +1,19 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
-interface PostWithCategory {
+interface PostWithoutCategory {
   id: string;
   title: string;
   content: string;
-  category_id: number;
   author_id: string;
   created_at: string;
   views_count: number;
   likes_count: number;
   comments_count: number;
-  categories: {
-    id: number;
-    name: string;
-  };
 }
 
 export function usePost(postId: string | null) {
-  const [post, setPost] = useState<PostWithCategory | null>(null);
+  const [post, setPost] = useState<PostWithoutCategory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,16 +30,10 @@ export function usePost(postId: string | null) {
         }
         
         const { data, error } = await supabase
-          .from('posts')
-          .select(`
-            *,
-            categories (
-              id,
-              name
-            )
-          `)
-          .eq('id', postId)
-          .single();
+        .from('posts')
+        .select('*')
+        .eq('id', postId)
+        .single();
 
         if (error) {
           setError(error.message);
