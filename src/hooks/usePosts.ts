@@ -10,7 +10,7 @@ interface Post {
   created_at: string;
 }
 
-export function usePosts(categoryId?: number, limit?: number) {
+export function usePosts(categoryId?: number) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,6 @@ export function usePosts(categoryId?: number, limit?: number) {
         setLoading(true);
         setError(null);
         
-        // Luego obtener los posts con límite si es necesario
         let query = supabase
           .from('posts')
           .select('*')
@@ -29,10 +28,6 @@ export function usePosts(categoryId?: number, limit?: number) {
 
         if (categoryId !== undefined) {
           query = query.eq('category_id', categoryId);
-        }
-
-        if (limit !== undefined) {
-          query = query.limit(limit);
         }
 
         const { data, error } = await query;
@@ -50,7 +45,7 @@ export function usePosts(categoryId?: number, limit?: number) {
     }
 
     fetchPosts();
-  }, [categoryId, limit]);
+  }, [categoryId]);
 
   return { posts, loading, error };
 }

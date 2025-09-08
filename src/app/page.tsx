@@ -3,17 +3,9 @@
 import { useCategories } from '@/hooks/useCategories';
 import Link from 'next/link';
 import { usePosts } from '@/hooks/usePosts';
-import { useAuth } from '@/contexts/AuthContext';
 
 function CategoryCard({ category }: { category: any }) {
-  const { userType } = useAuth();
-
-  // Determinar límite de posts según tipo de usuario
-  // Si no hay usuario autenticado, es anónimo (1 post)
-  // Solo usuarios premium ven todos los posts
-  const postLimit = (!userType || userType !== 'premium') ? 1 : undefined;
-  
-  const { posts, loading } = usePosts(category.id, postLimit);
+  const { posts, loading } = usePosts(category.id);
   const latestPost = posts.length > 0 ? posts[0] : null;
 
   return (
@@ -49,23 +41,6 @@ function CategoryCard({ category }: { category: any }) {
         <div className="bg-gray-50 rounded p-3 mb-3">
           <p className="text-sm text-gray-500">No hay posts disponibles</p>
         </div>
-      )}
-
-      {/* Botón según tipo de usuario */}
-      {userType === 'premium' ? (
-        <Link 
-          href={`/categoria/${category.id}`}
-          className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
-        >
-          Ver todos los posts
-        </Link>
-      ) : (
-        <button 
-          disabled 
-          className="text-sm text-gray-400 cursor-not-allowed"
-        >
-          Ver más posts
-        </button>
       )}
 
       <div className="mt-4 flex items-center text-xs text-gray-400">
