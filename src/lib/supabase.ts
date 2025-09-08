@@ -9,3 +9,31 @@ export function createClient() {
 
 // Para compatibilidad con el código existente
 export const supabase = createClient()
+
+// Función para crear un nuevo post
+export async function createPost({
+  title,
+  content,
+  category,
+  authorId
+}: {
+  title: string
+  content: string
+  category: string
+  authorId: string
+}) {
+  const supabase = createClient()
+  
+  const { data, error } = await supabase
+    .from('posts')
+    .insert({
+      title,
+      content,
+      category,
+      author_id: authorId
+    })
+    .select()
+    .single()
+
+  return { data, error }
+}

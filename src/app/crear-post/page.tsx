@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Modal from '@/components/Modal';
+import { createPost } from '@/lib/supabase';
 
 export default function CrearPost() {
   const { user, loading } = useAuth();
@@ -33,11 +34,35 @@ export default function CrearPost() {
     }
   }, [user, loading]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Por ahora solo mostrar en consola
-    console.log({ categoria, titulo, contenido });
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  if (!user) {
+    console.error('Usuario no autenticado');
+    return;
+  }
+
+  try {
+    const { data, error } = await createPost({
+      title: titulo,
+      content: contenido,
+      category: categoria,
+      authorId: user.id
+    });
+
+    if (error) {
+      console.error('Error al crear el post:', error);
+      return;
+    }
+
+    if (data) {
+      // Redirigir al post creado
+      router.push(`/post/${data.id}`);
+    }
+  } catch (error) {
+    console.error('Error inesperado:', error);
+  }
+};
 
   const handleCloseModal = () => {
     setShowModal(false);
