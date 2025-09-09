@@ -6,6 +6,8 @@ import { usePost } from '@/hooks/usePost';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAnonymousPostTracker } from '@/hooks/useAnonymousPostTracker';
 import Modal from '@/components/Modal';
+import SnackBar from '@/components/Snackbar';
+import { useLikes } from '@/hooks/useLikes';
 
 interface PostPageProps {
   params: Promise<{
@@ -20,6 +22,9 @@ export default function PostPage({ params }: PostPageProps) {
   const { viewedPostsCount, incrementViewedPosts, hasReachedLimit } = useAnonymousPostTracker();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(resolvedParams.id);
+  const [showSnackBar, setShowSnackBar] = useState(false);
+  const [snackBarMessage, setSnackBarMessage] = useState('');
   const [modalContent, setModalContent] = useState<{
     title: string;
     message: string;
@@ -32,6 +37,18 @@ export default function PostPage({ params }: PostPageProps) {
   const router = useRouter();
   const hasIncrementedViews = useRef(false);
   const hasTrackedAnonymousView = useRef(false);
+
+  const handleLikeClick = async () => {
+    const result = await toggleLike();
+    if (result && result.showSnackBar && result.message) {
+      setSnackBarMessage(result.message);
+      setShowSnackBar(true);
+    }
+  };
+
+  const hideSnackBar = () => {
+    setShowSnackBar(false);
+  };
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -219,7 +236,7 @@ export default function PostPage({ params }: PostPageProps) {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
-                <span>{post.likes_count} likes</span>
+                <span>{likesCount} likes</span>
               </div>
               
               <div className="flex items-center gap-2">
@@ -233,10 +250,18 @@ export default function PostPage({ params }: PostPageProps) {
             {/* Botones de interacción siempre visibles */}
             <div className="flex items-center gap-4">
               <button
-                className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors duration-200 border border-red-200 hover:border-red-300"
+                onClick={handleLikeClick}
+                disabled={likesLoading}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 border ${
+                  isLiked 
+                    ? 'bg-red-100 hover:bg-red-200 text-red-700 border-red-300 hover:border-red-400' 
+                    : 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200 hover:border-red-300'
+                } ${likesLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <span className="text-lg">❤️</span>
-                <span className="text-sm font-medium">Me gusta</span>
+                <span className="text-sm font-medium">
+                  {likesLoading ? 'Cargando...' : 'Me gusta'}
+                </span>
               </button>
               
               <button
@@ -284,6 +309,12 @@ export default function PostPage({ params }: PostPageProps) {
           </div>
         </Modal>
       )}
+      {/* SnackBar para notificaciones */}
+      <SnackBar 
+        message={snackBarMessage}
+        isVisible={showSnackBar}
+        onHide={hideSnackBar}
+      />
     </main>
   );
 }

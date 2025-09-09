@@ -22,10 +22,17 @@ export function useLikes(postId: string | null) {
         .select('id')
         .eq('post_id', postId)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
+
+      // Si hay error de permisos (406), asumimos que no hay like
+      if (error && error.code === 'PGRST116') {
+        setIsLiked(false);
+        return;
+      }
 
       setIsLiked(!!data && !error);
     } catch (error) {
+      console.log('Error checking like status:', error);
       setIsLiked(false);
     }
   }, [postId, user, supabase]);
@@ -51,7 +58,12 @@ export function useLikes(postId: string | null) {
 
   // Dar like a un post
   const toggleLike = async () => {
-    if (!postId || !user || loading) return;
+    if (!postId || loading) return;
+
+    // Verificar si es usuario anónimo o sin registro
+    if (!user) {
+      return { showSnackBar: true, message: "Necesitas una suscripción" };
+    }
 
     setLoading(true);
 
@@ -119,6 +131,8 @@ export function useLikes(postId: string | null) {
     } finally {
       setLoading(false);
     }
+
+    return { showSnackBar: false };
   };
 
   // Efectos para cargar datos iniciales
