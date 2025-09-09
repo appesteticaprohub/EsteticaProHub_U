@@ -3,6 +3,8 @@
 import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePost } from '@/hooks/usePost';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAnonymousPostTracker } from '@/hooks/useAnonymousPostTracker';
 import Modal from '@/components/Modal';
 
 interface PostPageProps {
@@ -13,22 +15,75 @@ interface PostPageProps {
 
 export default function PostPage({ params }: PostPageProps) {
   const resolvedParams = use(params);
-  const { post, loading, error, incrementViews, handleLikeClick, handleCommentClick } = usePost(resolvedParams.id);
+  const { post, loading, error, incrementViews } = usePost(resolvedParams.id);
+  const { user, userType, subscriptionStatus } = useAuth();
+  const { viewedPostsCount, incrementViewedPosts, hasReachedLimit } = useAnonymousPostTracker();
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState<{
+    title: string;
+    message: string;
+    primaryButton: string;
+    primaryAction: () => void;
+    secondaryButton?: string;
+    secondaryAction?: () => void;
+  } | null>(null);
+  
   const router = useRouter();
   const hasIncrementedViews = useRef(false);
-
-  const openSubscriptionModal = () => {
-    setIsModalOpen(true);
-  };
+  const hasTrackedAnonymousView = useRef(false);
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setModalContent(null);
   };
 
   const goToSubscription = () => {
+    console.log('Navegando a /suscripcion'); // Para debug
     router.push('/suscripcion');
   };
+
+  const goToHome = () => {
+    router.push('/');
+  };
+
+  // Verificar estado del usuario y mostrar modal correspondiente
+  useEffect(() => {
+    if (!loading && post) {
+      // Usuario premium con suscripción expirada
+      if (user && subscriptionStatus === 'Expired') {
+        setModalContent({
+          title: 'Suscripción Expirada',
+          message: 'Tu suscripción ha expirado. Renueva ahora para continuar disfrutando del contenido premium.',
+          primaryButton: 'Renovar Suscripción',
+          primaryAction: () => {
+            setIsModalOpen(false);
+            router.push('/suscripcion');
+          }
+        });
+        setIsModalOpen(true);
+        return;
+      }
+
+      // Usuario premium cancelado
+      if (user && subscriptionStatus === 'Cancelled') {
+        setModalContent({
+          title: 'Suscripción Cancelada',
+          message: 'Tu suscripción ha sido cancelada. No cumples con las normas de este sitio.',
+          primaryButton: 'Volver al Inicio',
+          primaryAction: goToHome
+        });
+        setIsModalOpen(true);
+        return;
+      }
+
+      // Usuario anónimo: trackear visualización
+      if (!user && !hasTrackedAnonymousView.current) {
+        incrementViewedPosts();
+        hasTrackedAnonymousView.current = true;
+      }
+    }
+  }, [loading, post, user, subscriptionStatus]);
 
   // Incrementar vistas cuando el post se carga exitosamente (solo una vez)
   useEffect(() => {
@@ -37,6 +92,19 @@ export default function PostPage({ params }: PostPageProps) {
       hasIncrementedViews.current = true;
     }
   }, [post, loading, error, incrementViews, resolvedParams.id]);
+
+  // Funciones para truncar contenido
+  const getTruncatedContent = (content: string, lines: number = 4) => {
+    const contentLines = content.split('\n');
+    if (contentLines.length <= lines) {
+      return content;
+    }
+    return contentLines.slice(0, lines).join('\n');
+  };
+
+  const shouldShowTruncatedContent = () => {
+  return !user && viewedPostsCount > 1;
+};
 
   if (loading) {
     return (
@@ -81,6 +149,10 @@ export default function PostPage({ params }: PostPageProps) {
     );
   }
 
+  const contentToShow = shouldShowTruncatedContent() 
+    ? getTruncatedContent(post.content) 
+    : post.content;
+
   return (
     <main className="p-6">
       <div className="max-w-4xl mx-auto">
@@ -101,10 +173,38 @@ export default function PostPage({ params }: PostPageProps) {
           </header>
           
           <div className="prose prose-lg max-w-none">
-            <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-              {post.content}
-            </div>
+            {shouldShowTruncatedContent() ? (
+              <div className="relative">
+                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                  {contentToShow}
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-none"></div>
+              </div>
+            ) : (
+              <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                {contentToShow}
+              </div>
+            )}
+            
+            {/* Call-to-action para usuarios anónimos que han alcanzado el límite */}
+            {shouldShowTruncatedContent() && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 text-center mt-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  ¿Quieres ver el contenido completo?
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Suscríbete ahora y accede a todo nuestro contenido premium sin límites.
+                </p>
+                <button
+                  onClick={goToSubscription}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
+                >
+                  Suscribirse Ahora
+                </button>
+              </div>
+            )}
           </div>
+          
           <footer className="mt-8 pt-6 border-t border-gray-200">
             <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
               <div className="flex items-center gap-2">
@@ -130,10 +230,9 @@ export default function PostPage({ params }: PostPageProps) {
               </div>
             </div>
             
-            {/* Botones de interacción */}
+            {/* Botones de interacción siempre visibles */}
             <div className="flex items-center gap-4">
               <button
-                onClick={openSubscriptionModal}
                 className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors duration-200 border border-red-200 hover:border-red-300"
               >
                 <span className="text-lg">❤️</span>
@@ -141,7 +240,6 @@ export default function PostPage({ params }: PostPageProps) {
               </button>
               
               <button
-                onClick={openSubscriptionModal}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors duration-200 border border-blue-200 hover:border-blue-300"
               >
                 <span className="text-lg">💬</span>
@@ -152,36 +250,40 @@ export default function PostPage({ params }: PostPageProps) {
         </article>
       </div>
 
-      {/* Modal de suscripción */}
-      <Modal isOpen={isModalOpen} onClose={closeModal}>
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
-            <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
+      {/* Modal dinámico */}
+      {modalContent && (
+        <Modal isOpen={isModalOpen} onClose={closeModal}>
+          <div className="text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
+              <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {modalContent.title}
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              {modalContent.message}
+            </p>
+            <div className="flex gap-3 justify-center">
+              {modalContent.secondaryButton && modalContent.secondaryAction && (
+                <button
+                  onClick={modalContent.secondaryAction}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
+                >
+                  {modalContent.secondaryButton}
+                </button>
+              )}
+              <button
+                onClick={modalContent.primaryAction}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200"
+              >
+                {modalContent.primaryButton}
+              </button>
+            </div>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Suscripción Premium Requerida
-          </h3>
-          <p className="text-sm text-gray-500 mb-6">
-            Necesitas suscripción premium para interactuar con los posts
-          </p>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={closeModal}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={goToSubscription}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200"
-            >
-              Suscribirse
-            </button>
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
     </main>
   );
 }
