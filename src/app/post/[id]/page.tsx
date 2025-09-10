@@ -9,6 +9,7 @@ import Modal from '@/components/Modal';
 import SnackBar from '@/components/Snackbar';
 import { useLikes } from '@/hooks/useLikes';
 import { useComments } from '@/hooks/useComments';
+import { useCommentsWithActions } from '@/hooks/useComments';
 
 interface PostPageProps {
   params: Promise<{
@@ -24,7 +25,7 @@ export default function PostPage({ params }: PostPageProps) {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(resolvedParams.id);
-  const { comments, loading: commentsLoading, error: commentsError } = useComments(resolvedParams.id);
+  const { comments, loading: commentsLoading, error: commentsError, createComment } = useCommentsWithActions(resolvedParams.id);
   const [showSnackBar, setShowSnackBar] = useState(false);
   const [snackBarMessage, setSnackBarMessage] = useState('');
   const [modalContent, setModalContent] = useState<{
@@ -39,6 +40,8 @@ export default function PostPage({ params }: PostPageProps) {
   const router = useRouter();
   const hasIncrementedViews = useRef(false);
   const hasTrackedAnonymousView = useRef(false);
+  const [commentText, setCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   const handleLikeClick = async () => {
     const result = await toggleLike();
@@ -50,6 +53,45 @@ export default function PostPage({ params }: PostPageProps) {
 
   const hideSnackBar = () => {
     setShowSnackBar(false);
+  };
+
+  const handleCommentSubmit = async () => {
+    // Validar contenido
+    if (!commentText.trim()) {
+      setSnackBarMessage('Por favor escribe un comentario');
+      setShowSnackBar(true);
+      return;
+    }
+
+    // Situación 1: Usuario anónimo o sin suscripción activa
+    if (!user || subscriptionStatus !== 'Active') {
+      setSnackBarMessage('Necesitas una suscripción');
+      setShowSnackBar(true);
+      return;
+    }
+
+    // Situación 2: Usuario premium activo - crear comentario
+    setIsSubmittingComment(true);
+    
+    try {
+      const result = await createComment(commentText.trim());
+      
+      if (result.error) {
+        setSnackBarMessage(`Error: ${result.error}`);
+        setShowSnackBar(true);
+      } else {
+        // Limpiar el formulario
+        setCommentText('');
+        // Opcional: mostrar mensaje de éxito
+        setSnackBarMessage('Comentario agregado exitosamente');
+        setShowSnackBar(true);
+      }
+    } catch (error) {
+      setSnackBarMessage('Error al enviar comentario');
+      setShowSnackBar(true);
+    } finally {
+      setIsSubmittingComment(false);
+    }
   };
 
   const closeModal = () => {
@@ -265,13 +307,6 @@ export default function PostPage({ params }: PostPageProps) {
                   {likesLoading ? 'Cargando...' : 'Me gusta'}
                 </span>
               </button>
-              
-              <button
-                className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors duration-200 border border-blue-200 hover:border-blue-300"
-              >
-                <span className="text-lg">💬</span>
-                <span className="text-sm font-medium">Comentar</span>
-              </button>
             </div>
           </footer>
         </article>
@@ -281,6 +316,31 @@ export default function PostPage({ params }: PostPageProps) {
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
             Comentarios ({post.comments_count})
           </h2>
+
+          {/* Formulario para agregar comentarios */}
+          <div className="mb-8 border-b border-gray-200 pb-6">
+            <textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Escribe tu comentario..."
+              className="w-full p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+              rows={3}
+              disabled={isSubmittingComment}
+            />
+            <div className="flex justify-end mt-3">
+              <button
+                onClick={handleCommentSubmit}
+                disabled={isSubmittingComment || !commentText.trim()}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors duration-200 ${
+                  isSubmittingComment || !commentText.trim()
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {isSubmittingComment ? 'Enviando...' : 'Comentar'}
+              </button>
+            </div>
+          </div>
           
           {commentsLoading && (
             <div className="space-y-4">
@@ -335,7 +395,8 @@ export default function PostPage({ params }: PostPageProps) {
                           month: 'short',
                           day: 'numeric',
                           hour: '2-digit',
-                          minute: '2-digit'
+                          minute: '2-digit',
+                          timeZone: 'America/Bogota'
                         })}
                       </span>
                     </div>

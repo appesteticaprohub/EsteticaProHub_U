@@ -1,6 +1,7 @@
 import useSWR from 'swr'
 import { apiClient } from '@/lib/api-client'
 import { Comment } from '@/types/api'
+import { mutate } from 'swr'
 
 const fetcher = async (url: string): Promise<Comment[]> => {
   const { data, error } = await apiClient.get<Comment[]>(url)
@@ -23,5 +24,42 @@ export function useComments(postId: string | null) {
     comments, 
     loading: isLoading, 
     error: error?.message || null
+  }
+}
+
+export function useCommentsWithActions(postId: string | null) {
+  const { comments, loading, error } = useComments(postId)
+
+  const createComment = async (content: string) => {
+    if (!postId) {
+      throw new Error('Post ID es requerido')
+    }
+
+    try {
+      const { data, error } = await apiClient.post<Comment>(`/posts/${postId}/comments`, {
+        content
+      })
+
+      if (error) {
+        throw new Error(error)
+      }
+
+      // Revalidar la lista de comentarios
+      mutate(`/posts/${postId}/comments`)
+      
+      // Revalidar la información del post para actualizar el contador
+      mutate(`/posts/${postId}`)
+
+      return { data, error: null }
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error.message : 'Error desconocido' }
+    }
+  }
+
+  return {
+    comments,
+    loading,
+    error,
+    createComment
   }
 }
