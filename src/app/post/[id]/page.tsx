@@ -10,11 +10,149 @@ import SnackBar from '@/components/Snackbar';
 import { useLikes } from '@/hooks/useLikes';
 import { useComments } from '@/hooks/useComments';
 import { useCommentsWithActions } from '@/hooks/useComments';
+import { Comment } from '@/types/api';
+
 
 interface PostPageProps {
   params: Promise<{
     id: string;
   }>;
+}
+
+interface CommentItemProps {
+  comment: Comment;
+  onReply: (commentId: string, content: string) => Promise<void>;
+  user: any;
+  subscriptionStatus: string | null;
+  level?: number;
+}
+
+function CommentItem({ comment, onReply, user, subscriptionStatus, level = 0 }: CommentItemProps) {
+  const [showReplyForm, setShowReplyForm] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  
+  const userName = comment.profiles?.full_name || comment.profiles?.email || 'Usuario anónimo';
+  const canReply = user && subscriptionStatus === 'Active';
+
+  const handleReplyClick = () => {
+    setShowReplyForm(true);
+    setReplyText(`@${userName} `);
+  };
+
+  const handleReplySubmit = async () => {
+    if (!replyText.trim()) {
+      return;
+    }
+    setIsSubmittingReply(true);
+    try {
+      await onReply(comment.id, replyText.trim());
+      setReplyText('');
+      setShowReplyForm(false);
+    } catch (error) {
+      console.error('Error submitting reply:', error);
+    } finally {
+      setIsSubmittingReply(false);
+    }
+  };
+
+  const cancelReply = () => {
+    setShowReplyForm(false);
+    setReplyText('');
+  };
+
+  return (
+    <div className={`${level > 0 ? 'ml-8 mt-4' : ''}`}>
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+          {userName.charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h4 className="text-sm font-medium text-gray-900">
+              {userName}
+            </h4>
+            <span className="text-xs text-gray-500">
+              {new Date(comment.created_at).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'America/Bogota'
+              })}
+            </span>
+          </div>
+          <p className="text-gray-700 text-sm whitespace-pre-wrap break-words mb-2">
+            {comment.content}
+          </p>
+          {canReply && (
+            <button
+              onClick={handleReplyClick}
+              className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+            >
+              Responder
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* Formulario de respuesta inline */}
+      {showReplyForm && (
+        <div className="mt-3 ml-11 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h4 className="text-sm font-medium text-blue-900">
+              Respondiendo a {userName}
+            </h4>
+            <button
+              onClick={cancelReply}
+              className="text-blue-600 hover:text-blue-800 text-sm"
+            >
+              Cancelar
+            </button>
+          </div>
+          <textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            placeholder={`Responder a ${userName}...`}
+            className="w-full p-3 border border-blue-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+            rows={3}
+            disabled={isSubmittingReply}
+            autoFocus
+          />
+          <div className="flex justify-end mt-3">
+            <button
+              onClick={handleReplySubmit}
+              disabled={isSubmittingReply || !replyText.trim()}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
+                isSubmittingReply || !replyText.trim()
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {isSubmittingReply ? 'Enviando...' : 'Responder'}
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Mostrar respuestas anidadas */}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="mt-4">
+          {comment.replies.map((reply) => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              onReply={onReply}
+              user={user}
+              subscriptionStatus={subscriptionStatus}
+              level={level + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function PostPage({ params }: PostPageProps) {
@@ -56,43 +194,69 @@ export default function PostPage({ params }: PostPageProps) {
   };
 
   const handleCommentSubmit = async () => {
-    // Validar contenido
-    if (!commentText.trim()) {
-      setSnackBarMessage('Por favor escribe un comentario');
-      setShowSnackBar(true);
-      return;
-    }
+  // Validar contenido
+  if (!commentText.trim()) {
+    setSnackBarMessage('Por favor escribe un comentario');
+    setShowSnackBar(true);
+    return;
+  }
 
-    // Situación 1: Usuario anónimo o sin suscripción activa
-    if (!user || subscriptionStatus !== 'Active') {
-      setSnackBarMessage('Necesitas una suscripción');
-      setShowSnackBar(true);
-      return;
-    }
+  // Situación 1: Usuario anónimo o sin suscripción activa
+  if (!user || subscriptionStatus !== 'Active') {
+    setSnackBarMessage('Necesitas una suscripción');
+    setShowSnackBar(true);
+    return;
+  }
 
-    // Situación 2: Usuario premium activo - crear comentario
-    setIsSubmittingComment(true);
+  // Situación 2: Usuario premium activo - crear comentario
+  setIsSubmittingComment(true);
+  
+  try {
+    const result = await createComment(commentText.trim());
     
-    try {
-      const result = await createComment(commentText.trim());
-      
-      if (result.error) {
-        setSnackBarMessage(`Error: ${result.error}`);
-        setShowSnackBar(true);
-      } else {
-        // Limpiar el formulario
-        setCommentText('');
-        // Opcional: mostrar mensaje de éxito
-        setSnackBarMessage('Comentario agregado exitosamente');
-        setShowSnackBar(true);
-      }
-    } catch (error) {
-      setSnackBarMessage('Error al enviar comentario');
+    if (result.error) {
+      setSnackBarMessage(`Error: ${result.error}`);
       setShowSnackBar(true);
-    } finally {
-      setIsSubmittingComment(false);
+    } else {
+      // Limpiar el formulario
+      setCommentText('');
+      // Opcional: mostrar mensaje de éxito
+      setSnackBarMessage('Comentario agregado exitosamente');
+      setShowSnackBar(true);
     }
-  };
+  } catch (error) {
+    setSnackBarMessage('Error al enviar comentario');
+    setShowSnackBar(true);
+  } finally {
+    setIsSubmittingComment(false);
+  }
+};
+
+const handleCreateReply = async (commentId: string, content: string) => {
+  if (!user || subscriptionStatus !== 'Active') {
+    setSnackBarMessage('Necesitas una suscripción');
+    setShowSnackBar(true);
+    throw new Error('Sin suscripción');
+  }
+
+  try {
+    const result = await createComment(content, commentId);
+    
+    if (result.error) {
+      setSnackBarMessage(`Error: ${result.error}`);
+      setShowSnackBar(true);
+      throw new Error(result.error);
+    } else {
+      setSnackBarMessage('Respuesta agregada exitosamente');
+      setShowSnackBar(true);
+    }
+  } catch (error) {
+    setSnackBarMessage('Error al enviar respuesta');
+    setShowSnackBar(true);
+    throw error;
+  }
+};
+
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -377,37 +541,18 @@ export default function PostPage({ params }: PostPageProps) {
           )}
           
           {!commentsLoading && !commentsError && comments.length > 0 && (
-            <div className="space-y-6">
-              {comments.map((comment) => (
-                <div key={comment.id} className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                    {comment.profiles?.full_name?.charAt(0).toUpperCase() || 
-                     comment.profiles?.email?.charAt(0).toUpperCase() || '?'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-sm font-medium text-gray-900">
-                        {comment.profiles?.full_name || comment.profiles?.email || 'Usuario anónimo'}
-                      </h4>
-                      <span className="text-xs text-gray-500">
-                        {new Date(comment.created_at).toLocaleDateString('es-ES', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          timeZone: 'America/Bogota'
-                        })}
-                      </span>
-                    </div>
-                    <p className="text-gray-700 text-sm whitespace-pre-wrap break-words">
-                      {comment.content}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="space-y-6">
+            {comments.map((comment) => (
+              <CommentItem 
+                key={comment.id} 
+                comment={comment} 
+                onReply={handleCreateReply}
+                user={user}
+                subscriptionStatus={subscriptionStatus}
+              />
+            ))}
+          </div>
+        )}
         </section>
       </div>
       {/* Modal dinámico */}

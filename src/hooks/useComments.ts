@@ -30,14 +30,15 @@ export function useComments(postId: string | null) {
 export function useCommentsWithActions(postId: string | null) {
   const { comments, loading, error } = useComments(postId)
 
-  const createComment = async (content: string) => {
+  const createComment = async (content: string, parentId?: string) => {
     if (!postId) {
       throw new Error('Post ID es requerido')
     }
 
     try {
       const { data, error } = await apiClient.post<Comment>(`/posts/${postId}/comments`, {
-        content
+        content,
+        parent_id: parentId || null
       })
 
       if (error) {

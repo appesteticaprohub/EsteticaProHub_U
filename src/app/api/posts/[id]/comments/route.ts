@@ -19,13 +19,14 @@ export async function GET(
         user_id,
         content,
         created_at,
+        parent_id,
         profiles!inner (
           full_name,
           email
         )
       `)
       .eq('post_id', id)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
 
     if (error) {
       console.error('Error fetching comments:', error)
@@ -35,18 +36,43 @@ export async function GET(
       )
     }
 
-    const comments: Comment[] = commentsData?.map((comment: any) => ({
-      id: comment.id,
-      post_id: comment.post_id,
-      user_id: comment.user_id,
-      content: comment.content,
-      created_at: comment.created_at,
-      profiles: Array.isArray(comment.profiles) 
-        ? comment.profiles[0] 
-        : comment.profiles
-    })) || []
+    // Organizar comentarios en estructura anidada
+    const commentsMap = new Map<string, Comment>()
+    const topLevelComments: Comment[] = []
 
-    return NextResponse.json({ data: comments, error: null })
+    // Primero, crear todos los comentarios
+    commentsData?.forEach((comment: any) => {
+      const commentObj: Comment = {
+        id: comment.id,
+        post_id: comment.post_id,
+        user_id: comment.user_id,
+        content: comment.content,
+        created_at: comment.created_at,
+        parent_id: comment.parent_id,
+        profiles: Array.isArray(comment.profiles) 
+          ? comment.profiles[0] 
+          : comment.profiles,
+        replies: []
+      }
+      commentsMap.set(comment.id, commentObj)
+    })
+
+    // Después, organizar en estructura jerárquica
+    commentsMap.forEach((comment) => {
+      if (comment.parent_id) {
+        // Es una respuesta, agregarlo a su padre
+        const parent = commentsMap.get(comment.parent_id)
+        if (parent) {
+          parent.replies = parent.replies || []
+          parent.replies.push(comment)
+        }
+      } else {
+        // Es un comentario principal
+        topLevelComments.push(comment)
+      }
+    })
+
+    return NextResponse.json({ data: topLevelComments, error: null })
     
   } catch (error) {
     console.error('Error in comments API:', error)
@@ -64,7 +90,7 @@ export async function POST(
   try {
     const { id } = await context.params
     const body = await request.json()
-    const { content } = body
+    const { content, parent_id } = body
 
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
@@ -99,13 +125,30 @@ export async function POST(
       )
     }
 
+    // Si es una respuesta, verificar que el comentario padre existe
+    if (parent_id) {
+      const { data: parentComment, error: parentError } = await supabase
+        .from('comments')
+        .select('id, post_id')
+        .eq('id', parent_id)
+        .single()
+
+      if (parentError || !parentComment || parentComment.post_id !== id) {
+        return NextResponse.json(
+          { data: null, error: 'Comentario padre no válido' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Insertar el comentario
     const { data: commentData, error: insertError } = await supabase
       .from('comments')
       .insert({
         post_id: id,
         user_id: user.id,
-        content: content.trim()
+        content: content.trim(),
+        parent_id: parent_id || null
       })
       .select(`
         id,
@@ -113,6 +156,7 @@ export async function POST(
         user_id,
         content,
         created_at,
+        parent_id,
         profiles!inner (
           full_name,
           email
@@ -154,9 +198,11 @@ export async function POST(
       user_id: commentData.user_id,
       content: commentData.content,
       created_at: commentData.created_at,
+      parent_id: commentData.parent_id,
       profiles: Array.isArray(commentData.profiles) 
         ? commentData.profiles[0] 
-        : commentData.profiles
+        : commentData.profiles,
+      replies: []
     }
 
     return NextResponse.json({ data: comment, error: null })

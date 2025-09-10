@@ -39,10 +39,12 @@ export interface Comment {
   user_id: string
   content: string
   created_at: string
+  parent_id: string | null
   profiles?: {
     full_name: string | null
     email: string
   }
+  replies?: Comment[]
 }
 
 // Tipos para Profiles
