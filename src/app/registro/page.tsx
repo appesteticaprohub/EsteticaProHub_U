@@ -2,14 +2,24 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import SpecialtySelect from '@/components/SpecialtySelect';
+import CountrySelect from '@/components/CountrySelect';
+import DateSelect from '@/components/DateSelect';
 
 export default function Registro() {
   const [formData, setFormData] = useState({
-    nombre: '',
-    apellido: '',
-    email: '',
-    contraseña: ''
-  });
+  nombre: '',
+  apellido: '',
+  email: '',
+  contraseña: '',
+  especialidad: '',
+  pais: '',
+  fechaNacimiento: {
+    day: '',
+    month: '',
+    year: ''
+  }
+});
   
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -21,6 +31,24 @@ export default function Registro() {
       [name]: value
     }));
   };
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const { name, value } = e.target;
+  setFormData(prev => ({
+    ...prev,
+    [name]: value
+  }));
+};
+
+const handleDateChange = (field: 'day' | 'month' | 'year', value: string) => {
+  setFormData(prev => ({
+    ...prev,
+    fechaNacimiento: {
+      ...prev.fechaNacimiento,
+      [field]: value
+    }
+  }));
+};
 
   const { signUp } = useAuth();
 
@@ -49,7 +77,14 @@ const handleSubmit = async (e: React.FormEvent) => {
         nombre: '',
         apellido: '',
         email: '',
-        contraseña: ''
+        contraseña: '',
+        especialidad: '',
+        pais: '',
+        fechaNacimiento: {
+          day: '',
+          month: '',
+          year: ''
+        }
       });
     }
   } catch (error) {
@@ -122,6 +157,51 @@ const handleSubmit = async (e: React.FormEvent) => {
                 disabled={loading}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 disabled:opacity-50"
                 placeholder="Tu apellido"
+              />
+            </div>
+
+            {/* Campo Especialidad */}
+            <div>
+              <label htmlFor="especialidad" className="block text-sm font-medium text-gray-700 mb-2">
+                Especialidad *
+              </label>
+              <SpecialtySelect
+                id="especialidad"
+                name="especialidad"
+                value={formData.especialidad}
+                onChange={handleSelectChange}
+                required
+                disabled={loading}
+              />
+            </div>
+
+            {/* Campo País */}
+            <div>
+              <label htmlFor="pais" className="block text-sm font-medium text-gray-700 mb-2">
+                País *
+              </label>
+              <CountrySelect
+                id="pais"
+                name="pais"
+                value={formData.pais}
+                onChange={handleSelectChange}
+                required
+                disabled={loading}
+              />
+            </div>
+
+            {/* Campo Fecha de Nacimiento */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha de Nacimiento *
+              </label>
+              <DateSelect
+                day={formData.fechaNacimiento.day}
+                month={formData.fechaNacimiento.month}
+                year={formData.fechaNacimiento.year}
+                onChange={handleDateChange}
+                required
+                disabled={loading}
               />
             </div>
 
