@@ -1,31 +1,59 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'
+import useSWR, { mutate } from 'swr'
+import { apiClient } from '@/lib/api-client'
+
+interface AnonymousData {
+  viewedPostsCount: number
+  hasReachedLimit: boolean
+}
+
+// Fetcher function para SWR
+const fetcher = async (url: string): Promise<AnonymousData> => {
+  const { data, error } = await apiClient.get<AnonymousData>(url)
+  if (error) throw new Error(error)
+  return data || { viewedPostsCount: 0, hasReachedLimit: false }
+}
 
 export function useAnonymousPostTracker() {
-  const [viewedPostsCount, setViewedPostsCount] = useState(0);
+  const { data, error, mutate: mutateTracker } = useSWR<AnonymousData>(
+    '/anonymous/track',
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  )
 
-  useEffect(() => {
-    // Obtener el contador actual del localStorage
-    const count = localStorage.getItem('anonymous_posts_viewed');
-    setViewedPostsCount(count ? parseInt(count, 10) : 0);
-  }, []);
+  const viewedPostsCount = data?.viewedPostsCount || 0
+  const hasReachedLimit = data?.hasReachedLimit || false
 
-  const incrementViewedPosts = () => {
-    const newCount = viewedPostsCount + 1;
-    setViewedPostsCount(newCount);
-    localStorage.setItem('anonymous_posts_viewed', newCount.toString());
-  };
+  const incrementViewedPosts = async () => {
+    try {
+      const { data: newData, error } = await apiClient.post<AnonymousData>(
+        '/anonymous/track',
+        {}
+      )
 
-  const resetViewedPosts = () => {
-    setViewedPostsCount(0);
-    localStorage.removeItem('anonymous_posts_viewed');
-  };
+      if (!error && newData) {
+        // Actualizar cache inmediatamente
+        mutateTracker(newData, false)
+      }
+    } catch (error) {
+      console.error('Error incrementing viewed posts:', error)
+    }
+  }
+
+  const resetViewedPosts = async () => {
+    // Esta funcionalidad se podría implementar si es necesaria
+    console.log('Reset not implemented in server-side version')
+  }
 
   return {
     viewedPostsCount,
     incrementViewedPosts,
     resetViewedPosts,
-    hasReachedLimit: viewedPostsCount > 1 // Después del primer post
-  };
+    hasReachedLimit
+  }
 }
