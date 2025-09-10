@@ -59,8 +59,16 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   try {
     const fullName = `${formData.nombre} ${formData.apellido}`;
+    const birthDate = `${formData.fechaNacimiento.year}-${formData.fechaNacimiento.month.padStart(2, '0')}-${formData.fechaNacimiento.day.padStart(2, '0')}`;
     
-    const { error } = await signUp(formData.email, formData.contraseña, fullName);
+    const { error } = await signUp(
+    formData.email, 
+    formData.contraseña, 
+    fullName,
+    formData.especialidad,
+    formData.pais,
+    birthDate
+  );
 
     if (error) {
       setMessage({

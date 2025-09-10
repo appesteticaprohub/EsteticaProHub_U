@@ -31,7 +31,7 @@ interface AuthContextType {
   subscriptionStatus: string | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: any }>
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>
+  signUp: (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string) => Promise<{ error: any }>
   signOut: () => Promise<void>
 }
 
@@ -83,28 +83,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
-    try {
-      const { data: authData, error } = await apiClient.post<AuthData>('/auth/signup', {
-        email,
-        password,
-        fullName,
-      })
+  const signUp = async (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string) => {
+  try {
+    const { data: authData, error } = await apiClient.post<AuthData>('/auth/signup', {
+      email,
+      password,
+      fullName,
+      specialty,
+      country,
+      birthDate,
+    })
 
-      if (error) {
-        return { error: { message: error } }
-      }
-
-      // Actualizar cache inmediatamente
-      if (authData) {
-        mutateAuth(authData, false)
-      }
-
-      return { error: null }
-    } catch (error) {
-      return { error: { message: 'Network error' } }
+    if (error) {
+      return { error: { message: error } }
     }
+
+    // Actualizar cache inmediatamente
+    if (authData) {
+      mutateAuth(authData, false)
+    }
+
+    return { error: null }
+  } catch (error) {
+    return { error: { message: 'Network error' } }
   }
+}
 
   const signOut = async () => {
     try {
