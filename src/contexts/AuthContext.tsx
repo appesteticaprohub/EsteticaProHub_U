@@ -110,14 +110,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await apiClient.post('/auth/logout', {})
       
-      // Limpiar cache inmediatamente
+      // Limpiar cache de auth inmediatamente
       mutateAuth(
         { user: null, session: null, userType: 'anonymous', subscriptionStatus: null },
         false
       )
 
-      // Invalidar todo el cache de SWR
-      mutate(() => true, undefined, { revalidate: false })
+      // Revalidar específicamente los endpoints de posts para el estado anónimo
+      mutate('/posts?limit=5&orderBy=created_at&ascending=false')
+      mutate('/posts?limit=5&orderBy=views_count&ascending=false')
+      mutate('/posts?limit=5&orderBy=comments_count&ascending=false')
+      
+      // También revalidar el tracker anónimo
+      mutate('/anonymous/track')
+      
     } catch (error) {
       console.error('Error signing out:', error)
     }
