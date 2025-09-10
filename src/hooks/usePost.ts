@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import useSWR, { mutate } from 'swr'
+import { apiClient } from '@/lib/api-client'
 
 interface PostWithoutCategory {
   id: string;
@@ -12,83 +12,58 @@ interface PostWithoutCategory {
   comments_count: number;
 }
 
+// Fetcher function para SWR
+const fetcher = async (url: string): Promise<PostWithoutCategory> => {
+  const { data, error } = await apiClient.get<PostWithoutCategory>(url)
+  if (error) throw new Error(error)
+  if (!data) throw new Error('Post not found')
+  return data
+}
+
 export function usePost(postId: string | null) {
-  const [post, setPost] = useState<PostWithoutCategory | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchPost() {
-      try {
-        setLoading(true);
-        setError(null);
-        setPost(null);
-
-        if (!postId) {
-          setLoading(false);
-          return;
-        }
-        
-        const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('id', postId)
-        .single();
-
-        if (error) {
-          setError(error.message);
-        } else {
-          setPost(data);
-        }
-      } catch (err) {
-        setError('Error fetching post');
-      } finally {
-        setLoading(false);
-      }
+  const { data: post = null, error, isLoading } = useSWR<PostWithoutCategory>(
+    postId ? `/posts/${postId}` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
     }
-
-    fetchPost();
-  }, [postId]);
+  )
 
   const incrementViews = async (postId: string) => {
     try {
-      // Primero obtener el valor actual
-      const { data: currentPost } = await supabase
-        .from('posts')
-        .select('views_count')
-        .eq('id', postId)
-        .single();
+      const { data, error } = await apiClient.patch(`/posts/${postId}/views`, {})
       
-      if (currentPost) {
-        // Incrementar en la base de datos
-        await supabase
-          .from('posts')
-          .update({ views_count: currentPost.views_count + 1 })
-          .eq('id', postId);
-        
-        // Actualizar el estado local inmediatamente
-        if (post) {
-          setPost({
-            ...post,
-            views_count: currentPost.views_count + 1
-          });
-        }
+      if (error) {
+        console.error('Error incrementing views:', error)
+        return
+      }
+
+      // Actualizar cache de SWR con los nuevos datos
+      if (data) {
+        mutate(`/posts/${postId}`, data, false)
       }
     } catch (error) {
-      console.error('Error incrementing views:', error);
+      console.error('Error incrementing views:', error)
     }
-  };
+  }
 
   const handleLikeClick = () => {
     // Esta función será manejada desde el componente para abrir el modal
-    return;
-  };
+    return
+  }
 
   const handleCommentClick = () => {
     // Esta función será manejada desde el componente para abrir el modal
-    return;
-  };
+    return
+  }
 
-  return { post, loading, error, incrementViews, handleLikeClick, handleCommentClick };
-
+  return { 
+    post, 
+    loading: isLoading, 
+    error: error?.message || null, 
+    incrementViews, 
+    handleLikeClick, 
+    handleCommentClick 
+  }
 }

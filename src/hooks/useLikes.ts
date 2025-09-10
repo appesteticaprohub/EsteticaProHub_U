@@ -1,147 +1,108 @@
-import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react'
+import useSWR, { mutate } from 'swr'
+import { apiClient } from '@/lib/api-client'
+
+interface LikesData {
+  isLiked: boolean;
+  likesCount: number;
+}
+
+interface LikesResponse {
+  isLiked: boolean;
+  likesCount: number;
+  showSnackBar?: boolean;
+}
+
+// Fetcher function para SWR
+const fetcher = async (url: string): Promise<LikesData> => {
+  const { data, error } = await apiClient.get<LikesData>(url)
+  if (error) throw new Error(error)
+  return data || { isLiked: false, likesCount: 0 }
+}
 
 export function useLikes(postId: string | null) {
-  const supabase = createClient();
-  const { user } = useAuth();
-  const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-
-  // Verificar si el usuario ya dio like al post
-  const checkIfLiked = useCallback(async () => {
-    if (!postId || !user) {
-      setIsLiked(false);
-      return;
+  const [loading, setLoading] = useState(false)
+  
+  const { data, error, mutate: mutateLikes } = useSWR<LikesData>(
+    postId ? `/posts/${postId}/likes` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
     }
+  )
 
-    try {
-      const { data, error } = await supabase
-        .from('likes')
-        .select('id')
-        .eq('post_id', postId)
-        .eq('user_id', user.id)
-        .maybeSingle();
+  const isLiked = data?.isLiked || false
+  const likesCount = data?.likesCount || 0
 
-      // Si hay error de permisos (406), asumimos que no hay like
-      if (error && error.code === 'PGRST116') {
-        setIsLiked(false);
-        return;
-      }
-
-      setIsLiked(!!data && !error);
-    } catch (error) {
-      console.log('Error checking like status:', error);
-      setIsLiked(false);
-    }
-  }, [postId, user, supabase]);
-
-  // Obtener el contador actual de likes del post
-  const fetchLikesCount = useCallback(async () => {
-    if (!postId) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('likes_count')
-        .eq('id', postId)
-        .single();
-
-      if (!error && data) {
-        setLikesCount(data.likes_count || 0);
-      }
-    } catch (error) {
-      console.error('Error fetching likes count:', error);
-    }
-  }, [postId, supabase]);
-
-  // Dar like a un post
+  // Función para dar/quitar like
   const toggleLike = async () => {
-    if (!postId || loading) return;
+    if (!postId || loading) return { showSnackBar: false }
 
-    // Verificar si es usuario anónimo o sin registro
-    if (!user) {
-      return { showSnackBar: true, message: "Necesitas una suscripción" };
-    }
-
-    setLoading(true);
+    setLoading(true)
 
     try {
-      if (isLiked) {
-        // Quitar like
-        const { error: deleteError } = await supabase
-          .from('likes')
-          .delete()
-          .eq('post_id', postId)
-          .eq('user_id', user.id);
+      const { data: response, error } = await apiClient.post<LikesResponse>(
+        `/posts/${postId}/likes`,
+        {}
+      )
 
-        if (!deleteError) {
-          // Decrementar contador en la tabla posts
-          const { data: currentPost } = await supabase
-            .from('posts')
-            .select('likes_count')
-            .eq('id', postId)
-            .single();
-
-          if (currentPost) {
-            const newCount = Math.max(0, currentPost.likes_count - 1);
-            
-            await supabase
-              .from('posts')
-              .update({ likes_count: newCount })
-              .eq('id', postId);
-
-            setLikesCount(newCount);
-            setIsLiked(false);
-          }
+      if (error) {
+        if (error === 'Necesitas una suscripción') {
+          return { showSnackBar: true, message: error }
         }
-      } else {
-        // Dar like
-        const { error: insertError } = await supabase
-          .from('likes')
-          .insert({
-            post_id: postId,
-            user_id: user.id
-          });
+        console.error('Error toggling like:', error)
+        return { showSnackBar: false }
+      }
 
-        if (!insertError) {
-          // Incrementar contador en la tabla posts
-          const { data: currentPost } = await supabase
-            .from('posts')
-            .select('likes_count')
-            .eq('id', postId)
-            .single();
+      if (response) {
+        // Actualizar cache local inmediatamente
+        mutateLikes(
+          {
+            isLiked: response.isLiked,
+            likesCount: response.likesCount
+          },
+          false
+        )
 
-          if (currentPost) {
-            const newCount = currentPost.likes_count + 1;
-            
-            await supabase
-              .from('posts')
-              .update({ likes_count: newCount })
-              .eq('id', postId);
-
-            setLikesCount(newCount);
-            setIsLiked(true);
-          }
+        // También actualizar el cache del post individual si existe
+        if (postId) {
+          mutate(
+            `/posts/${postId}`,
+            (currentPost: any) => {
+              if (currentPost) {
+                return {
+                  ...currentPost,
+                  likes_count: response.likesCount
+                }
+              }
+              return currentPost
+            },
+            false
+          )
         }
+
+        return { showSnackBar: response.showSnackBar || false }
       }
     } catch (error) {
-      console.error('Error toggling like:', error);
+      console.error('Error toggling like:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
 
-    return { showSnackBar: false };
-  };
+    return { showSnackBar: false }
+  }
 
-  // Efectos para cargar datos iniciales
-  useEffect(() => {
-    if (postId) {
-      checkIfLiked();
-      fetchLikesCount();
-    }
-  }, [postId, user, checkIfLiked, fetchLikesCount]);
+  // Funciones de compatibilidad (no se usan pero mantienen la interfaz)
+  const checkIfLiked = async () => {
+    // SWR maneja esto automáticamente
+    return
+  }
+
+  const fetchLikesCount = async () => {
+    // SWR maneja esto automáticamente
+    return
+  }
 
   return {
     isLiked,
@@ -150,5 +111,5 @@ export function useLikes(postId: string | null) {
     toggleLike,
     checkIfLiked,
     fetchLikesCount
-  };
+  }
 }

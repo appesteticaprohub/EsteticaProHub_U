@@ -1,8 +1,28 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase'
+import useSWR, { mutate } from 'swr'
+import { apiClient } from '@/lib/api-client'
+
+interface User {
+  id: string
+  email: string
+  user_metadata?: any
+}
+
+interface Session {
+  access_token: string
+  refresh_token: string
+  expires_at: number
+  user: User
+}
+
+interface AuthData {
+  user: User | null
+  session: Session | null
+  userType: string
+  subscriptionStatus: string | null
+}
 
 interface AuthContextType {
   user: User | null
@@ -17,89 +37,90 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Fetcher function para SWR
+const fetcher = async (url: string): Promise<AuthData> => {
+  const { data, error } = await apiClient.get<AuthData>(url)
+  if (error) throw new Error(error)
+  return data || { user: null, session: null, userType: 'anonymous', subscriptionStatus: null }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const supabase = createClient()
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [userType, setUserType] = useState<string | null>(null)
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
-
-  useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        // Obtener el tipo de usuario desde la tabla profiles
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('user_type, subscription_status')
-          .eq('id', session.user.id)
-          .single()
-        
-        setUserType(profile?.user_type || 'anonymous')
-        setSubscriptionStatus(profile?.subscription_status || null)
-      } else {
-        setUserType('anonymous')
-      }
-      
-      setLoading(false)
+  const { data, error, isLoading, mutate: mutateAuth } = useSWR<AuthData>(
+    '/auth/session',
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      refreshInterval: 0,
     }
-    getSession()
+  )
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          // Obtener el tipo de usuario desde la tabla profiles
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('user_type, subscription_status')
-            .eq('id', session.user.id)
-            .single()
-          
-          setUserType(profile?.user_type || 'anonymous')
-          setSubscriptionStatus(profile?.subscription_status || null)
-        } else {
-          setUserType('anonymous')
-        }
-        
-        setLoading(false)
-      }
-    )
-
-    return () => subscription.unsubscribe()
-  }, [])
+  const user = data?.user || null
+  const session = data?.session || null
+  const userType = data?.userType || 'anonymous'
+  const subscriptionStatus = data?.subscriptionStatus || null
+  const loading = isLoading
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    return { error }
+    try {
+      const { data: authData, error } = await apiClient.post<AuthData>('/auth/login', {
+        email,
+        password,
+      })
+
+      if (error) {
+        return { error: { message: error } }
+      }
+
+      // Actualizar cache inmediatamente
+      if (authData) {
+        mutateAuth(authData, false)
+      }
+
+      return { error: null }
+    } catch (error) {
+      return { error: { message: 'Network error' } }
+    }
   }
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    })
-    return { error }
+    try {
+      const { data: authData, error } = await apiClient.post<AuthData>('/auth/signup', {
+        email,
+        password,
+        fullName,
+      })
+
+      if (error) {
+        return { error: { message: error } }
+      }
+
+      // Actualizar cache inmediatamente
+      if (authData) {
+        mutateAuth(authData, false)
+      }
+
+      return { error: null }
+    } catch (error) {
+      return { error: { message: 'Network error' } }
+    }
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      await apiClient.post('/auth/logout', {})
+      
+      // Limpiar cache inmediatamente
+      mutateAuth(
+        { user: null, session: null, userType: 'anonymous', subscriptionStatus: null },
+        false
+      )
+
+      // Invalidar todo el cache de SWR
+      mutate(() => true, undefined, { revalidate: false })
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
   }
 
   const value = {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Registro() {
   const [formData, setFormData] = useState({
@@ -22,45 +22,45 @@ export default function Registro() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage(null);
+  const { signUp } = useAuth();
 
-    try {
-      // Registrar usuario con Supabase usando solo email y contraseña
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.contraseña,
-      });
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setMessage(null);
 
-      if (error) {
-        setMessage({
-          type: 'error',
-          text: `Error: ${error.message}`
-        });
-      } else {
-        setMessage({
-          type: 'success',
-          text: '¡Registro exitoso!'
-        });
-        // Limpiar el formulario
-        setFormData({
-          nombre: '',
-          apellido: '',
-          email: '',
-          contraseña: ''
-        });
-      }
-    } catch (error) {
+  try {
+    const fullName = `${formData.nombre} ${formData.apellido}`;
+    
+    const { error } = await signUp(formData.email, formData.contraseña, fullName);
+
+    if (error) {
       setMessage({
         type: 'error',
-        text: 'Error inesperado. Por favor intenta de nuevo.'
+        text: `Error: ${error.message}`
       });
-    } finally {
-      setLoading(false);
+    } else {
+      setMessage({
+        type: 'success',
+        text: '¡Registro exitoso!'
+      });
+      // Limpiar el formulario
+      setFormData({
+        nombre: '',
+        apellido: '',
+        email: '',
+        contraseña: ''
+      });
     }
-  };
+  } catch (error) {
+    setMessage({
+      type: 'error',
+      text: 'Error inesperado. Por favor intenta de nuevo.'
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-100 py-12 px-4">

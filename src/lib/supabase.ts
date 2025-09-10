@@ -1,16 +1,9 @@
-import { createBrowserClient } from '@supabase/ssr'
+// ARCHIVO MIGRADO - YA NO USA CLIENTE SUPABASE EN EL FRONTEND
+// Todas las funciones ahora usan API routes server-side
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+import { apiClient } from './api-client'
 
-export function createClient() {
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
-}
-
-// Para compatibilidad con el código existente
-export const supabase = createClient()
-
-// Función para crear un nuevo post
+// Función para crear un nuevo post (migrada a API routes)
 export async function createPost({
   title,
   content,
@@ -22,18 +15,15 @@ export async function createPost({
   category: string
   authorId: string
 }) {
-  const supabase = createClient()
-  
-  const { data, error } = await supabase
-    .from('posts')
-    .insert({
-      title,
-      content,
-      category,
-      author_id: authorId
-    })
-    .select()
-    .single()
+  const { data, error } = await apiClient.post('/posts', {
+    title,
+    content,
+    category,
+    authorId
+  })
 
   return { data, error }
 }
+
+// NOTA: Este archivo ya no exporta cliente Supabase para frontend
+// Solo mantiene funciones de compatibilidad que usan API routes

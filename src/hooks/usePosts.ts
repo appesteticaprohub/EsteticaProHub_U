@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import useSWR from 'swr'
+import { apiClient } from '@/lib/api-client'
 
 interface Post {
   id: string;
@@ -12,144 +12,85 @@ interface Post {
   comments_count: number;
 }
 
+interface PostsResponse {
+  data: Post[] | null;
+  error: string | null;
+}
+
+// Fetcher function para SWR
+const fetcher = async (url: string): Promise<Post[]> => {
+  const { data, error } = await apiClient.get<Post[]>(url)
+  if (error) throw new Error(error)
+  return data || []
+}
+
 export function usePosts() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchPosts() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const { data, error } = await supabase
-          .from('posts')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          setError(error.message);
-        } else {
-          setPosts(data || []);
-        }
-      } catch (err) {
-        setError('Error fetching posts');
-      } finally {
-        setLoading(false);
-      }
+  const { data: posts = [], error, isLoading } = useSWR<Post[]>(
+    '/posts',
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
     }
+  )
 
-    fetchPosts();
-  }, []);
-
-  return { posts, loading, error };
+  return { 
+    posts, 
+    loading: isLoading, 
+    error: error?.message || null 
+  }
 }
 
 // Hook para posts más nuevos
 export function useNewestPosts(limit: number = 5) {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchNewestPosts() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const { data, error } = await supabase
-          .from('posts')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(limit);
-
-        if (error) {
-          setError(error.message);
-        } else {
-          setPosts(data || []);
-        }
-      } catch (err) {
-        setError('Error fetching newest posts');
-      } finally {
-        setLoading(false);
-      }
+  const { data: posts = [], error, isLoading } = useSWR<Post[]>(
+    `/posts?limit=${limit}&orderBy=created_at&ascending=false`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
     }
+  )
 
-    fetchNewestPosts();
-  }, [limit]);
-
-  return { posts, loading, error };
+  return { 
+    posts, 
+    loading: isLoading, 
+    error: error?.message || null 
+  }
 }
 
 // Hook para posts más vistos
 export function useMostViewedPosts(limit: number = 5) {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchMostViewedPosts() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const { data, error } = await supabase
-          .from('posts')
-          .select('*')
-          .order('views_count', { ascending: false })
-          .limit(limit);
-
-        if (error) {
-          setError(error.message);
-        } else {
-          setPosts(data || []);
-        }
-      } catch (err) {
-        setError('Error fetching most viewed posts');
-      } finally {
-        setLoading(false);
-      }
+  const { data: posts = [], error, isLoading } = useSWR<Post[]>(
+    `/posts?limit=${limit}&orderBy=views_count&ascending=false`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
     }
+  )
 
-    fetchMostViewedPosts();
-  }, [limit]);
-
-  return { posts, loading, error };
+  return { 
+    posts, 
+    loading: isLoading, 
+    error: error?.message || null 
+  }
 }
 
 // Hook para posts más comentados
 export function useMostCommentedPosts(limit: number = 5) {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchMostCommentedPosts() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const { data, error } = await supabase
-          .from('posts')
-          .select('*')
-          .order('comments_count', { ascending: false })
-          .limit(limit);
-
-        if (error) {
-          setError(error.message);
-        } else {
-          setPosts(data || []);
-        }
-      } catch (err) {
-        setError('Error fetching most commented posts');
-      } finally {
-        setLoading(false);
-      }
+  const { data: posts = [], error, isLoading } = useSWR<Post[]>(
+    `/posts?limit=${limit}&orderBy=comments_count&ascending=false`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
     }
+  )
 
-    fetchMostCommentedPosts();
-  }, [limit]);
-
-  return { posts, loading, error };
+  return { 
+    posts, 
+    loading: isLoading, 
+    error: error?.message || null 
+  }
 }
