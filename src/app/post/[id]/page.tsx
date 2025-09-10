@@ -23,23 +23,26 @@ interface CommentItemProps {
   comment: Comment;
   onReply: (commentId: string, content: string) => Promise<void>;
   onUpdate: (commentId: string, content: string) => Promise<void>;
+  onDelete: (commentId: string) => Promise<void>;
   currentUserId: string | null;
   user: any;
   subscriptionStatus: string | null;
   level?: number;
 }
 
-function CommentItem({ comment, onReply, onUpdate, currentUserId, user, subscriptionStatus, level = 0 }: CommentItemProps) {
+function CommentItem({ comment, onReply, onUpdate, onDelete, currentUserId, user, subscriptionStatus, level = 0 }: CommentItemProps) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment.content);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const userName = comment.profiles?.full_name || comment.profiles?.email || 'Usuario anónimo';
-  const canReply = user && subscriptionStatus === 'Active';
-  const canEdit = currentUserId === comment.user_id && subscriptionStatus === 'Active';
+  const canReply = user && subscriptionStatus === 'Active' && !comment.is_deleted;
+  const canEdit = currentUserId === comment.user_id && subscriptionStatus === 'Active' && !comment.is_deleted;
+  const canDelete = currentUserId === comment.user_id && subscriptionStatus === 'Active' && !comment.is_deleted;
 
   const handleReplyClick = () => {
     setShowReplyForm(true);
@@ -90,6 +93,21 @@ function CommentItem({ comment, onReply, onUpdate, currentUserId, user, subscrip
   const cancelEdit = () => {
     setIsEditing(false);
     setEditText(comment.content);
+  };
+
+  const handleDeleteClick = async () => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este comentario?')) {
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      await onDelete(comment.id);
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -172,6 +190,17 @@ function CommentItem({ comment, onReply, onUpdate, currentUserId, user, subscrip
                   Editar
                 </button>
               )}
+              {canDelete && (
+                <button
+                  onClick={handleDeleteClick}
+                  disabled={isDeleting}
+                  className={`text-red-600 hover:text-red-800 text-xs font-medium ${
+                    isDeleting ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isDeleting ? 'Eliminando...' : 'Eliminar'}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -225,6 +254,7 @@ function CommentItem({ comment, onReply, onUpdate, currentUserId, user, subscrip
               comment={reply}
               onReply={onReply}
               onUpdate={onUpdate}
+              onDelete={onDelete}
               currentUserId={currentUserId}
               user={user}
               subscriptionStatus={subscriptionStatus}
@@ -245,7 +275,7 @@ export default function PostPage({ params }: PostPageProps) {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(resolvedParams.id);
-  const { comments, loading: commentsLoading, error: commentsError, createComment, updateComment } = useCommentsWithActions(resolvedParams.id);
+  const { comments, loading: commentsLoading, error: commentsError, createComment, updateComment, deleteComment } = useCommentsWithActions(resolvedParams.id);
   const [showSnackBar, setShowSnackBar] = useState(false);
   const [snackBarMessage, setSnackBarMessage] = useState('');
   const [modalContent, setModalContent] = useState<{
@@ -359,6 +389,31 @@ const handleUpdateComment = async (commentId: string, content: string) => {
     }
   } catch (error) {
     setSnackBarMessage('Error al actualizar comentario');
+    setShowSnackBar(true);
+    throw error;
+  }
+};
+
+const handleDeleteComment = async (commentId: string) => {
+  if (!user || subscriptionStatus !== 'Active') {
+    setSnackBarMessage('Necesitas una suscripción');
+    setShowSnackBar(true);
+    throw new Error('Sin suscripción');
+  }
+
+  try {
+    const result = await deleteComment(commentId, resolvedParams.id);
+    
+    if (result.error) {
+      setSnackBarMessage(`Error: ${result.error}`);
+      setShowSnackBar(true);
+      throw new Error(result.error);
+    } else {
+      setSnackBarMessage('Comentario eliminado exitosamente');
+      setShowSnackBar(true);
+    }
+  } catch (error) {
+    setSnackBarMessage('Error al eliminar comentario');
     setShowSnackBar(true);
     throw error;
   }
@@ -649,16 +704,17 @@ const handleUpdateComment = async (commentId: string, content: string) => {
           {!commentsLoading && !commentsError && comments.length > 0 && (
           <div className="space-y-6">
             {comments.map((comment) => (
-              <CommentItem 
-                key={comment.id} 
-                comment={comment} 
-                onReply={handleCreateReply}
-                onUpdate={handleUpdateComment}
-                currentUserId={user?.id || null}
-                user={user}
-                subscriptionStatus={subscriptionStatus}
-              />
-            ))}
+            <CommentItem
+              key={comment.id}
+              comment={comment}
+              onReply={handleCreateReply}
+              onUpdate={handleUpdateComment}
+              onDelete={handleDeleteComment}
+              currentUserId={user?.id || null}
+              user={user}
+              subscriptionStatus={subscriptionStatus}
+            />
+          ))}
           </div>
         )}
         </section>

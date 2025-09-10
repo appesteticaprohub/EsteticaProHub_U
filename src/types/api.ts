@@ -32,7 +32,6 @@ export interface Like {
   created_at: string
 }
 
-// Tipos para Comments
 export interface Comment {
   id: string
   post_id: string
@@ -40,6 +39,8 @@ export interface Comment {
   content: string
   created_at: string
   parent_id: string | null
+  is_deleted: boolean
+  deleted_at: string | null
   profiles?: {
     full_name: string | null
     email: string

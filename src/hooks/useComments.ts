@@ -76,11 +76,32 @@ export function useCommentsWithActions(postId: string | null) {
   }
 }
 
+const deleteComment = async (commentId: string, postId: string) => {
+  try {
+    const { data, error } = await apiClient.delete(`/posts/${postId}/comments/${commentId}`)
+
+    if (error) {
+      throw new Error(error)
+    }
+
+    // Revalidar la lista de comentarios
+    mutate(`/posts/${postId}/comments`)
+    
+    // Revalidar la información del post para actualizar el contador
+    mutate(`/posts/${postId}`)
+
+    return { data, error: null }
+  } catch (error) {
+    return { data: null, error: error instanceof Error ? error.message : 'Error desconocido' }
+  }
+}
+
 return {
   comments,
   loading,
   error,
   createComment,
-  updateComment
+  updateComment,
+  deleteComment
 }
 }

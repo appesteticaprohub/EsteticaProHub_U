@@ -12,21 +12,23 @@ export async function GET(
     const supabase = await createServerSupabaseClient()
     
     const { data: commentsData, error } = await supabase
-      .from('comments')
-      .select(`
-        id,
-        post_id,
-        user_id,
-        content,
-        created_at,
-        parent_id,
-        profiles!inner (
-          full_name,
-          email
-        )
-      `)
-      .eq('post_id', id)
-      .order('created_at', { ascending: true })
+  .from('comments')
+  .select(`
+    id,
+    post_id,
+    user_id,
+    content,
+    created_at,
+    parent_id,
+    is_deleted,
+    deleted_at,
+    profiles!inner (
+      full_name,
+      email
+    )
+  `)
+  .eq('post_id', id)
+  .order('created_at', { ascending: true })
 
     if (error) {
       console.error('Error fetching comments:', error)
@@ -46,12 +48,14 @@ export async function GET(
         id: comment.id,
         post_id: comment.post_id,
         user_id: comment.user_id,
-        content: comment.content,
+        content: comment.is_deleted ? '[Comentario eliminado]' : comment.content,
         created_at: comment.created_at,
         parent_id: comment.parent_id,
-        profiles: Array.isArray(comment.profiles) 
+        is_deleted: comment.is_deleted,
+        deleted_at: comment.deleted_at,
+        profiles: comment.is_deleted ? null : (Array.isArray(comment.profiles) 
           ? comment.profiles[0] 
-          : comment.profiles,
+          : comment.profiles),
         replies: []
       }
       commentsMap.set(comment.id, commentObj)
@@ -193,17 +197,19 @@ export async function POST(
     }
 
     const comment: Comment = {
-      id: commentData.id,
-      post_id: commentData.post_id,
-      user_id: commentData.user_id,
-      content: commentData.content,
-      created_at: commentData.created_at,
-      parent_id: commentData.parent_id,
-      profiles: Array.isArray(commentData.profiles) 
-        ? commentData.profiles[0] 
-        : commentData.profiles,
-      replies: []
-    }
+    id: commentData.id,
+    post_id: commentData.post_id,
+    user_id: commentData.user_id,
+    content: commentData.content,
+    created_at: commentData.created_at,
+    parent_id: commentData.parent_id,
+    is_deleted: false,
+    deleted_at: null,
+    profiles: Array.isArray(commentData.profiles) 
+      ? commentData.profiles[0] 
+      : commentData.profiles,
+    replies: []
+  }
 
     return NextResponse.json({ data: comment, error: null })
     
