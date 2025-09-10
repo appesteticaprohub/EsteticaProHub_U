@@ -8,6 +8,7 @@ import { useAnonymousPostTracker } from '@/hooks/useAnonymousPostTracker';
 import Modal from '@/components/Modal';
 import SnackBar from '@/components/Snackbar';
 import { useLikes } from '@/hooks/useLikes';
+import { useComments } from '@/hooks/useComments';
 
 interface PostPageProps {
   params: Promise<{
@@ -23,6 +24,7 @@ export default function PostPage({ params }: PostPageProps) {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(resolvedParams.id);
+  const { comments, loading: commentsLoading, error: commentsError } = useComments(resolvedParams.id);
   const [showSnackBar, setShowSnackBar] = useState(false);
   const [snackBarMessage, setSnackBarMessage] = useState('');
   const [modalContent, setModalContent] = useState<{
@@ -273,8 +275,80 @@ export default function PostPage({ params }: PostPageProps) {
             </div>
           </footer>
         </article>
-      </div>
 
+        {/* Sección de comentarios */}
+        <section className="bg-white rounded-lg shadow-sm border mt-6 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            Comentarios ({post.comments_count})
+          </h2>
+          
+          {commentsLoading && (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {commentsError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-600 text-sm">Error al cargar comentarios: {commentsError}</p>
+            </div>
+          )}
+          
+          {!commentsLoading && !commentsError && comments.length === 0 && (
+            <div className="text-center py-8">
+              <div className="text-gray-400 mb-2">
+                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.97 8.97 0 01-4.906-1.435l-3.657 1.218a.5.5 0 01-.65-.65l1.218-3.657A8.97 8.97 0 013 12a8 8 0 018-8c4.418 0 8 3.582 8 8z" />
+                </svg>
+              </div>
+              <p className="text-gray-500">No hay comentarios aún</p>
+              <p className="text-gray-400 text-sm">Sé el primero en comentar</p>
+            </div>
+          )}
+          
+          {!commentsLoading && !commentsError && comments.length > 0 && (
+            <div className="space-y-6">
+              {comments.map((comment) => (
+                <div key={comment.id} className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    {comment.profiles?.full_name?.charAt(0).toUpperCase() || 
+                     comment.profiles?.email?.charAt(0).toUpperCase() || '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="text-sm font-medium text-gray-900">
+                        {comment.profiles?.full_name || comment.profiles?.email || 'Usuario anónimo'}
+                      </h4>
+                      <span className="text-xs text-gray-500">
+                        {new Date(comment.created_at).toLocaleDateString('es-ES', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-gray-700 text-sm whitespace-pre-wrap break-words">
+                      {comment.content}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
       {/* Modal dinámico */}
       {modalContent && (
         <Modal isOpen={isModalOpen} onClose={closeModal}>

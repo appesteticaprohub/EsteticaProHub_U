@@ -32,6 +32,19 @@ export interface Like {
   created_at: string
 }
 
+// Tipos para Comments
+export interface Comment {
+  id: string
+  post_id: string
+  user_id: string
+  content: string
+  created_at: string
+  profiles?: {
+    full_name: string | null
+    email: string
+  }
+}
+
 // Tipos para Profiles
 export interface Profile {
   id: string
