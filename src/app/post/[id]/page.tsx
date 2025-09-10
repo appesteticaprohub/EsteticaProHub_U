@@ -22,18 +22,24 @@ interface PostPageProps {
 interface CommentItemProps {
   comment: Comment;
   onReply: (commentId: string, content: string) => Promise<void>;
+  onUpdate: (commentId: string, content: string) => Promise<void>;
+  currentUserId: string | null;
   user: any;
   subscriptionStatus: string | null;
   level?: number;
 }
 
-function CommentItem({ comment, onReply, user, subscriptionStatus, level = 0 }: CommentItemProps) {
+function CommentItem({ comment, onReply, onUpdate, currentUserId, user, subscriptionStatus, level = 0 }: CommentItemProps) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.content);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   
   const userName = comment.profiles?.full_name || comment.profiles?.email || 'Usuario anónimo';
   const canReply = user && subscriptionStatus === 'Active';
+  const canEdit = currentUserId === comment.user_id && subscriptionStatus === 'Active';
 
   const handleReplyClick = () => {
     setShowReplyForm(true);
@@ -61,6 +67,31 @@ function CommentItem({ comment, onReply, user, subscriptionStatus, level = 0 }: 
     setReplyText('');
   };
 
+  const handleEditClick = () => {
+    setIsEditing(true);
+    setEditText(comment.content);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editText.trim()) {
+      return;
+    }
+    setIsSubmittingEdit(true);
+    try {
+      await onUpdate(comment.id, editText.trim());
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error submitting edit:', error);
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setEditText(comment.content);
+  };
+
   return (
     <div className={`${level > 0 ? 'ml-8 mt-4' : ''}`}>
       <div className="flex items-start gap-3">
@@ -83,16 +114,65 @@ function CommentItem({ comment, onReply, user, subscriptionStatus, level = 0 }: 
               })}
             </span>
           </div>
-          <p className="text-gray-700 text-sm whitespace-pre-wrap break-words mb-2">
-            {comment.content}
-          </p>
-          {canReply && (
-            <button
-              onClick={handleReplyClick}
-              className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-            >
-              Responder
-            </button>
+          
+          {/* Contenido del comentario o formulario de edición */}
+          {isEditing ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
+              <textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                className="w-full p-2 border border-yellow-300 rounded resize-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors duration-200"
+                rows={3}
+                disabled={isSubmittingEdit}
+                autoFocus
+              />
+              <div className="flex justify-end gap-2 mt-2">
+                <button
+                  onClick={cancelEdit}
+                  disabled={isSubmittingEdit}
+                  className="px-3 py-1 text-xs text-gray-600 hover:text-gray-800 transition-colors duration-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleEditSubmit}
+                  disabled={isSubmittingEdit || !editText.trim()}
+                  className={`px-3 py-1 text-xs rounded transition-colors duration-200 ${
+                    isSubmittingEdit || !editText.trim()
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                  }`}
+                >
+                  {isSubmittingEdit ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-700 text-sm whitespace-pre-wrap break-words mb-2">
+              {comment.content}
+            </p>
+          )}
+          
+          {/* Botones de acción */}
+          {!isEditing && (
+            <div className="flex items-center gap-3">
+              {canReply && (
+                <button
+                  onClick={handleReplyClick}
+                  className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                >
+                  Responder
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  onClick={handleEditClick}
+                  className="text-yellow-600 hover:text-yellow-800 text-xs font-medium"
+                >
+                  Editar
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -144,6 +224,8 @@ function CommentItem({ comment, onReply, user, subscriptionStatus, level = 0 }: 
               key={reply.id}
               comment={reply}
               onReply={onReply}
+              onUpdate={onUpdate}
+              currentUserId={currentUserId}
               user={user}
               subscriptionStatus={subscriptionStatus}
               level={level + 1}
@@ -163,7 +245,7 @@ export default function PostPage({ params }: PostPageProps) {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(resolvedParams.id);
-  const { comments, loading: commentsLoading, error: commentsError, createComment } = useCommentsWithActions(resolvedParams.id);
+  const { comments, loading: commentsLoading, error: commentsError, createComment, updateComment } = useCommentsWithActions(resolvedParams.id);
   const [showSnackBar, setShowSnackBar] = useState(false);
   const [snackBarMessage, setSnackBarMessage] = useState('');
   const [modalContent, setModalContent] = useState<{
@@ -257,6 +339,30 @@ const handleCreateReply = async (commentId: string, content: string) => {
   }
 };
 
+const handleUpdateComment = async (commentId: string, content: string) => {
+  if (!user || subscriptionStatus !== 'Active') {
+    setSnackBarMessage('Necesitas una suscripción');
+    setShowSnackBar(true);
+    throw new Error('Sin suscripción');
+  }
+
+  try {
+    const result = await updateComment(commentId, content, resolvedParams.id);
+    
+    if (result.error) {
+      setSnackBarMessage(`Error: ${result.error}`);
+      setShowSnackBar(true);
+      throw new Error(result.error);
+    } else {
+      setSnackBarMessage('Comentario actualizado exitosamente');
+      setShowSnackBar(true);
+    }
+  } catch (error) {
+    setSnackBarMessage('Error al actualizar comentario');
+    setShowSnackBar(true);
+    throw error;
+  }
+};
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -547,6 +653,8 @@ const handleCreateReply = async (commentId: string, content: string) => {
                 key={comment.id} 
                 comment={comment} 
                 onReply={handleCreateReply}
+                onUpdate={handleUpdateComment}
+                currentUserId={user?.id || null}
                 user={user}
                 subscriptionStatus={subscriptionStatus}
               />

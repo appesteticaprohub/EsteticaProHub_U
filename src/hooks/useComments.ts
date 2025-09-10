@@ -57,10 +57,30 @@ export function useCommentsWithActions(postId: string | null) {
     }
   }
 
-  return {
-    comments,
-    loading,
-    error,
-    createComment
+  const updateComment = async (commentId: string, content: string, postId: string) => {
+  try {
+    const { data, error } = await apiClient.put<Comment>(`/posts/${postId}/comments/${commentId}`, {
+      content
+    })
+
+    if (error) {
+      throw new Error(error)
+    }
+
+    // Revalidar la lista de comentarios
+    mutate(`/posts/${postId}/comments`)
+
+    return { data, error: null }
+  } catch (error) {
+    return { data: null, error: error instanceof Error ? error.message : 'Error desconocido' }
   }
+}
+
+return {
+  comments,
+  loading,
+  error,
+  createComment,
+  updateComment
+}
 }
