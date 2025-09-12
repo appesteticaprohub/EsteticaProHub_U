@@ -25,7 +25,10 @@ interface CommentItemProps {
   onUpdate: (commentId: string, content: string) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
   currentUserId: string | null;
-  user: any;
+  user: {
+    id: string;
+    email: string;
+  } | null;
   subscriptionStatus: string | null;
   level?: number;
 }

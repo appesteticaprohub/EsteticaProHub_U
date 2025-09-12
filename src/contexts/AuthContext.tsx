@@ -7,7 +7,9 @@ import { apiClient } from '@/lib/api-client'
 interface User {
   id: string
   email: string
-  user_metadata?: any
+  user_metadata?: {
+    [key: string]: string | number | boolean | null;
+  }
 }
 
 interface Session {
@@ -30,8 +32,8 @@ interface AuthContextType {
   userType: string | null
   subscriptionStatus: string | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: any }>
-  signUp: (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string) => Promise<{ error: any }>
+  signIn: (email: string, password: string) => Promise<{ error: { message: string } | null }>
+  signUp: (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string) => Promise<{ error: { message: string } | null }>
   signOut: () => Promise<void>
 }
 

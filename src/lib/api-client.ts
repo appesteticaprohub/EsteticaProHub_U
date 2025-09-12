@@ -47,7 +47,7 @@ export class ApiClient {
   // Métodos POST
   async post<T>(
     endpoint: string, 
-    body: any
+    body: Record<string, unknown>
   ): Promise<{ data: T | null; error: string | null }> {
     return this.request<T>(endpoint, {
       method: 'POST',
@@ -58,7 +58,7 @@ export class ApiClient {
   // Métodos PUT
   async put<T>(
     endpoint: string, 
-    body: any
+    body: Record<string, unknown>
   ): Promise<{ data: T | null; error: string | null }> {
     return this.request<T>(endpoint, {
       method: 'PUT',
@@ -69,7 +69,7 @@ export class ApiClient {
   // Métodos PATCH
   async patch<T>(
     endpoint: string, 
-    body: any
+    body: Record<string, unknown>
   ): Promise<{ data: T | null; error: string | null }> {
     return this.request<T>(endpoint, {
       method: 'PATCH',

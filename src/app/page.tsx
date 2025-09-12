@@ -54,7 +54,11 @@ function CategoryCard({
   onLimitChange 
 }: {
   title: string;
-  posts: any[];
+  posts: {
+    id: string;
+    title: string;
+    created_at: string;
+  }[];
   loading: boolean;
   error: string | null;
   limit: number;

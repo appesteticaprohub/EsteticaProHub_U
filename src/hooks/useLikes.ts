@@ -69,7 +69,7 @@ export function useLikes(postId: string | null) {
         if (postId) {
           mutate(
             `/posts/${postId}`,
-            (currentPost: any) => {
+            (currentPost: { likes_count: number; [key: string]: unknown } | undefined) => {
               if (currentPost) {
                 return {
                   ...currentPost,

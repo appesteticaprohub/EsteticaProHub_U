@@ -43,7 +43,23 @@ export async function GET(
     const topLevelComments: Comment[] = []
 
     // Primero, crear todos los comentarios
-    commentsData?.forEach((comment: any) => {
+    commentsData?.forEach((comment: {
+      id: string;
+      post_id: string;
+      user_id: string;
+      content: string;
+      created_at: string;
+      parent_id: string | null;
+      is_deleted: boolean;
+      deleted_at: string | null;
+      profiles: {
+        full_name: string | null;
+        email: string;
+      } | {
+        full_name: string | null;
+        email: string;
+      }[];
+    }) => {
       const commentObj: Comment = {
         id: comment.id,
         post_id: comment.post_id,
@@ -53,7 +69,7 @@ export async function GET(
         parent_id: comment.parent_id,
         is_deleted: comment.is_deleted,
         deleted_at: comment.deleted_at,
-        profiles: comment.is_deleted ? null : (Array.isArray(comment.profiles) 
+        profiles: comment.is_deleted ? undefined : (Array.isArray(comment.profiles) 
           ? comment.profiles[0] 
           : comment.profiles),
         replies: []

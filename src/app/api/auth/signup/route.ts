@@ -38,7 +38,12 @@ if (error) {
 
 // Si el registro fue exitoso y tenemos un usuario, actualizar el perfil
 if (data.user) {
-  const updateData: any = {}
+  const updateData: {
+    full_name?: string;
+    specialty?: string;
+    country?: string;
+    birth_date?: string;
+  } = {}
 
   // Solo agregar campos si tienen valor
   if (fullName) updateData.full_name = fullName
