@@ -56,10 +56,10 @@ export default function MiPerfil() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha de registro
+                  ID de Usuario
                 </label>
-                <div className="text-lg text-gray-900 bg-gray-50 px-4 py-3 rounded-md">
-                  {formatDate(user.created_at)}
+                <div className="text-lg text-gray-900 bg-gray-50 px-4 py-3 rounded-md font-mono text-sm">
+                  {user.id}
                 </div>
               </div>
             </div>
