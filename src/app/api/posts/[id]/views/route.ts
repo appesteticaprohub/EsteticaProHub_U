@@ -3,11 +3,11 @@ import { createServerSupabaseClient } from '@/lib/server-supabase'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient()
-    const { id } = params
+    const { id } = await params
 
     // Primero obtener el valor actual
     const { data: currentPost, error: fetchError } = await supabase
@@ -39,7 +39,7 @@ export async function PATCH(
     }
 
     return NextResponse.json({ data, error: null })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Internal server error' },
       { status: 500 }

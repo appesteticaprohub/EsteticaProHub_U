@@ -3,12 +3,12 @@ import { createServerSupabaseClient, getCurrentUser } from '@/lib/server-supabas
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient()
     const { user } = await getCurrentUser()
-    const { id: postId } = params
+    const { id: postId } = await params
 
     // Obtener contador de likes del post
     const { data: post, error: postError } = await supabase
@@ -28,17 +28,14 @@ export async function GET(
 
     // Si hay usuario, verificar si ya dio like
     if (user) {
-      const { data: like, error: likeError } = await supabase
+      const { data: like } = await supabase
         .from('likes')
         .select('id')
         .eq('post_id', postId)
         .eq('user_id', user.id)
         .maybeSingle()
 
-      // Si hay error de permisos, asumimos que no hay like
-      if (!likeError || likeError.code === 'PGRST116') {
-        isLiked = !!like
-      }
+      isLiked = !!like
     }
 
     return NextResponse.json({
@@ -48,7 +45,7 @@ export async function GET(
       },
       error: null
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Internal server error' },
       { status: 500 }
@@ -58,12 +55,12 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient()
     const { user } = await getCurrentUser()
-    const { id: postId } = params
+    const { id: postId } = await params
 
     if (!user) {
       return NextResponse.json(
@@ -165,7 +162,7 @@ export async function POST(
       { data: null, error: 'Error processing like' },
       { status: 500 }
     )
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Internal server error' },
       { status: 500 }

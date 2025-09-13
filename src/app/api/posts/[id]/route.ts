@@ -4,12 +4,12 @@ import { cookies } from 'next/headers'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient()
     const { user } = await getCurrentUser()
-    const { id } = params
+    const { id } = await params
 
     const { data, error } = await supabase
       .from('posts')
@@ -43,7 +43,7 @@ export async function GET(
     }
 
     return NextResponse.json({ data, error: null })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Internal server error' },
       { status: 500 }
