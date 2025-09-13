@@ -7,6 +7,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import Modal from '@/components/Modal';
 import { createPost } from '@/lib/supabase';
 
+// Tipo para la respuesta del post creado
+interface CreatedPost {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  author_id: string;
+  created_at: string;
+  updated_at: string;
+  views_count: number;
+  likes_count: number;
+  comments_count: number;
+}
+
 export default function CrearPost() {
   const { user, session, userType, subscriptionStatus, loading } = useAuth();
   const router = useRouter();
@@ -77,7 +91,7 @@ export default function CrearPost() {
       content: contenido,
       category: categoria,
       authorId: user.id
-    });
+    }) as { data: CreatedPost | null; error: string | null };
 
     if (error) {
       console.error('Error al crear el post:', error);
