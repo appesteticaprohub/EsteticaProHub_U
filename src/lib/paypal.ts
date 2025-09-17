@@ -80,12 +80,50 @@ export async function verifyPayPalPayment(paymentId: string) {
 
 // ==================== FUNCIONES PARA SUSCRIPCIONES ====================
 
+// Crear producto en PayPal (se ejecuta una vez)
+export async function createPayPalProduct() {
+  const accessToken = await getPayPalAccessToken();
+  
+  const product = {
+    name: "EsteticaProHub Premium",
+    description: "Suscripción premium mensual para EsteticaProHub - Acceso completo a contenido exclusivo y funciones avanzadas",
+    type: "SERVICE",
+    category: "SOFTWARE",
+    image_url: `${PAYPAL_CONFIG.baseUrl}/logo.png`, // Opcional
+    home_url: PAYPAL_CONFIG.baseUrl
+  };
+
+  const response = await fetch(`${PAYPAL_BASE_URL}/v1/catalogs/products`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(product),
+  });
+
+  return response.json();
+}
+
 // Crear plan de suscripción en PayPal (se ejecuta una vez)
 export async function createPayPalSubscriptionPlan() {
   const accessToken = await getPayPalAccessToken();
   
+  // Primero crear el producto si no existe
+  console.log('🛍️ Creando producto PayPal...');
+  const product = await createPayPalProduct();
+  
+  console.log('🛍️ Respuesta del producto:', JSON.stringify(product, null, 2));
+  
+  if (product.error || !product.id) {
+    console.error('❌ Error creando producto:', product);
+    return { error: 'Failed to create product', details: product };
+  }
+  
+  console.log('✅ Producto creado con ID:', product.id);
+  
   const plan = {
-    product_id: "ESTETICA_PRO_HUB", // ID único del producto
+    product_id: product.id, // Usar el ID del producto recién creado
     name: "EsteticaProHub Premium Monthly",
     description: "Suscripción mensual premium para EsteticaProHub",
     status: "ACTIVE",

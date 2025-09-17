@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       const { error } = await supabase
         .from('payment_sessions')
         .update({ 
-          status: 'active_subscription',
+          status: 'paid', // Usar 'paid' en lugar de 'active_subscription'
           paypal_subscription_id: subscriptionId
         })
         .eq('external_reference', externalReference);

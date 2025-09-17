@@ -48,46 +48,136 @@ export async function POST(request: NextRequest) {
     if (isAutoRenewal) {
       // ==================== FLUJO DE SUSCRIPCIÓN ====================
       
-      // Primero crear el plan (en producción esto se haría una sola vez)
-      const plan = await createPayPalSubscriptionPlan();
+      console.log('🔄 INICIANDO FLUJO DE SUSCRIPCIÓN');
+      console.log('📊 External Reference:', externalReference);
+      console.log('🏦 PayPal Environment:', process.env.PAYPAL_ENVIRONMENT);
+      console.log('🔑 PayPal Client ID exists:', !!process.env.PAYPAL_CLIENT_ID);
+      console.log('🔐 PayPal Client Secret exists:', !!process.env.PAYPAL_CLIENT_SECRET);
       
-      if (plan.error) {
-        console.error('PayPal Plan error:', plan.error);
+      try {
+        // Primero crear el plan (en producción esto se haría una vez)
+        console.log('📋 Creando plan de suscripción PayPal...');
+        const plan = await createPayPalSubscriptionPlan();
+        
+        console.log('📋 Respuesta del plan:', JSON.stringify(plan, null, 2));
+        
+        if (plan.error) {
+          console.error('❌ PayPal Plan error:', plan.error);
+          console.error('❌ Plan error details:', JSON.stringify(plan, null, 2));
+          return NextResponse.json(
+            { 
+              error: 'Error creating subscription plan',
+              details: plan.error,
+              step: 'plan_creation'
+            },
+            { status: 500 }
+          );
+        }
+
+        if (!plan.id) {
+          console.error('❌ Plan creado pero sin ID:', JSON.stringify(plan, null, 2));
+          return NextResponse.json(
+            { 
+              error: 'Plan created but no ID returned',
+              details: plan,
+              step: 'plan_validation'
+            },
+            { status: 500 }
+          );
+        }
+
+        console.log('✅ Plan creado exitosamente con ID:', plan.id);
+        
+        // Crear suscripción con el plan
+        console.log('🔄 Creando suscripción PayPal con plan ID:', plan.id);
+        const paypalSubscription = await createPayPalSubscription(externalReference, plan.id);
+
+        console.log('🔄 Respuesta de suscripción:', JSON.stringify(paypalSubscription, null, 2));
+
+        if (paypalSubscription.error) {
+          console.error('❌ PayPal Subscription error:', paypalSubscription.error);
+          console.error('❌ Subscription error details:', JSON.stringify(paypalSubscription, null, 2));
+          return NextResponse.json(
+            { 
+              error: 'Error creating PayPal subscription',
+              details: paypalSubscription.error,
+              step: 'subscription_creation'
+            },
+            { status: 500 }
+          );
+        }
+
+        if (!paypalSubscription.id) {
+          console.error('❌ Suscripción creada pero sin ID:', JSON.stringify(paypalSubscription, null, 2));
+          return NextResponse.json(
+            { 
+              error: 'Subscription created but no ID returned',
+              details: paypalSubscription,
+              step: 'subscription_validation'
+            },
+            { status: 500 }
+          );
+        }
+
+        console.log('✅ Suscripción creada exitosamente con ID:', paypalSubscription.id);
+
+        // Actualizar session con PayPal subscription ID
+        console.log('💾 Actualizando payment session con subscription ID...');
+        const { error: updateError } = await supabase
+          .from('payment_sessions')
+          .update({ paypal_subscription_id: paypalSubscription.id })
+          .eq('external_reference', externalReference);
+
+        if (updateError) {
+          console.error('❌ Error actualizando payment session:', updateError);
+        } else {
+          console.log('✅ Payment session actualizada correctamente');
+        }
+
+        // Encontrar URL de aprobación de PayPal
+        console.log('🔍 Buscando URL de aprobación...');
+        console.log('🔗 Links disponibles:', JSON.stringify(paypalSubscription.links, null, 2));
+        
+        const approvalUrl = paypalSubscription.links?.find(
+          (link: any) => link.rel === 'approve'
+        )?.href;
+
+        if (!approvalUrl) {
+          console.error('❌ No se encontró URL de aprobación');
+          console.error('🔗 Links recibidos:', JSON.stringify(paypalSubscription.links, null, 2));
+          return NextResponse.json(
+            { 
+              error: 'No approval URL found',
+              details: paypalSubscription.links,
+              step: 'approval_url_extraction'
+            },
+            { status: 500 }
+          );
+        }
+
+        console.log('✅ URL de aprobación encontrada:', approvalUrl);
+        console.log('🎉 FLUJO DE SUSCRIPCIÓN COMPLETADO EXITOSAMENTE');
+
+        return NextResponse.json({
+          success: true,
+          payment_type: 'subscription',
+          paypal_subscription_id: paypalSubscription.id,
+          approval_url: approvalUrl,
+          external_reference: externalReference
+        });
+
+      } catch (subscriptionError) {
+        console.error('💥 Error inesperado en flujo de suscripción:', subscriptionError);
+        console.error('💥 Stack trace:', (subscriptionError as Error).stack);
         return NextResponse.json(
-          { error: 'Error creating subscription plan' },
+          { 
+            error: 'Unexpected error in subscription flow',
+            details: (subscriptionError as Error).message,
+            step: 'unexpected_error'
+          },
           { status: 500 }
         );
       }
-
-      // Crear suscripción con el plan
-      const paypalSubscription = await createPayPalSubscription(externalReference, plan.id);
-
-      if (paypalSubscription.error) {
-        console.error('PayPal Subscription error:', paypalSubscription.error);
-        return NextResponse.json(
-          { error: 'Error creating PayPal subscription' },
-          { status: 500 }
-        );
-      }
-
-      // Actualizar session con PayPal subscription ID
-      await supabase
-        .from('payment_sessions')
-        .update({ paypal_subscription_id: paypalSubscription.id })
-        .eq('external_reference', externalReference);
-
-      // Encontrar URL de aprobación de PayPal
-      const approvalUrl = paypalSubscription.links?.find(
-        (link: any) => link.rel === 'approve'
-      )?.href;
-
-      return NextResponse.json({
-        success: true,
-        payment_type: 'subscription',
-        paypal_subscription_id: paypalSubscription.id,
-        approval_url: approvalUrl,
-        external_reference: externalReference
-      });
 
     } else {
       // ==================== FLUJO DE PAGO ÚNICO (EXISTENTE) ====================

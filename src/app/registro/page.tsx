@@ -65,13 +65,29 @@ useEffect(() => {
       return;
     }
 
-    // Si hay parámetros de PayPal, ejecutar el pago primero
+    console.log('🔍 Validando pago/suscripción para ref:', paymentRef);
+    console.log('🔍 Parámetros URL:', Object.fromEntries(searchParams.entries()));
+
+    // Verificar si es un pago único (parámetros tradicionales de PayPal)
     const paymentId = searchParams.get('paymentId');
     const payerId = searchParams.get('PayerID');
 
-    console.log('Payment params:', { paymentId, payerId, paymentRef });
+    // Verificar si es una suscripción (parámetros de PayPal subscription)
+    const subscriptionId = searchParams.get('subscription_id');
+    const baToken = searchParams.get('ba_token');
 
+    console.log('💳 Tipo de pago detectado:', {
+      paymentId,
+      payerId,
+      subscriptionId,
+      baToken,
+      isOneTimePayment: !!(paymentId && payerId),
+      isSubscription: !!(subscriptionId || baToken)
+    });
+
+    // FLUJO PARA PAGOS ÚNICOS
     if (paymentId && payerId) {
+      console.log('💰 Procesando pago único...');
       try {
         const executeResponse = await fetch('/api/paypal/execute-payment', {
           method: 'POST',
@@ -79,35 +95,78 @@ useEffect(() => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-          paymentId: paymentId,
-          payerId: payerId,
-          externalReference: paymentRef
-        }),
+            paymentId: paymentId,
+            payerId: payerId,
+            externalReference: paymentRef
+          }),
         });
 
-        console.log('Sending to execute-payment:', { paymentId, payerId, externalReference: paymentRef });
+        console.log('💰 Respuesta execute-payment:', executeResponse.status);
 
         if (!executeResponse.ok) {
           setPaymentError('Error al confirmar el pago');
           return;
         }
       } catch (error) {
+        console.error('❌ Error ejecutando pago:', error);
         setPaymentError('Error al confirmar el pago');
         return;
       }
     }
 
-    // Validar payment session
+    // FLUJO PARA SUSCRIPCIONES
+    else if (subscriptionId || baToken) {
+      console.log('🔄 Procesando suscripción aprobada...');
+      try {
+        // Ejecutar aprobación de suscripción
+        const executeResponse = await fetch('/api/paypal/execute-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            subscriptionId: subscriptionId,
+            baToken: baToken,
+            externalReference: paymentRef,
+            type: 'subscription'
+          }),
+        });
+
+        console.log('🔄 Respuesta execute-subscription:', executeResponse.status);
+
+        if (!executeResponse.ok) {
+          const errorData = await executeResponse.json();
+          console.error('❌ Error en execute-subscription:', errorData);
+          setPaymentError('Error al confirmar la suscripción');
+          return;
+        }
+
+        const responseData = await executeResponse.json();
+        console.log('✅ Suscripción procesada:', responseData);
+      } catch (error) {
+        console.error('❌ Error ejecutando suscripción:', error);
+        setPaymentError('Error al confirmar la suscripción');
+        return;
+      }
+    }
+
+    // Validar payment session (común para ambos flujos)
+    console.log('🔍 Validando sesión de pago...');
     try {
       const response = await fetch(`/api/paypal/validate-session?ref=${paymentRef}`);
       const data = await response.json();
 
+      console.log('🔍 Respuesta validate-session:', data);
+
       if (data.isValid) {
+        console.log('✅ Pago/suscripción validada correctamente');
         setPaymentValidated(true);
       } else {
+        console.error('❌ Sesión inválida:', data.error);
         setPaymentError(data.error || 'Sesión de pago inválida');
       }
     } catch (error) {
+      console.error('❌ Error validando sesión:', error);
       setPaymentError('Error al validar el pago');
     }
   };
