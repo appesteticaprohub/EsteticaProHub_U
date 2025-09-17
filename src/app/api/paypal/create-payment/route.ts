@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createPayPalPayment, createPayPalSubscription, createOrGetPayPalSubscriptionPlan } from '@/lib/paypal';
+import { isAutoRenewalEnabled } from '@/lib/settings';
 
 // Generar referencia externa única
 function generateExternalReference(): string {
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const isAutoRenewal = process.env.ENABLE_AUTO_RENEWAL === 'true';
+    const isAutoRenewal = await isAutoRenewalEnabled();
 
     // Crear payment session en base de datos
     const externalReference = generateExternalReference();

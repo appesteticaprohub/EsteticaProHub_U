@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyPayPalPayment, verifyPayPalSubscription } from '@/lib/paypal';
+import { isAutoRenewalEnabled } from '@/lib/settings';
 
 // Función para obtener token de acceso
 async function getPayPalAccessToken(): Promise<string> {
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isAutoRenewal = process.env.ENABLE_AUTO_RENEWAL === 'true';
+    const isAutoRenewal = await isAutoRenewalEnabled();
 
     if (isAutoRenewal && subscriptionId) {
       // ==================== FLUJO DE SUSCRIPCIÓN ====================
