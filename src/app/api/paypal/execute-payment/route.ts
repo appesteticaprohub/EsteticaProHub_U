@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { verifyPayPalPayment } from '@/lib/paypal';
+import { verifyPayPalPayment, verifyPayPalSubscription } from '@/lib/paypal';
 
 // Función para obtener token de acceso
 async function getPayPalAccessToken(): Promise<string> {
@@ -25,40 +25,12 @@ async function getPayPalAccessToken(): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
-    const { paymentId, payerId, externalReference } = await request.json();
-    console.log('Received params:', { paymentId, payerId, externalReference });
+    const { paymentId, payerId, externalReference, subscriptionId } = await request.json();
+    console.log('Received params:', { paymentId, payerId, externalReference, subscriptionId });
 
-    if (!paymentId || !payerId || !externalReference) {
+    if (!externalReference || (!paymentId && !subscriptionId)) {
       return NextResponse.json(
         { error: 'Missing required parameters' },
-        { status: 400 }
-      );
-    }
-
-    // Primero ejecutar el pago en PayPal
-    console.log('About to execute PayPal payment:', paymentId);
-
-    const accessToken = await getPayPalAccessToken();
-
-    const executePayload = {
-      payer_id: payerId
-    };
-
-    const executeResponse = await fetch(`https://api.sandbox.paypal.com/v1/payments/payment/${paymentId}/execute`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(executePayload),
-    });
-
-    const executedPayment = await executeResponse.json();
-    console.log('PayPal execution response:', executedPayment);
-
-    if (executedPayment.state !== 'approved') {
-      return NextResponse.json(
-        { error: 'Payment not approved' },
         { status: 400 }
       );
     }
@@ -68,31 +40,133 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Actualizar payment session a 'paid'
-    const { error } = await supabase
+    // Obtener información de la sesión para determinar el tipo
+    const { data: session, error: sessionError } = await supabase
       .from('payment_sessions')
-      .update({ 
-        status: 'paid',
-        paypal_payment_id: paymentId
-      })
-      .eq('external_reference', externalReference);
+      .select('*')
+      .eq('external_reference', externalReference)
+      .single();
 
-    if (error) {
-      console.error('Database error:', error);
+    if (sessionError || !session) {
+      console.error('Session not found:', sessionError);
       return NextResponse.json(
-        { error: 'Database update failed' },
-        { status: 500 }
+        { error: 'Payment session not found' },
+        { status: 400 }
       );
     }
 
-    return NextResponse.json({ success: true, message: 'Payment confirmed' });
+    const isAutoRenewal = process.env.ENABLE_AUTO_RENEWAL === 'true';
+
+    if (isAutoRenewal && subscriptionId) {
+      // ==================== FLUJO DE SUSCRIPCIÓN ====================
+      console.log('Processing subscription:', subscriptionId);
+
+      // Verificar estado de la suscripción en PayPal
+      const subscriptionDetails = await verifyPayPalSubscription(subscriptionId);
+      console.log('PayPal subscription details:', subscriptionDetails);
+
+      if (subscriptionDetails.status !== 'ACTIVE') {
+        return NextResponse.json(
+          { error: 'Subscription not active' },
+          { status: 400 }
+        );
+      }
+
+      // Actualizar payment session para suscripción activa
+      const { error } = await supabase
+        .from('payment_sessions')
+        .update({ 
+          status: 'active_subscription',
+          paypal_subscription_id: subscriptionId
+        })
+        .eq('external_reference', externalReference);
+
+      if (error) {
+        console.error('Database error:', error);
+        return NextResponse.json(
+          { error: 'Database update failed' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Subscription activated',
+        subscription_id: subscriptionId 
+      });
+
+    } else if (!isAutoRenewal && paymentId) {
+      // ==================== FLUJO DE PAGO ÚNICO (EXISTENTE) ====================
+      console.log('Processing one-time payment:', paymentId);
+
+      if (!payerId) {
+        return NextResponse.json(
+          { error: 'Missing payerId for one-time payment' },
+          { status: 400 }
+        );
+      }
+
+      const accessToken = await getPayPalAccessToken();
+
+      const executePayload = {
+        payer_id: payerId
+      };
+
+      const PAYPAL_BASE_URL = process.env.PAYPAL_ENVIRONMENT === 'production' 
+        ? 'https://api.paypal.com'
+        : 'https://api.sandbox.paypal.com';
+
+      const executeResponse = await fetch(`${PAYPAL_BASE_URL}/v1/payments/payment/${paymentId}/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(executePayload),
+      });
+
+      const executedPayment = await executeResponse.json();
+      console.log('PayPal execution response:', executedPayment);
+
+      if (executedPayment.state !== 'approved') {
+        return NextResponse.json(
+          { error: 'Payment not approved' },
+          { status: 400 }
+        );
+      }
+
+      // Actualizar payment session a 'paid'
+      const { error } = await supabase
+        .from('payment_sessions')
+        .update({ 
+          status: 'paid',
+          paypal_payment_id: paymentId
+        })
+        .eq('external_reference', externalReference);
+
+      if (error) {
+        console.error('Database error:', error);
+        return NextResponse.json(
+          { error: 'Database update failed' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({ success: true, message: 'Payment confirmed' });
+
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid payment configuration' },
+        { status: 400 }
+      );
+    }
 
   } catch (error) {
-  console.error('Execute payment error details:', error);
-  if (error instanceof Error) {
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-  }
+    console.error('Execute payment error details:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

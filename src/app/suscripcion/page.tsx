@@ -1,40 +1,79 @@
 'use client';
-
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function Suscripcion() {
   const router = useRouter();
+  const [isAutoRenewal, setIsAutoRenewal] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+  // Simplemente usar una variable de entorno del cliente o asumir configuración
+  // Por ahora, detectamos desde una API simple
+  const detectMode = async () => {
+    try {
+      // Crear una llamada que nos devuelva la configuración
+      const response = await fetch('/api/paypal/config');
+      if (response.ok) {
+        const config = await response.json();
+        setIsAutoRenewal(config.autoRenewal);
+      } else {
+        setIsAutoRenewal(false);
+      }
+    } catch (error) {
+      setIsAutoRenewal(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  detectMode();
+}, []);
 
   const handleSuscripcion = async () => {
-  try {
-    const response = await fetch('/api/paypal/create-payment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      const response = await fetch('/api/paypal/create-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (data.success && data.approval_url) {
-      // Redirigir a PayPal
-      window.location.href = data.approval_url;
-    } else {
-      alert('Error al crear el pago. Por favor intenta de nuevo.');
+      if (data.success && data.approval_url) {
+        window.location.href = data.approval_url;
+      } else {
+        alert('Error al crear el pago. Por favor intenta de nuevo.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error inesperado. Por favor intenta de nuevo.');
     }
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Error inesperado. Por favor intenta de nuevo.');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    );
   }
-};
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
       <div className="max-w-4xl mx-auto">
-        {/* Título llamativo */}
+        {/* Título dinámico */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            ¡Hazte <span className="text-blue-600">Premium</span> Hoy!
+            {isAutoRenewal ? (
+              <>¡Únete a <span className="text-blue-600">Premium</span>!</>
+            ) : (
+              <>¡Hazte <span className="text-blue-600">Premium</span> Hoy!</>
+            )}
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Accede a contenido exclusivo, funciones avanzadas y participa en discusiones especializadas con otros profesionales de la estética.
@@ -43,19 +82,43 @@ export default function Suscripcion() {
 
         {/* Tarjeta de suscripción */}
         <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-12 max-w-2xl mx-auto">
-          {/* Precio destacado */}
+          {/* Precio y modalidad */}
           <div className="text-center mb-8">
             <div className="inline-flex items-baseline gap-2 mb-2">
               <span className="text-5xl font-bold text-gray-900">$10</span>
-              <span className="text-xl text-gray-500">/ mes</span>
+              <span className="text-xl text-gray-500">
+                {isAutoRenewal ? '/ mes' : ''}
+              </span>
             </div>
-            <p className="text-gray-600">Facturación mensual • Cancela cuando quieras</p>
+            
+            {isAutoRenewal ? (
+              <div>
+                <p className="text-gray-600 mb-2">Suscripción mensual automática</p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-green-800 text-sm font-medium">
+                    ✅ Renovación automática • Cancela cuando quieras
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-gray-600 mb-2">Pago único - Acceso por 1 mes</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-blue-800 text-sm font-medium">
+                    💡 Sin renovación automática • Sin compromisos
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Lista de beneficios */}
           <div className="mb-8">
             <h3 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
-              Lo que incluye tu suscripción Premium:
+              {isAutoRenewal ? 
+                'Tu suscripción Premium incluye:' : 
+                'Tu acceso Premium incluye:'
+              }
             </h3>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
@@ -120,25 +183,31 @@ export default function Suscripcion() {
             </ul>
           </div>
 
-          {/* Botón llamativo */}
+          {/* Botón dinámico */}
           <button 
             onClick={handleSuscripcion}
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-8 rounded-xl text-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
           >
-            🚀 Suscribirse Ahora
+            {isAutoRenewal ? '🚀 Iniciar Suscripción' : '💎 Obtener Acceso Premium'}
           </button>
           
           <div className="text-center mt-4">
             <p className="text-sm text-gray-500">
-              ✨ Oferta especial: Primer mes con 30% de descuento
+              {isAutoRenewal ? 
+                '📱 Administra tu suscripción desde tu perfil' : 
+                '✨ Acceso inmediato por 30 días'
+              }
             </p>
           </div>
         </div>
 
-        {/* Garantía */}
+        {/* Garantía dinámica */}
         <div className="text-center mt-8">
           <p className="text-gray-600">
-            💰 Garantía de 30 días - Si no estás satisfecho, te devolvemos tu dinero
+            {isAutoRenewal ? 
+              '🔒 Cancela en cualquier momento sin penalizaciones' : 
+              '💰 Garantía de satisfacción - Soporte completo incluido'
+            }
           </p>
         </div>
       </div>
