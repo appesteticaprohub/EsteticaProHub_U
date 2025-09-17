@@ -5,9 +5,28 @@ import { useRouter } from 'next/navigation';
 export default function Suscripcion() {
   const router = useRouter();
 
-  const handleSuscripcion = () => {
-    router.push('/pago');
-  };
+  const handleSuscripcion = async () => {
+  try {
+    const response = await fetch('/api/paypal/create-payment', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.approval_url) {
+      // Redirigir a PayPal
+      window.location.href = data.approval_url;
+    } else {
+      alert('Error al crear el pago. Por favor intenta de nuevo.');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error inesperado. Por favor intenta de nuevo.');
+  }
+};
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
@@ -27,7 +46,7 @@ export default function Suscripcion() {
           {/* Precio destacado */}
           <div className="text-center mb-8">
             <div className="inline-flex items-baseline gap-2 mb-2">
-              <span className="text-5xl font-bold text-gray-900">$29</span>
+              <span className="text-5xl font-bold text-gray-900">$10</span>
               <span className="text-xl text-gray-500">/ mes</span>
             </div>
             <p className="text-gray-600">Facturación mensual • Cancela cuando quieras</p>

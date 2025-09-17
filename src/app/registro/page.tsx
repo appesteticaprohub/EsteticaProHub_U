@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import SpecialtySelect from '@/components/SpecialtySelect';
 import CountrySelect from '@/components/CountrySelect';
@@ -22,6 +23,10 @@ export default function Registro() {
 });
   
   const [loading, setLoading] = useState(false);
+  const [paymentValidated, setPaymentValidated] = useState<boolean | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const paymentRef = searchParams.get('ref');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,8 +57,75 @@ const handleDateChange = (field: 'day' | 'month' | 'year', value: string) => {
 
   const { signUp } = useAuth();
 
+  // Validar payment session al cargar la página
+useEffect(() => {
+  const validatePayment = async () => {
+    if (!paymentRef) {
+      setPaymentError('No se encontró referencia de pago válida');
+      return;
+    }
+
+    // Si hay parámetros de PayPal, ejecutar el pago primero
+    const paymentId = searchParams.get('paymentId');
+    const payerId = searchParams.get('PayerID');
+
+    console.log('Payment params:', { paymentId, payerId, paymentRef });
+
+    if (paymentId && payerId) {
+      try {
+        const executeResponse = await fetch('/api/paypal/execute-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+          paymentId: paymentId,
+          payerId: payerId,
+          externalReference: paymentRef
+        }),
+        });
+
+        console.log('Sending to execute-payment:', { paymentId, payerId, externalReference: paymentRef });
+
+        if (!executeResponse.ok) {
+          setPaymentError('Error al confirmar el pago');
+          return;
+        }
+      } catch (error) {
+        setPaymentError('Error al confirmar el pago');
+        return;
+      }
+    }
+
+    // Validar payment session
+    try {
+      const response = await fetch(`/api/paypal/validate-session?ref=${paymentRef}`);
+      const data = await response.json();
+
+      if (data.isValid) {
+        setPaymentValidated(true);
+      } else {
+        setPaymentError(data.error || 'Sesión de pago inválida');
+      }
+    } catch (error) {
+      setPaymentError('Error al validar el pago');
+    }
+  };
+
+  validatePayment();
+}, [paymentRef, searchParams]);
+
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
+  
+  if (!paymentValidated) {
+    setMessage({
+      type: 'error',
+      text: 'Debe completar el pago antes de registrarse'
+    });
+    return;
+  }
+
   setLoading(true);
   setMessage(null);
 
@@ -62,13 +134,13 @@ const handleSubmit = async (e: React.FormEvent) => {
     const birthDate = `${formData.fechaNacimiento.year}-${formData.fechaNacimiento.month.padStart(2, '0')}-${formData.fechaNacimiento.day.padStart(2, '0')}`;
     
     const { error } = await signUp(
-    formData.email, 
-    formData.contraseña, 
-    fullName,
-    formData.especialidad,
-    formData.pais,
-    birthDate
-  );
+      formData.email, 
+      formData.contraseña, 
+      fullName,
+      formData.especialidad,
+      formData.pais,
+      birthDate
+    );
 
     if (error) {
       setMessage({
@@ -76,10 +148,22 @@ const handleSubmit = async (e: React.FormEvent) => {
         text: `Error: ${error.message}`
       });
     } else {
+      // Marcar payment session como usada
+      if (paymentRef) {
+        await fetch('/api/paypal/mark-session-used', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ external_reference: paymentRef }),
+        });
+      }
+
       setMessage({
         type: 'success',
-        text: '¡Registro exitoso!'
+        text: '¡Registro exitoso! Tu suscripción Premium está activa.'
       });
+      
       // Limpiar el formulario
       setFormData({
         nombre: '',
