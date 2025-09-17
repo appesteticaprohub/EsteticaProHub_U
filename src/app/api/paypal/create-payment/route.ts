@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createPayPalPayment, createPayPalSubscription, createPayPalSubscriptionPlan } from '@/lib/paypal';
+import { createPayPalPayment, createPayPalSubscription, createOrGetPayPalSubscriptionPlan } from '@/lib/paypal';
 
 // Generar referencia externa única
 function generateExternalReference(): string {
@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
       
       try {
         // Primero crear el plan (en producción esto se haría una vez)
-        console.log('📋 Creando plan de suscripción PayPal...');
-        const plan = await createPayPalSubscriptionPlan();
+        console.log('📋 Obteniendo plan de suscripción PayPal...');
+        const plan = await createOrGetPayPalSubscriptionPlan();
         
         console.log('📋 Respuesta del plan:', JSON.stringify(plan, null, 2));
         

@@ -80,16 +80,45 @@ export async function verifyPayPalPayment(paymentId: string) {
 
 // ==================== FUNCIONES PARA SUSCRIPCIONES ====================
 
-// Crear producto en PayPal (se ejecuta una vez)
-export async function createPayPalProduct() {
+// Crear o recuperar producto existente en PayPal
+export async function createOrGetPayPalProduct() {
   const accessToken = await getPayPalAccessToken();
   
+  // Primero intentar buscar producto existente por nombre
+  console.log('🔍 Buscando producto existente...');
+  
+  try {
+    const searchResponse = await fetch(`${PAYPAL_BASE_URL}/v1/catalogs/products?page_size=20`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (searchResponse.ok) {
+      const searchData = await searchResponse.json();
+      const existingProduct = searchData.products?.find(
+        (product: any) => product.name === "EsteticaProHub Premium"
+      );
+
+      if (existingProduct) {
+        console.log('✅ Producto existente encontrado:', existingProduct.id);
+        return existingProduct;
+      }
+    }
+  } catch (error) {
+    console.log('⚠️ Error buscando productos existentes, creando nuevo...');
+  }
+
+  // Si no existe, crear nuevo producto
+  console.log('🛍️ Creando nuevo producto...');
   const product = {
     name: "EsteticaProHub Premium",
     description: "Suscripción premium mensual para EsteticaProHub - Acceso completo a contenido exclusivo y funciones avanzadas",
     type: "SERVICE",
     category: "SOFTWARE",
-    image_url: `${PAYPAL_CONFIG.baseUrl}/logo.png`, // Opcional
+    image_url: `${PAYPAL_CONFIG.baseUrl}/logo.png`,
     home_url: PAYPAL_CONFIG.baseUrl
   };
 
@@ -105,25 +134,53 @@ export async function createPayPalProduct() {
   return response.json();
 }
 
-// Crear plan de suscripción en PayPal (se ejecuta una vez)
-export async function createPayPalSubscriptionPlan() {
+export async function createOrGetPayPalSubscriptionPlan() {
   const accessToken = await getPayPalAccessToken();
   
-  // Primero crear el producto si no existe
-  console.log('🛍️ Creando producto PayPal...');
-  const product = await createPayPalProduct();
+  // Obtener o crear el producto
+  console.log('🛍️ Obteniendo producto PayPal...');
+  const product = await createOrGetPayPalProduct();
   
   console.log('🛍️ Respuesta del producto:', JSON.stringify(product, null, 2));
   
   if (product.error || !product.id) {
-    console.error('❌ Error creando producto:', product);
-    return { error: 'Failed to create product', details: product };
+    console.error('❌ Error con producto:', product);
+    return { error: 'Failed to get/create product', details: product };
   }
   
-  console.log('✅ Producto creado con ID:', product.id);
+  console.log('✅ Producto disponible con ID:', product.id);
   
+  // Buscar plan existente para este producto
+  console.log('🔍 Buscando plan existente...');
+  
+  try {
+    const searchResponse = await fetch(`${PAYPAL_BASE_URL}/v1/billing/plans?product_id=${product.id}&page_size=20`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (searchResponse.ok) {
+      const searchData = await searchResponse.json();
+      const existingPlan = searchData.plans?.find(
+        (plan: any) => plan.name === "EsteticaProHub Premium Monthly" && plan.status === "ACTIVE"
+      );
+
+      if (existingPlan) {
+        console.log('✅ Plan existente encontrado:', existingPlan.id);
+        return existingPlan;
+      }
+    }
+  } catch (error) {
+    console.log('⚠️ Error buscando planes existentes, creando nuevo...');
+  }
+
+  // Si no existe, crear nuevo plan
+  console.log('📋 Creando nuevo plan...');
   const plan = {
-    product_id: product.id, // Usar el ID del producto recién creado
+    product_id: product.id,
     name: "EsteticaProHub Premium Monthly",
     description: "Suscripción mensual premium para EsteticaProHub",
     status: "ACTIVE",
@@ -134,7 +191,7 @@ export async function createPayPalSubscriptionPlan() {
       },
       tenure_type: "REGULAR",
       sequence: 1,
-      total_cycles: 0, // 0 = infinito hasta que se cancele
+      total_cycles: 0,
       pricing_scheme: {
         fixed_price: {
           value: PAYPAL_CONFIG.amount,
