@@ -32,18 +32,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Validar estado
-    if (session.status !== 'paid') {
+    // Validar expiración PRIMERO (verificación lazy)
+    if (new Date() > new Date(session.expires_at)) {
+      // Marcar como expired si aún está como pending
+      if (session.status === 'pending') {
+        const { error: updateError } = await supabase
+          .from('payment_sessions')
+          .update({ status: 'expired' })
+          .eq('external_reference', externalReference);
+
+        if (updateError) {
+          console.error('Error updating expired session:', updateError);
+        } else {
+          console.log('Session marked as expired:', externalReference);
+        }
+      }
+
       return NextResponse.json(
-        { isValid: false, error: 'El pago no ha sido confirmado' },
+        { isValid: false, error: 'La sesión de pago ha expirado' },
         { status: 400 }
       );
     }
 
-    // Validar expiración
-    if (new Date() > new Date(session.expires_at)) {
+    // Validar estado (después de verificar expiración)
+    if (session.status !== 'paid') {
       return NextResponse.json(
-        { isValid: false, error: 'La sesión de pago ha expirado' },
+        { isValid: false, error: 'El pago no ha sido confirmado' },
         { status: 400 }
       );
     }
