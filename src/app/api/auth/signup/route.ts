@@ -72,6 +72,34 @@ if (data.user) {
       console.error('Error associating payment session with user:', sessionError)
     } else {
       console.log('Payment session associated with user:', data.user.id)
+      
+      // Verificar si la sesión está pagada y actualizar perfil del usuario
+      const { data: sessionData, error: sessionFetchError } = await supabaseAdmin
+        .from('payment_sessions')
+        .select('status, subscription_type')
+        .eq('external_reference', paymentReference)
+        .single()
+
+      if (!sessionFetchError && sessionData && sessionData.status === 'paid') {
+        // Calcular fecha de expiración (1 mes desde ahora)
+        const expirationDate = new Date();
+        expirationDate.setMonth(expirationDate.getMonth() + 1);
+
+        const { error: profileSubscriptionError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            subscription_status: 'Active',
+            subscription_expires_at: expirationDate.toISOString(),
+            user_type: 'premium'
+          })
+          .eq('id', data.user.id)
+
+        if (profileSubscriptionError) {
+          console.error('Error updating profile subscription info:', profileSubscriptionError)
+        } else {
+          console.log('Profile updated with subscription info for user:', data.user.id)
+        }
+      }
     }
   }
 }
