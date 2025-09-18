@@ -33,7 +33,7 @@ interface AuthContextType {
   subscriptionStatus: string | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: { message: string } | null }>
-  signUp: (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string) => Promise<{ error: { message: string } | null }>
+  signUp: (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string, paymentReference?: string) => Promise<{ error: { message: string } | null }>
   signOut: () => Promise<void>
 }
 
@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string) => {
+  const signUp = async (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string, paymentReference?: string) => {
   try {
     const { data: authData, error } = await apiClient.post<AuthData>('/auth/signup', {
       email,
@@ -94,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       specialty,
       country,
       birthDate,
+      paymentReference,
     })
 
     if (error) {

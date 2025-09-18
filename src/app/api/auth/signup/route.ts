@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
-    const { email, password, fullName, specialty, country, birthDate } = await request.json()
+    const { email, password, fullName, specialty, country, birthDate, paymentReference } = await request.json()
     
     if (!email || !password) {
       return NextResponse.json(
@@ -59,6 +59,20 @@ if (data.user) {
 
   if (profileError) {
     console.error('Error updating profile:', profileError)
+  }
+
+  // Asociar payment session con el nuevo usuario si existe paymentReference
+  if (paymentReference) {
+    const { error: sessionError } = await supabaseAdmin
+      .from('payment_sessions')
+      .update({ user_id: data.user.id })
+      .eq('external_reference', paymentReference)
+
+    if (sessionError) {
+      console.error('Error associating payment session with user:', sessionError)
+    } else {
+      console.log('Payment session associated with user:', data.user.id)
+    }
   }
 }
 

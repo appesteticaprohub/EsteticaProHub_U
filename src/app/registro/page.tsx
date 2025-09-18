@@ -198,7 +198,8 @@ const handleSubmit = async (e: React.FormEvent) => {
       fullName,
       formData.especialidad,
       formData.pais,
-      birthDate
+      birthDate,
+      paymentRef || undefined // Convertir null a undefined
     );
 
     if (error) {
