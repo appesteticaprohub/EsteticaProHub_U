@@ -90,7 +90,8 @@ if (data.user) {
           .update({
             subscription_status: 'Active',
             subscription_expires_at: expirationDate.toISOString(),
-            user_type: 'premium'
+            user_type: 'premium',
+            auto_renewal_enabled: sessionData.subscription_type === 'recurring'
           })
           .eq('id', data.user.id)
 
