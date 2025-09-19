@@ -61,13 +61,16 @@ export async function middleware(request: NextRequest) {
   console.log('Usuario en middleware:', user?.email || 'No autenticado')
 
   // Definir rutas
-  const authRoutes = ['/login', '/registro']
+  const authRoutes = ['/login']
+  const registrationRoute = '/registro'
   const fullyProtectedRoutes = ['/perfil']  // Solo perfil requiere login obligatorio
   const subscriptionVerificationRoutes = ['/crear-post', '/post', '/suscripcion']  // Verifican suscripción si hay usuario autenticado
   
   const isAuthRoute = authRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
   )
+
+  const isRegistrationRoute = request.nextUrl.pathname.startsWith(registrationRoute)
   
   const isFullyProtected = fullyProtectedRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
@@ -135,10 +138,20 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Si ya está autenticado y trata de acceder a login/registro, redirigir a home
+  // Si ya está autenticado y trata de acceder a login, redirigir a home
   if (isAuthRoute && user) {
     console.log('Redirigiendo a home - usuario autenticado en ruta de auth')
     return NextResponse.redirect(new URL('/', request.url))
+  }
+
+  // Para registro, permitir usuarios autenticados si vienen de un pago (tienen parámetro ref)
+  if (isRegistrationRoute && user) {
+    const hasPaymentRef = request.nextUrl.searchParams.has('ref')
+    if (!hasPaymentRef) {
+      console.log('Redirigiendo a home - usuario autenticado en registro sin ref de pago')
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+    console.log('Permitiendo acceso a registro - usuario autenticado con ref de pago')
   }
 
   return response

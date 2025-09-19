@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import SpecialtySelect from '@/components/SpecialtySelect';
 import CountrySelect from '@/components/CountrySelect';
 import DateSelect from '@/components/DateSelect';
@@ -28,6 +29,9 @@ export default function Registro() {
   const searchParams = useSearchParams();
   const paymentRef = searchParams.get('ref');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const router = useRouter();
+  const [isRenewal, setIsRenewal] = useState<boolean>(false);
+  const [renewalProcessed, setRenewalProcessed] = useState<boolean>(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -55,7 +59,62 @@ const handleDateChange = (field: 'day' | 'month' | 'year', value: string) => {
   }));
 };
 
-  const { signUp } = useAuth();
+  const { signUp, user } = useAuth();
+
+  // Función para procesar renovación de usuario existente
+  const processRenewal = async (paymentRef: string) => {
+    try {
+      console.log('🔄 Procesando renovación para usuario existente');
+      console.log('🔄 Payment ref:', paymentRef);
+      
+      // Calcular nueva fecha de expiración (30 días desde hoy)
+      const now = new Date();
+      const newExpirationDate = new Date(now.setMonth(now.getMonth() + 1));
+      
+      // Actualizar el perfil del usuario existente
+      const response = await fetch('/api/auth/renew-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          external_reference: paymentRef,
+          subscription_expires_at: newExpirationDate.toISOString()
+        }),
+      });
+
+      if (response.ok) {
+        console.log('✅ Renovación procesada exitosamente');
+        
+        // Marcar payment session como usada
+        await fetch('/api/paypal/mark-session-used', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ external_reference: paymentRef }),
+        });
+
+        setRenewalProcessed(true);
+        setMessage({
+          type: 'success',
+          text: '¡Renovación exitosa! Tu suscripción Premium ha sido extendida.'
+        });
+
+        // Redirigir al perfil después de 3 segundos
+        setTimeout(() => {
+          router.push('/perfil');
+        }, 3000);
+
+      } else {
+        console.error('❌ Error procesando renovación');
+        setPaymentError('Error al procesar la renovación');
+      }
+    } catch (error) {
+      console.error('❌ Error inesperado en renovación:', error);
+      setPaymentError('Error inesperado al procesar la renovación');
+    }
+  };
 
   // Validar payment session al cargar la página
 useEffect(() => {
@@ -161,6 +220,31 @@ useEffect(() => {
       if (data.isValid) {
         console.log('✅ Pago/suscripción validada correctamente');
         setPaymentValidated(true);
+        
+        // NUEVA LÓGICA: Verificar si es renovación de usuario existente
+        // Usar una verificación más robusta del estado de autenticación
+        const checkUserAndProcessRenewal = async () => {
+          try {
+            const response = await fetch('/api/auth/session');
+            const sessionData = await response.json();
+            
+            console.log('🔍 Verificando sesión de usuario:', sessionData);
+            
+            if (sessionData.data && sessionData.data.user) {
+              console.log('🔄 Usuario autenticado detectado - procesando renovación');
+              console.log('🔄 Usuario:', sessionData.data.user.email);
+              setIsRenewal(true);
+              await processRenewal(paymentRef);
+            } else {
+              console.log('👤 Usuario no autenticado - flujo de registro normal');
+            }
+          } catch (error) {
+            console.error('❌ Error verificando sesión:', error);
+            console.log('👤 Asumiendo usuario no autenticado - flujo de registro normal');
+          }
+        };
+        
+        await checkUserAndProcessRenewal();
       } else {
         console.error('❌ Sesión inválida:', data.error);
         setPaymentError(data.error || 'Sesión de pago inválida');
@@ -255,14 +339,18 @@ const handleSubmit = async (e: React.FormEvent) => {
         {/* Título */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            ¡Completa tu registro!
+            {isRenewal ? '¡Renovación Exitosa!' : '¡Completa tu registro!'}
           </h1>
           <p className="text-gray-600">
-            Solo faltan unos datos para activar tu cuenta Premium
+            {isRenewal 
+              ? 'Tu suscripción Premium ha sido renovada exitosamente'
+              : 'Solo faltan unos datos para activar tu cuenta Premium'
+            }
           </p>
         </div>
 
-        {/* Formulario */}
+        {/* Formulario solo para usuarios nuevos */}
+        {!isRenewal && (
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           {/* Mensaje de éxito/error */}
           {message && (
@@ -421,6 +509,32 @@ const handleSubmit = async (e: React.FormEvent) => {
             </p>
           </div>
         </div>
+        )}
+
+        {/* Mensaje para renovaciones */}
+        {isRenewal && (
+          <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
+            <div className="mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Listo!</h2>
+              <p className="text-gray-600 mb-4">
+                Tu suscripción Premium ha sido renovada por 30 días adicionales.
+              </p>
+              {message && message.type === 'success' && (
+                <div className="bg-green-100 border border-green-400 text-green-700 p-4 rounded-lg mb-4">
+                  <p className="text-sm font-medium">{message.text}</p>
+                </div>
+              )}
+              <p className="text-sm text-gray-500">
+                Serás redirigido a tu perfil en unos segundos...
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Indicador de éxito */}
         <div className="text-center mt-6">
