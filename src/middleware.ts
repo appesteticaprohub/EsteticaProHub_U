@@ -60,22 +60,60 @@ export async function middleware(request: NextRequest) {
 
   console.log('Usuario en middleware:', user?.email || 'No autenticado')
 
-  // Definir rutas protegidas
-  const protectedRoutes = ['/perfil']
+  // Definir rutas
   const authRoutes = ['/login', '/registro']
-  
-  const isProtectedRoute = protectedRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  )
+  const fullyProtectedRoutes = ['/perfil']  // Solo perfil requiere login obligatorio
+  const subscriptionVerificationRoutes = ['/crear-post', '/post', '/suscripcion']  // Verifican suscripción si hay usuario autenticado
   
   const isAuthRoute = authRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
   )
+  
+  const isFullyProtected = fullyProtectedRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  )
+  
+  const needsSubscriptionCheck = subscriptionVerificationRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  )
 
-  // Si es una ruta protegida y no hay usuario, redirigir a login
-  if (isProtectedRoute && !user) {
-    console.log('Redirigiendo a login - ruta protegida sin usuario')
+  // Rutas que requieren login obligatorio
+  if (isFullyProtected && !user) {
+    console.log('Redirigiendo a login - ruta que requiere autenticación')
     return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  // Verificación de suscripciones para rutas específicas cuando hay usuario
+  if ((isFullyProtected || needsSubscriptionCheck) && user) {
+    console.log('Verificando suscripción para usuario:', user.email)
+    
+    try {
+      // Importar las funciones de verificación
+      const { getUserProfile, isSubscriptionExpired, updateExpiredSubscription } = await import('@/lib/subscription-utils')
+      
+      const profile = await getUserProfile(user.id)
+      
+      if (profile) {
+        console.log('Perfil encontrado:', {
+          status: profile.subscription_status,
+          expiresAt: profile.subscription_expires_at
+        })
+        
+        // Solo actualizar BD si está Active pero vencido
+        if (isSubscriptionExpired(profile.subscription_expires_at) && 
+            profile.subscription_status === 'Active') {
+          
+          console.log('Suscripción expirada detectada, actualizando estado...')
+          await updateExpiredSubscription(user.id)
+        }
+        
+        // Permitir acceso - las páginas manejarán el UI para usuarios expirados
+      } else {
+        console.log('No se pudo obtener el perfil del usuario')
+      }
+    } catch (error) {
+      console.error('Error en verificación de suscripción:', error)
+    }
   }
 
   // Si ya está autenticado y trata de acceder a login/registro, redirigir a home

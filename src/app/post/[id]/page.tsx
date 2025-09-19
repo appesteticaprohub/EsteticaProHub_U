@@ -4,6 +4,7 @@ import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePost } from '@/hooks/usePost';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useAnonymousPostTracker } from '@/hooks/useAnonymousPostTracker';
 import Modal from '@/components/Modal';
 import SnackBar from '@/components/Snackbar';
@@ -273,7 +274,8 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, currentUserId, user
 export default function PostPage({ params }: PostPageProps) {
   const resolvedParams = use(params);
   const { post, loading, error, incrementViews } = usePost(resolvedParams.id);
-  const { user, userType, subscriptionStatus } = useAuth();
+  const { user, userType } = useAuth();
+  const { subscriptionStatus } = useSubscriptionStatus();
   const { viewedPostsCount, incrementViewedPosts, hasReachedLimit } = useAnonymousPostTracker();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -439,7 +441,7 @@ const handleDeleteComment = async (commentId: string) => {
   // Verificar estado del usuario y mostrar modal correspondiente
   useEffect(() => {
     if (!loading && post) {
-      // Usuario premium con suscripción expirada
+      // Usuario premium con suscripción expirada (middleware ya actualizó si era necesario)
       if (user && subscriptionStatus === 'Expired') {
         setModalContent({
           title: 'Suscripción Expirada',

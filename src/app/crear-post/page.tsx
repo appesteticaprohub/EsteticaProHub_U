@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import Modal from '@/components/Modal';
 import { createPost } from '@/lib/supabase';
 
@@ -22,7 +23,9 @@ interface CreatedPost {
 }
 
 export default function CrearPost() {
-  const { user, session, userType, subscriptionStatus, loading } = useAuth();
+  const { user, session, userType, loading: authLoading } = useAuth();
+  const { subscriptionStatus, loading: statusLoading } = useSubscriptionStatus();
+  const loading = authLoading || statusLoading;
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
@@ -59,7 +62,7 @@ export default function CrearPost() {
         return;
       }
 
-      // Situación 3: Usuario premium con estado Expired
+      // Situación 3: Usuario premium con estado Expired (middleware ya actualizó si era necesario)
       if (session && userType === 'premium' && subscriptionStatus === 'Expired') {
         setModalMessage('Necesitas renovar tu suscripción');
         setModalButtons('renew');

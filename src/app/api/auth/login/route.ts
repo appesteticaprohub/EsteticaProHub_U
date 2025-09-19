@@ -28,9 +28,24 @@ export async function POST(request: NextRequest) {
     // Obtener el perfil del usuario
     const { data: profile } = await supabase
       .from('profiles')
-      .select('user_type, subscription_status')
+      .select('user_type, subscription_status, subscription_expires_at')
       .eq('id', data.user.id)
       .single()
+
+    // Verificar y actualizar estado de suscripción si es necesario
+    if (profile) {
+      const { isSubscriptionExpired, updateExpiredSubscription } = await import('@/lib/subscription-utils')
+      
+      if (isSubscriptionExpired(profile.subscription_expires_at) && 
+          profile.subscription_status === 'Active') {
+        
+        console.log('Login: Actualizando suscripción expirada para usuario:', data.user.email)
+        await updateExpiredSubscription(data.user.id)
+        
+        // Actualizar el perfil local para retornar el estado correcto
+        profile.subscription_status = 'Expired'
+      }
+    }
 
     return NextResponse.json({
       data: {
