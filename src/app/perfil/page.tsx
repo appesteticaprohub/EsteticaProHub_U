@@ -2,11 +2,16 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus'
+import PaymentRecoveryModal from '@/components/PaymentRecoveryModal'
+import { useState } from 'react'
 
 
 export default function MiPerfil() {
   const { user, signOut, loading } = useAuth()
+  const { subscriptionStatus, subscriptionData, loading: statusLoading } = useSubscriptionStatus()
   const router = useRouter()
+  const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false)
 
   const handleSignOut = async () => {
     await signOut()
@@ -23,7 +28,7 @@ export default function MiPerfil() {
     })
   }
 
-  if (loading) {
+  if (loading || statusLoading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Cargando...</div>
@@ -36,7 +41,16 @@ export default function MiPerfil() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-8">
+    <>
+      <PaymentRecoveryModal 
+        isOpen={showPaymentRecoveryModal}
+        onClose={() => setShowPaymentRecoveryModal(false)}
+        subscriptionStatus={subscriptionStatus || ''}
+        paymentRetryCount={subscriptionData.payment_retry_count}
+        gracePeriodEnds={subscriptionData.grace_period_ends}
+      />
+      
+      <main className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white shadow rounded-lg">
           <div className="px-6 py-8">
@@ -62,6 +76,74 @@ export default function MiPerfil() {
                   {user.id}
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Estado de Suscripción
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className={`text-lg font-medium px-4 py-3 rounded-md ${
+                    subscriptionStatus === 'Active' ? 'bg-green-100 text-green-800' :
+                    subscriptionStatus === 'Grace_Period' ? 'bg-yellow-100 text-yellow-800' :
+                    subscriptionStatus === 'Payment_Failed' ? 'bg-orange-100 text-orange-800' :
+                    subscriptionStatus === 'Suspended' ? 'bg-red-100 text-red-800' :
+                    subscriptionStatus === 'Expired' ? 'bg-gray-100 text-gray-800' :
+                    subscriptionStatus === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-50 text-gray-900'
+                  }`}>
+                    {subscriptionStatus === 'Active' ? 'Activa' :
+                     subscriptionStatus === 'Grace_Period' ? 'Período de Gracia' :
+                     subscriptionStatus === 'Payment_Failed' ? 'Problema de Pago' :
+                     subscriptionStatus === 'Suspended' ? 'Suspendida' :
+                     subscriptionStatus === 'Expired' ? 'Expirada' :
+                     subscriptionStatus === 'Cancelled' ? 'Cancelada' :
+                     subscriptionStatus || 'No disponible'}
+                  </div>
+                  
+                  {(subscriptionStatus === 'Payment_Failed' || 
+                    subscriptionStatus === 'Grace_Period' || 
+                    subscriptionStatus === 'Suspended') && (
+                    <button
+                      onClick={() => setShowPaymentRecoveryModal(true)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                    >
+                      Resolver
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {subscriptionData.subscription_expires_at && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Fecha de Expiración
+                  </label>
+                  <div className="text-lg text-gray-900 bg-gray-50 px-4 py-3 rounded-md">
+                    {formatDate(subscriptionData.subscription_expires_at)}
+                  </div>
+                </div>
+              )}
+
+              {subscriptionData.payment_retry_count > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Intentos de Pago
+                  </label>
+                  <div className="text-lg text-orange-600 bg-orange-50 px-4 py-3 rounded-md">
+                    {subscriptionData.payment_retry_count} intento{subscriptionData.payment_retry_count !== 1 ? 's' : ''} fallido{subscriptionData.payment_retry_count !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              )}
+
+              {subscriptionData.grace_period_ends && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Período de Gracia Termina
+                  </label>
+                  <div className="text-lg text-yellow-600 bg-yellow-50 px-4 py-3 rounded-md">
+                    {formatDate(subscriptionData.grace_period_ends)}
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="mt-8 pt-6 border-t border-gray-200">
@@ -76,5 +158,6 @@ export default function MiPerfil() {
         </div>
       </div>
     </main>
+    </>
   )
 }

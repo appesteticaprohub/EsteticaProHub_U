@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePost } from '@/hooks/usePost';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+import PaymentRecoveryModal from '@/components/PaymentRecoveryModal';
 import { useAnonymousPostTracker } from '@/hooks/useAnonymousPostTracker';
 import Modal from '@/components/Modal';
 import SnackBar from '@/components/Snackbar';
@@ -275,7 +276,7 @@ export default function PostPage({ params }: PostPageProps) {
   const resolvedParams = use(params);
   const { post, loading, error, incrementViews } = usePost(resolvedParams.id);
   const { user, userType } = useAuth();
-  const { subscriptionStatus } = useSubscriptionStatus();
+  const { subscriptionStatus, subscriptionData } = useSubscriptionStatus();
   const { viewedPostsCount, incrementViewedPosts, hasReachedLimit } = useAnonymousPostTracker();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -283,6 +284,7 @@ export default function PostPage({ params }: PostPageProps) {
   const { comments, loading: commentsLoading, error: commentsError, createComment, updateComment, deleteComment } = useCommentsWithActions(resolvedParams.id);
   const [showSnackBar, setShowSnackBar] = useState(false);
   const [snackBarMessage, setSnackBarMessage] = useState('');
+  const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false);
   const [modalContent, setModalContent] = useState<{
     title: string;
     message: string;
@@ -468,6 +470,14 @@ const handleDeleteComment = async (commentId: string) => {
         return;
       }
 
+      // Usuario con problemas de pago - mostrar modal de recovery
+      if (user && (subscriptionStatus === 'Payment_Failed' || 
+                   subscriptionStatus === 'Grace_Period' || 
+                   subscriptionStatus === 'Suspended')) {
+        setShowPaymentRecoveryModal(true);
+        return;
+      }
+
       // Usuario anónimo: trackear visualización
       if (!user && !hasTrackedAnonymousView.current) {
         incrementViewedPosts();
@@ -549,6 +559,50 @@ const handleDeleteComment = async (commentId: string) => {
       <div className="max-w-4xl mx-auto">
         <article className="bg-white rounded-lg shadow-sm border p-8">
           <header className="mb-8">
+            {/* Indicador de estado de suscripción para usuarios autenticados */}
+            {user && subscriptionStatus && (
+              <div className="mb-4">
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  subscriptionStatus === 'Active' ? 'bg-green-100 text-green-800' :
+                  subscriptionStatus === 'Grace_Period' ? 'bg-yellow-100 text-yellow-800' :
+                  subscriptionStatus === 'Payment_Failed' ? 'bg-orange-100 text-orange-800' :
+                  subscriptionStatus === 'Suspended' ? 'bg-red-100 text-red-800' :
+                  subscriptionStatus === 'Expired' ? 'bg-gray-100 text-gray-800' :
+                  subscriptionStatus === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-50 text-gray-600'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                    subscriptionStatus === 'Active' ? 'bg-green-400' :
+                    subscriptionStatus === 'Grace_Period' ? 'bg-yellow-400' :
+                    subscriptionStatus === 'Payment_Failed' ? 'bg-orange-400' :
+                    subscriptionStatus === 'Suspended' ? 'bg-red-400' :
+                    subscriptionStatus === 'Expired' ? 'bg-gray-400' :
+                    subscriptionStatus === 'Cancelled' ? 'bg-red-400' :
+                    'bg-gray-300'
+                  }`}></div>
+                  Suscripción: {
+                    subscriptionStatus === 'Active' ? 'Activa' :
+                    subscriptionStatus === 'Grace_Period' ? 'Período de Gracia' :
+                    subscriptionStatus === 'Payment_Failed' ? 'Problema de Pago' :
+                    subscriptionStatus === 'Suspended' ? 'Suspendida' :
+                    subscriptionStatus === 'Expired' ? 'Expirada' :
+                    subscriptionStatus === 'Cancelled' ? 'Cancelada' :
+                    subscriptionStatus
+                  }
+                  {(subscriptionStatus === 'Payment_Failed' || 
+                    subscriptionStatus === 'Grace_Period' || 
+                    subscriptionStatus === 'Suspended') && (
+                    <button
+                      onClick={() => setShowPaymentRecoveryModal(true)}
+                      className="ml-2 text-xs underline hover:no-underline"
+                    >
+                      Resolver
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
               {post.title}
             </h1>
@@ -724,6 +778,14 @@ const handleDeleteComment = async (commentId: string) => {
         )}
         </section>
       </div>
+      {/* Modal de Recovery de Pagos */}
+      <PaymentRecoveryModal 
+        isOpen={showPaymentRecoveryModal}
+        onClose={() => setShowPaymentRecoveryModal(false)}
+        subscriptionStatus={subscriptionStatus || ''}
+        paymentRetryCount={subscriptionData.payment_retry_count}
+        gracePeriodEnds={subscriptionData.grace_period_ends}
+      />
       {/* Modal dinámico */}
       {modalContent && (
         <Modal isOpen={isModalOpen} onClose={closeModal}>

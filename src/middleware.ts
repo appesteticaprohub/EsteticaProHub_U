@@ -99,13 +99,32 @@ export async function middleware(request: NextRequest) {
           expiresAt: profile.subscription_expires_at
         })
         
-        // Solo actualizar BD si está Active pero vencido
-        if (isSubscriptionExpired(profile.subscription_expires_at) && 
-            profile.subscription_status === 'Active') {
+        // Importar nuevas funciones para estados avanzados
+        const { isInGracePeriod } = await import('@/lib/subscription-utils')
+        
+        // Manejar diferentes estados de suscripción
+        if (profile.subscription_status === 'Active' && 
+            isSubscriptionExpired(profile.subscription_expires_at)) {
           
-          console.log('Suscripción expirada detectada, actualizando estado...')
+          console.log('Suscripción Active expirada, actualizando a Expired...')
           await updateExpiredSubscription(user.id)
-        }
+          
+        } else if (profile.subscription_status === 'Grace_Period' && 
+                   profile.grace_period_ends && 
+                   !isInGracePeriod(profile.grace_period_ends)) {
+          
+          console.log('Período de gracia expirado, actualizando a Expired...')
+          await updateExpiredSubscription(user.id)
+          
+        } else if (profile.subscription_status === 'Payment_Failed') {
+          
+          console.log('Usuario con pago fallido detectado - UI manejará recovery')
+          
+        } else if (profile.subscription_status === 'Suspended') {
+          
+          console.log('Usuario con suscripción suspendida detectado')
+          
+          }
         
         // Permitir acceso - las páginas manejarán el UI para usuarios expirados
       } else {

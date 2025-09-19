@@ -140,12 +140,89 @@ export async function POST(request: NextRequest) {
     if (body.event_type === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED') {
       const subscriptionId = body.resource?.billing_agreement_id;
       
-      if (subscriptionId) {
-        console.log(`Subscription ${subscriptionId} payment failed - may retry automatically`);
-        // PayPal intentará automáticamente según la configuración del plan
+      if (!subscriptionId) {
+        console.error('Missing subscription ID in payment failed event');
+        return NextResponse.json({ error: 'Missing subscription ID' }, { status: 400 });
       }
 
-      return NextResponse.json({ message: 'Subscription payment failure noted' });
+      // Buscar el usuario asociado a esta suscripción
+      const { data: session } = await supabase
+        .from('payment_sessions')
+        .select('user_id')
+        .eq('paypal_subscription_id', subscriptionId)
+        .eq('status', 'active_subscription')
+        .single();
+
+      if (session && session.user_id) {
+        // Obtener información actual del usuario
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('payment_retry_count')
+          .eq('id', session.user_id)
+          .single();
+
+        const currentRetryCount = profile?.payment_retry_count || 0;
+        const newRetryCount = currentRetryCount + 1;
+
+        // Actualizar estado a Payment_Failed con contador de intentos
+        await supabase
+          .from('profiles')
+          .update({ 
+            subscription_status: 'Payment_Failed',
+            payment_retry_count: newRetryCount,
+            last_payment_attempt: new Date().toISOString()
+          })
+          .eq('id', session.user_id);
+
+        console.log(`Subscription ${subscriptionId} payment failed. Retry count: ${newRetryCount}`);
+
+        // Si es el tercer intento fallido, activar período de gracia
+        if (newRetryCount >= 3) {
+          const gracePeriodEnd = new Date();
+          gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 7); // 7 días de gracia
+
+          await supabase
+            .from('profiles')
+            .update({ 
+              subscription_status: 'Grace_Period',
+              grace_period_ends: gracePeriodEnd.toISOString()
+            })
+            .eq('id', session.user_id);
+
+          console.log(`Activating grace period for user ${session.user_id} until ${gracePeriodEnd.toISOString()}`);
+        }
+      }
+
+      return NextResponse.json({ message: 'Subscription payment failure processed' });
+    }
+
+    // Suscripción suspendida por PayPal
+    if (body.event_type === 'BILLING.SUBSCRIPTION.SUSPENDED') {
+      const subscriptionId = body.resource?.id;
+      
+      if (!subscriptionId) {
+        console.error('Missing subscription ID in suspended event');
+        return NextResponse.json({ error: 'Missing subscription ID' }, { status: 400 });
+      }
+
+      // Buscar el usuario asociado a esta suscripción
+      const { data: session } = await supabase
+        .from('payment_sessions')
+        .select('user_id')
+        .eq('paypal_subscription_id', subscriptionId)
+        .single();
+
+      if (session && session.user_id) {
+        // Actualizar estado a Suspended
+        await supabase
+          .from('profiles')
+          .update({ subscription_status: 'Suspended' })
+          .eq('id', session.user_id);
+
+        console.log(`Subscription ${subscriptionId} suspended for user ${session.user_id}`);
+      }
+
+      return NextResponse.json({ message: 'Subscription suspended' });
     }
 
     // Evento no manejado

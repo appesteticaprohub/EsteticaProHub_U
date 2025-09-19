@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import Modal from '@/components/Modal';
+import PaymentRecoveryModal from '@/components/PaymentRecoveryModal';
 import { createPost } from '@/lib/supabase';
 
 // Tipo para la respuesta del post creado
@@ -24,12 +25,13 @@ interface CreatedPost {
 
 export default function CrearPost() {
   const { user, session, userType, loading: authLoading } = useAuth();
-  const { subscriptionStatus, loading: statusLoading } = useSubscriptionStatus();
+  const { subscriptionStatus, subscriptionData, loading: statusLoading } = useSubscriptionStatus();
   const loading = authLoading || statusLoading;
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [modalButtons, setModalButtons] = useState<'subscription' | 'login' | 'renew' | 'cancelled'>('subscription');
+  const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false);
   const [categoria, setCategoria] = useState('');
   const [titulo, setTitulo] = useState('');
   const [contenido, setContenido] = useState('');
@@ -75,6 +77,15 @@ export default function CrearPost() {
         setModalMessage('Tu suscripción ha sido cancelada por violar las normas de este sitio');
         setModalButtons('cancelled');
         setShowModal(true);
+        return;
+      }
+
+      // Situación 5: Usuario con problemas de pago
+      if (session && userType === 'premium' && 
+          (subscriptionStatus === 'Payment_Failed' || 
+           subscriptionStatus === 'Grace_Period' || 
+           subscriptionStatus === 'Suspended')) {
+        setShowPaymentRecoveryModal(true);
         return;
       }
     }
@@ -129,6 +140,14 @@ export default function CrearPost() {
   // Mostrar contenido directamente, el modal se maneja por estado
   return (
     <main className="p-6 max-w-4xl mx-auto">
+      {/* Modal de Recovery de Pagos */}
+      <PaymentRecoveryModal 
+        isOpen={showPaymentRecoveryModal}
+        onClose={() => setShowPaymentRecoveryModal(false)}
+        subscriptionStatus={subscriptionStatus || ''}
+        paymentRetryCount={subscriptionData.payment_retry_count}
+        gracePeriodEnds={subscriptionData.grace_period_ends}
+      />
       {/* Modal de protección */}
       <Modal isOpen={showModal} onClose={handleCloseModal}>
         <div className="text-center">

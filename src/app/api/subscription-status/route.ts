@@ -15,10 +15,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Obtener estado de suscripción
+    // Obtener estado de suscripción con campos adicionales
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('subscription_status')
+      .select(`
+        subscription_status,
+        subscription_expires_at,
+        payment_retry_count,
+        last_payment_attempt,
+        grace_period_ends,
+        auto_renewal_enabled
+      `)
       .eq('id', user.id)
       .single()
 
@@ -30,7 +37,14 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      data: { subscription_status: profile?.subscription_status || null },
+      data: {
+        subscription_status: profile?.subscription_status || null,
+        subscription_expires_at: profile?.subscription_expires_at || null,
+        payment_retry_count: profile?.payment_retry_count || 0,
+        last_payment_attempt: profile?.last_payment_attempt || null,
+        grace_period_ends: profile?.grace_period_ends || null,
+        auto_renewal_enabled: profile?.auto_renewal_enabled || false
+      },
       error: null
     })
   } catch (error) {
