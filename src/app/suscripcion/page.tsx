@@ -6,22 +6,31 @@ export default function Suscripcion() {
   const router = useRouter();
   const [isAutoRenewal, setIsAutoRenewal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [subscriptionPrice, setSubscriptionPrice] = useState(10.00);
 
   useEffect(() => {
   // Simplemente usar una variable de entorno del cliente o asumir configuración
   // Por ahora, detectamos desde una API simple
   const detectMode = async () => {
     try {
-      // Crear una llamada que nos devuelva la configuración
-      const response = await fetch('/api/paypal/config');
-      if (response.ok) {
-        const config = await response.json();
+      // Obtener configuración de auto-renewal
+      const configResponse = await fetch('/api/paypal/config');
+      if (configResponse.ok) {
+        const config = await configResponse.json();
         setIsAutoRenewal(config.autoRenewal);
       } else {
         setIsAutoRenewal(false);
       }
+
+      // Obtener precio dinámico
+      const priceResponse = await fetch('/api/subscription-price');
+      if (priceResponse.ok) {
+        const priceData = await priceResponse.json();
+        setSubscriptionPrice(priceData.price);
+      }
     } catch (error) {
       setIsAutoRenewal(false);
+      setSubscriptionPrice(10.00); // Fallback
     } finally {
       setLoading(false);
     }
@@ -85,7 +94,7 @@ export default function Suscripcion() {
           {/* Precio y modalidad */}
           <div className="text-center mb-8">
             <div className="inline-flex items-baseline gap-2 mb-2">
-              <span className="text-5xl font-bold text-gray-900">$10</span>
+              <span className="text-5xl font-bold text-gray-900">${subscriptionPrice}</span>
               <span className="text-xl text-gray-500">
                 {isAutoRenewal ? '/ mes' : ''}
               </span>

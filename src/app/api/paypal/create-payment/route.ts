@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createPayPalPayment, createPayPalSubscription, createOrGetPayPalSubscriptionPlan } from '@/lib/paypal';
+import { createPayPalPayment, createPayPalSubscription, createOrGetPayPalSubscriptionPlan, getDynamicPrice } from '@/lib/paypal';
 import { isAutoRenewalEnabled } from '@/lib/settings';
 
 // Generar referencia externa única
@@ -24,9 +24,13 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 48); // Expira en 48 horas
 
+    // Obtener precio dinámico desde la base de datos
+    const dynamicPrice = await getDynamicPrice();
+    const priceNumber = parseFloat(dynamicPrice);
+
     const sessionData = {
       external_reference: externalReference,
-      amount: 10.00,
+      amount: priceNumber,
       expires_at: expiresAt.toISOString(),
       status: 'pending',
       subscription_type: isAutoRenewal ? 'recurring' : 'one_time'
@@ -56,9 +60,10 @@ export async function POST(request: NextRequest) {
       console.log('🔐 PayPal Client Secret exists:', !!process.env.PAYPAL_CLIENT_SECRET);
       
       try {
-        // Primero crear el plan (en producción esto se haría una vez)
+        // Primero crear el plan con precio dinámico
         console.log('📋 Obteniendo plan de suscripción PayPal...');
-        const plan = await createOrGetPayPalSubscriptionPlan();
+        console.log('💰 Precio dinámico obtenido: $' + dynamicPrice);
+        const plan = await createOrGetPayPalSubscriptionPlan(dynamicPrice);
         
         console.log('📋 Respuesta del plan:', JSON.stringify(plan, null, 2));
         

@@ -1,6 +1,6 @@
 export const PAYPAL_CONFIG = {
   currency: 'USD',
-  amount: '10.00',
+  amount: '10.00', // Fallback por defecto
   environment: process.env.PAYPAL_ENVIRONMENT || 'sandbox',
   baseUrl: process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000',
   clientId: process.env.PAYPAL_CLIENT_ID!,
@@ -134,7 +134,7 @@ export async function createOrGetPayPalProduct() {
   return response.json();
 }
 
-export async function createOrGetPayPalSubscriptionPlan() {
+export async function createOrGetPayPalSubscriptionPlan(dynamicPrice?: string) {
   const accessToken = await getPayPalAccessToken();
   
   // Obtener o crear el producto
@@ -164,8 +164,11 @@ export async function createOrGetPayPalSubscriptionPlan() {
 
     if (searchResponse.ok) {
       const searchData = await searchResponse.json();
+      const targetPrice = dynamicPrice || PAYPAL_CONFIG.amount;
       const existingPlan = searchData.plans?.find(
-        (plan: any) => plan.name === "EsteticaProHub Premium Monthly" && plan.status === "ACTIVE"
+        (plan: any) => plan.name === "EsteticaProHub Premium Monthly" && 
+                      plan.status === "ACTIVE" &&
+                      plan.billing_cycles?.[0]?.pricing_scheme?.fixed_price?.value === targetPrice
       );
 
       if (existingPlan) {
@@ -193,11 +196,11 @@ export async function createOrGetPayPalSubscriptionPlan() {
       sequence: 1,
       total_cycles: 0,
       pricing_scheme: {
-        fixed_price: {
-          value: PAYPAL_CONFIG.amount,
-          currency_code: PAYPAL_CONFIG.currency
-        }
-      }
+            fixed_price: {
+              value: dynamicPrice || PAYPAL_CONFIG.amount,
+              currency_code: PAYPAL_CONFIG.currency
+            }
+          }
     }],
     payment_preferences: {
       auto_bill_outstanding: true,
@@ -369,11 +372,25 @@ export async function updateMultipleSubscriptionsPrices(subscriptions: Array<{id
 // Obtener precio dinámico desde la base de datos
 export async function getDynamicPrice() {
   try {
-    // Esta función debería ser llamada desde el servidor donde tienes acceso a Supabase
-    // Por ahora retornamos el precio por defecto
-    return PAYPAL_CONFIG.amount;
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'SUBSCRIPTION_PRICE')
+      .single();
+
+    if (!error && data?.value) {
+      return data.value;
+    }
+    
+    return PAYPAL_CONFIG.amount; // Fallback
   } catch (error) {
     console.error('Error obteniendo precio dinámico:', error);
-    return PAYPAL_CONFIG.amount;
+    return PAYPAL_CONFIG.amount; // Fallback
   }
 }
