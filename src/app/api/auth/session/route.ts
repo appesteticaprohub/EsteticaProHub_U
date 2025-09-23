@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient, getCurrentUser } from '@/lib/server-supabase'
+import { NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/server-supabase'
 
 export async function GET() {
   try {
@@ -19,7 +19,7 @@ export async function GET() {
     }
 
     // Obtener el perfil del usuario
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
       .select('user_type, subscription_status')
       .eq('id', session.user.id)
@@ -34,7 +34,7 @@ export async function GET() {
       },
       error: null
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Internal server error' },
       { status: 500 }
