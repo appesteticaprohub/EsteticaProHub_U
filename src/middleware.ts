@@ -59,6 +59,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   console.log('Usuario en middleware:', user?.email || 'No autenticado')
+  console.log('Ruta visitada:', request.nextUrl.pathname)
 
   // Definir rutas
   const authRoutes = ['/login']
@@ -127,7 +128,12 @@ export async function middleware(request: NextRequest) {
           
           console.log('Usuario con suscripción suspendida detectado')
           
-          }
+        } else if (profile.subscription_status === 'Cancelled' && 
+           isSubscriptionExpired(profile.subscription_expires_at)) {
+          
+          console.log('Suscripción Cancelled expirada, actualizando a Expired...')
+          await updateExpiredSubscription(user.id)
+        }
         
         // Permitir acceso - las páginas manejarán el UI para usuarios expirados
       } else {

@@ -1,79 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { cancelPayPalSubscription } from '@/lib/paypal';
+import { createServerSupabaseClient } from '@/lib/server-supabase';
+import { cancelSubscription } from '@/lib/subscription-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const { subscriptionId, userId } = await request.json();
-
-    if (!subscriptionId || !userId) {
-      return NextResponse.json(
-        { error: 'Missing subscription ID or user ID' },
-        { status: 400 }
-      );
+    const supabase = await createServerSupabaseClient();
+    
+    // Verificar autenticación
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session?.user) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const userId = sessionData.session.user.id;
 
-    // Verificar que la suscripción pertenece al usuario
-    const { data: session, error: sessionError } = await supabase
-      .from('payment_sessions')
-      .select('*')
-      .eq('paypal_subscription_id', subscriptionId)
-      .eq('user_id', userId)
-      .eq('status', 'active_subscription')
+    // Verificar que el usuario tiene una suscripción activa o cancelable
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('subscription_status, auto_renewal_enabled')
+      .eq('id', userId)
       .single();
 
-    if (sessionError || !session) {
-      return NextResponse.json(
-        { error: 'Subscription not found or not active' },
-        { status: 404 }
-      );
+    if (profileError || !profile) {
+      return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 });
     }
 
-    // Cancelar en PayPal
-    const cancelResponse = await cancelPayPalSubscription(subscriptionId, 'Usuario canceló desde la plataforma');
-
-    if (!cancelResponse.ok) {
-      console.error('PayPal cancellation failed:', await cancelResponse.text());
-      return NextResponse.json(
-        { error: 'Failed to cancel subscription with PayPal' },
-        { status: 500 }
-      );
+    if (profile.subscription_status === 'Cancelled') {
+      return NextResponse.json({ error: 'La suscripción ya está cancelada' }, { status: 400 });
     }
 
-    // Actualizar estado en nuestra base de datos
-    const { error: updateError } = await supabase
-      .from('payment_sessions')
-      .update({ status: 'cancelled_subscription' })
-      .eq('paypal_subscription_id', subscriptionId);
-
-    if (updateError) {
-      console.error('Database error:', updateError);
-      return NextResponse.json(
-        { error: 'Database update failed' },
-        { status: 500 }
-      );
+    if (!['Active', 'Payment_Failed', 'Grace_Period'].includes(profile.subscription_status)) {
+      return NextResponse.json({ error: 'No se puede cancelar suscripción en este estado' }, { status: 400 });
     }
 
-    // Actualizar perfil del usuario
-    await supabase
-      .from('profiles')
-      .update({ auto_renewal_enabled: false })
-      .eq('id', userId);
+    // Cancelar suscripción (actualizar estado en BD)
+    const success = await cancelSubscription(userId);
+
+    if (!success) {
+      return NextResponse.json({ error: 'Error cancelando suscripción' }, { status: 500 });
+    }
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Subscription cancelled successfully' 
+      message: 'Suscripción cancelada exitosamente. Conservarás acceso hasta la fecha de expiración.' 
     });
 
   } catch (error) {
-    console.error('Cancel subscription error:', error);
+    console.error('Error cancelando suscripción:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     );
   }

@@ -458,15 +458,28 @@ const handleDeleteComment = async (commentId: string) => {
         return;
       }
 
-      // Usuario premium cancelado
+      // Usuario premium cancelado - verificar si aún tiene acceso
       if (user && subscriptionStatus === 'Cancelled') {
-        setModalContent({
-          title: 'Suscripción Cancelada',
-          message: 'Tu suscripción ha sido cancelada. No cumples con las normas de este sitio.',
-          primaryButton: 'Volver al Inicio',
-          primaryAction: goToHome
-        });
-        setIsModalOpen(true);
+        const now = new Date();
+        const expirationDate = subscriptionData.subscription_expires_at ? new Date(subscriptionData.subscription_expires_at) : null;
+        
+        if (expirationDate && now <= expirationDate) {
+          // Aún tiene acceso hasta la fecha de expiración - no mostrar modal
+          setIsModalOpen(false);
+          setModalContent(null);
+        } else {
+          // Ya expiró el acceso
+          setModalContent({
+            title: 'Suscripción Cancelada Expirada',
+            message: 'Tu suscripción cancelada ha expirado. Renueva ahora para continuar accediendo al contenido premium.',
+            primaryButton: 'Renovar Suscripción',
+            primaryAction: () => {
+              setIsModalOpen(false);
+              router.push('/suscripcion');
+            }
+          });
+          setIsModalOpen(true);
+        }
         return;
       }
 

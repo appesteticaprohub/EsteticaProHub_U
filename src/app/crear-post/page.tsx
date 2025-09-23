@@ -72,12 +72,22 @@ export default function CrearPost() {
         return;
       }
 
-      // Situación 4: Usuario premium con estado Cancelled
+      // Situación 4: Usuario premium con estado Cancelled - verificar si aún tiene acceso
       if (session && userType === 'premium' && subscriptionStatus === 'Cancelled') {
-        setModalMessage('Tu suscripción ha sido cancelada por violar las normas de este sitio');
-        setModalButtons('cancelled');
-        setShowModal(true);
-        return;
+        const now = new Date();
+        const expirationDate = subscriptionData.subscription_expires_at ? new Date(subscriptionData.subscription_expires_at) : null;
+        
+        if (expirationDate && now <= expirationDate) {
+          // Aún tiene acceso hasta la fecha de expiración
+          setShowModal(false);
+          return;
+        } else {
+          // Ya expiró el acceso
+          setModalMessage('Tu suscripción cancelada ha expirado. Necesitas renovar para continuar.');
+          setModalButtons('renew');
+          setShowModal(true);
+          return;
+        }
       }
 
       // Situación 5: Usuario con problemas de pago

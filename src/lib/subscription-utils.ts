@@ -29,7 +29,6 @@ export async function updateExpiredSubscription(userId: string) {
     .from('profiles')
     .update({ subscription_status: 'Expired' })
     .eq('id', userId)
-    .eq('subscription_status', 'Active') // Solo si actualmente está Active
   
   if (error) {
     console.error('Error updating expired subscription:', error)
@@ -198,6 +197,70 @@ export async function updateSuspendedStatus(userId: string) {
   
   if (error) {
     console.error('Error updating suspended status:', error)
+    return false
+  }
+  
+  return true
+
+}
+
+export async function cancelSubscription(userId: string) {
+  const cookieStore = await cookies()
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    }
+  )
+  
+  const { error } = await supabase
+    .from('profiles')
+    .update({ 
+      subscription_status: 'Cancelled',
+      auto_renewal_enabled: false
+      // Mantenemos subscription_expires_at para conservar acceso hasta esa fecha
+    })
+    .eq('id', userId)
+  
+  if (error) {
+    console.error('Error cancelling subscription:', error)
+    return false
+  }
+  
+  return true
+}
+
+export async function reactivateSubscription(userId: string) {
+  const cookieStore = await cookies()
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    }
+  )
+  
+  const { error } = await supabase
+    .from('profiles')
+    .update({ 
+      subscription_status: 'Active',
+      auto_renewal_enabled: true
+    })
+    .eq('id', userId)
+  
+  if (error) {
+    console.error('Error reactivating subscription:', error)
     return false
   }
   

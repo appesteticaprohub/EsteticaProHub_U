@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus'
 import PaymentRecoveryModal from '@/components/PaymentRecoveryModal'
 import { useState } from 'react'
+import CancelSubscriptionModal from '@/components/CancelSubscriptionModal'
+
 
 
 export default function MiPerfil() {
@@ -12,11 +14,60 @@ export default function MiPerfil() {
   const { subscriptionStatus, subscriptionData, loading: statusLoading } = useSubscriptionStatus()
   const router = useRouter()
   const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
 
   const handleSignOut = async () => {
     await signOut()
     router.push('/')
   }
+
+  const handleCancelSubscription = async () => {
+  try {
+    const response = await fetch('/api/paypal/cancel-subscription', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      // Recargar la página para mostrar el nuevo estado
+      window.location.reload()
+    } else {
+      console.error('Error:', data.error)
+      alert('Error cancelando suscripción: ' + data.error)
+    }
+  } catch (error) {
+    console.error('Error:', error)
+    alert('Error cancelando suscripción')
+  }
+}
+
+const handleReactivateSubscription = async () => {
+  try {
+    const response = await fetch('/api/paypal/reactivate-subscription', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      // Recargar la página para mostrar el nuevo estado
+      window.location.reload()
+    } else {
+      console.error('Error:', data.error)
+      alert('Error reactivando suscripción: ' + data.error)
+    }
+  } catch (error) {
+    console.error('Error:', error)
+    alert('Error reactivando suscripción')
+  }
+}
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
@@ -49,6 +100,13 @@ export default function MiPerfil() {
         paymentRetryCount={subscriptionData.payment_retry_count}
         gracePeriodEnds={subscriptionData.grace_period_ends}
       />
+
+      <CancelSubscriptionModal
+      isOpen={showCancelModal}
+      onClose={() => setShowCancelModal(false)}
+      onConfirm={handleCancelSubscription}
+      subscriptionExpiresAt={subscriptionData.subscription_expires_at}
+    />
       
       <main className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -108,6 +166,35 @@ export default function MiPerfil() {
                     >
                       Resolver
                     </button>
+                  )}
+
+                  {subscriptionStatus === 'Active' && (
+                    <button
+                      onClick={() => setShowCancelModal(true)}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                    >
+                      Cancelar Suscripción
+                    </button>
+                  )}
+
+                  {subscriptionStatus === 'Cancelled' && subscriptionData.subscription_expires_at && (
+                    <div className="mt-2 space-y-2">
+                      <div className="text-sm text-gray-600">
+                        Acceso hasta: {formatDate(subscriptionData.subscription_expires_at)}
+                      </div>
+                      {(() => {
+                        const now = new Date();
+                        const expirationDate = new Date(subscriptionData.subscription_expires_at);
+                        return now <= expirationDate ? (
+                          <button
+                            onClick={handleReactivateSubscription}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                          >
+                            Reactivar Suscripción
+                          </button>
+                        ) : null;
+                      })()}
+                    </div>
                   )}
                 </div>
               </div>
