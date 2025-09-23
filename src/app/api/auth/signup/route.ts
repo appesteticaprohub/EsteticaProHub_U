@@ -81,24 +81,42 @@ if (data.user) {
         .single()
 
       if (!sessionFetchError && sessionData && sessionData.status === 'paid') {
+        // Obtener la sesión completa con paypal_subscription_id
+        const { data: fullSessionData, error: fullSessionError } = await supabaseAdmin
+          .from('payment_sessions')
+          .select('*')
+          .eq('external_reference', paymentReference)
+          .single()
+
         // Calcular fecha de expiración (1 mes desde ahora)
         const expirationDate = new Date();
         expirationDate.setMonth(expirationDate.getMonth() + 1);
 
+        const profileUpdateData: any = {
+          subscription_status: 'Active',
+          subscription_expires_at: expirationDate.toISOString(),
+          user_type: 'premium',
+          auto_renewal_enabled: sessionData.subscription_type === 'recurring'
+        }
+
+        // CRÍTICO: Transferir paypal_subscription_id si existe
+        if (!fullSessionError && fullSessionData?.paypal_subscription_id) {
+          profileUpdateData.paypal_subscription_id = fullSessionData.paypal_subscription_id;
+          console.log(`🔄 Transferring PayPal subscription ID: ${fullSessionData.paypal_subscription_id} to user: ${data.user.id}`);
+        }
+
         const { error: profileSubscriptionError } = await supabaseAdmin
           .from('profiles')
-          .update({
-            subscription_status: 'Active',
-            subscription_expires_at: expirationDate.toISOString(),
-            user_type: 'premium',
-            auto_renewal_enabled: sessionData.subscription_type === 'recurring'
-          })
+          .update(profileUpdateData)
           .eq('id', data.user.id)
 
         if (profileSubscriptionError) {
           console.error('Error updating profile subscription info:', profileSubscriptionError)
         } else {
-          console.log('Profile updated with subscription info for user:', data.user.id)
+          console.log('✅ Profile updated with subscription info for user:', data.user.id)
+          if (fullSessionData?.paypal_subscription_id) {
+            console.log(`✅ PayPal Subscription ID transferred successfully: ${fullSessionData.paypal_subscription_id}`)
+          }
         }
       }
     }

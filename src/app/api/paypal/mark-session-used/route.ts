@@ -17,18 +17,44 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { error } = await supabase
+    // Obtener la sesión completa para verificar estado y obtener user_id
+    const { data: session, error: sessionError } = await supabase
+      .from('payment_sessions')
+      .select('*')
+      .eq('external_reference', external_reference)
+      .single();
+
+    if (sessionError || !session) {
+      console.error('Session not found:', sessionError);
+      return NextResponse.json(
+        { error: 'Payment session not found' },
+        { status: 400 }
+      );
+    }
+
+    // Verificar que la sesión tenga user_id (fue asociada en signup)
+    if (!session.user_id) {
+      return NextResponse.json(
+        { error: 'Session not associated with user' },
+        { status: 400 }
+      );
+    }
+
+    // Marcar sesión como usada
+    const { error: updateError } = await supabase
       .from('payment_sessions')
       .update({ status: 'used' })
       .eq('external_reference', external_reference);
 
-    if (error) {
-      console.error('Error marking session as used:', error);
+    if (updateError) {
+      console.error('Error marking session as used:', updateError);
       return NextResponse.json(
         { error: 'Database update failed' },
         { status: 500 }
       );
     }
+
+    console.log(`Session ${external_reference} marked as used for user ${session.user_id}`);
 
     return NextResponse.json({ success: true });
 
