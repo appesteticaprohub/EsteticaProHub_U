@@ -283,3 +283,97 @@ export async function cancelPayPalSubscription(subscriptionId: string, reason: s
 
   return response;
 }
+
+// ==================== NUEVAS FUNCIONES PARA ACTUALIZACIÓN DE PRECIOS ====================
+
+// Actualizar precio de una suscripción específica
+export async function updatePayPalSubscriptionPrice(subscriptionId: string, newPrice: string) {
+  const accessToken = await getPayPalAccessToken();
+  
+  const updateData = {
+    plan_id: null, // No cambiamos el plan, solo el precio
+    pricing_scheme: {
+      fixed_price: {
+        value: newPrice,
+        currency_code: PAYPAL_CONFIG.currency
+      }
+    }
+  };
+
+  const response = await fetch(`${PAYPAL_BASE_URL}/v1/billing/subscriptions/${subscriptionId}/revise`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      plan_id: await getCurrentPlanId(),
+      plan: {
+        billing_cycles: [{
+          frequency: {
+            interval_unit: "MONTH",
+            interval_count: 1
+          },
+          tenure_type: "REGULAR",
+          sequence: 1,
+          total_cycles: 0,
+          pricing_scheme: {
+            fixed_price: {
+              value: newPrice,
+              currency_code: PAYPAL_CONFIG.currency
+            }
+          }
+        }]
+      }
+    }),
+  });
+
+  return response;
+}
+
+// Obtener ID del plan actual
+async function getCurrentPlanId() {
+  const plan = await createOrGetPayPalSubscriptionPlan();
+  return plan.id;
+}
+
+// Actualizar múltiples suscripciones
+export async function updateMultipleSubscriptionsPrices(subscriptions: Array<{id: string, paypal_subscription_id: string}>, newPrice: string) {
+  const results = [];
+  
+  for (const subscription of subscriptions) {
+    try {
+      const result = await updatePayPalSubscriptionPrice(subscription.paypal_subscription_id, newPrice);
+      results.push({
+        userId: subscription.id,
+        paypalSubscriptionId: subscription.paypal_subscription_id,
+        success: result.status === 200,
+        response: result.status
+      });
+    } catch (error) {
+      results.push({
+        userId: subscription.id,
+        paypalSubscriptionId: subscription.paypal_subscription_id,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+    
+    // Pequeño delay entre llamadas para no saturar la API de PayPal
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  
+  return results;
+}
+
+// Obtener precio dinámico desde la base de datos
+export async function getDynamicPrice() {
+  try {
+    // Esta función debería ser llamada desde el servidor donde tienes acceso a Supabase
+    // Por ahora retornamos el precio por defecto
+    return PAYPAL_CONFIG.amount;
+  } catch (error) {
+    console.error('Error obteniendo precio dinámico:', error);
+    return PAYPAL_CONFIG.amount;
+  }
+}
