@@ -99,7 +99,7 @@ export default function CrearPost() {
         return;
       }
     }
-  }, [session, userType, subscriptionStatus, loading]);
+  }, [session, userType, subscriptionStatus, loading, subscriptionData.subscription_expires_at]);
 
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -137,10 +137,6 @@ export default function CrearPost() {
     router.push('/');
   };
 
-  const handleGoToLogin = () => {
-    setShowModal(false);
-    router.push('/login');
-  };
 
   const handleGoToSubscription = () => {
     setShowModal(false);
