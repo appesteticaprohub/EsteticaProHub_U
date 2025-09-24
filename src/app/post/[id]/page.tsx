@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useRef, useState } from 'react';
+import { use, useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePost } from '@/hooks/usePost';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +10,6 @@ import { useAnonymousPostTracker } from '@/hooks/useAnonymousPostTracker';
 import Modal from '@/components/Modal';
 import SnackBar from '@/components/Snackbar';
 import { useLikes } from '@/hooks/useLikes';
-import { useComments } from '@/hooks/useComments';
 import { useCommentsWithActions } from '@/hooks/useComments';
 import { Comment } from '@/types/api';
 
@@ -275,9 +274,12 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, currentUserId, user
 export default function PostPage({ params }: PostPageProps) {
   const resolvedParams = use(params);
   const { post, loading, error, incrementViews } = usePost(resolvedParams.id);
-  const { user, userType } = useAuth();
+  const { user } = useAuth();
   const { subscriptionStatus, subscriptionData } = useSubscriptionStatus();
-  const { viewedPostsCount, incrementViewedPosts, hasReachedLimit } = useAnonymousPostTracker();
+  const expirationDate = useMemo(() => {
+    return subscriptionData?.subscription_expires_at ? new Date(subscriptionData.subscription_expires_at) : null;
+  }, [subscriptionData?.subscription_expires_at]);
+  const { viewedPostsCount, incrementViewedPosts } = useAnonymousPostTracker();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(resolvedParams.id);
@@ -343,7 +345,7 @@ export default function PostPage({ params }: PostPageProps) {
       setSnackBarMessage('Comentario agregado exitosamente');
       setShowSnackBar(true);
     }
-  } catch (error) {
+  } catch {
     setSnackBarMessage('Error al enviar comentario');
     setShowSnackBar(true);
   } finally {
@@ -436,10 +438,6 @@ const handleDeleteComment = async (commentId: string) => {
     router.push('/suscripcion');
   };
 
-  const goToHome = () => {
-    router.push('/');
-  };
-
   // Verificar estado del usuario y mostrar modal correspondiente
   useEffect(() => {
     if (!loading && post) {
@@ -497,7 +495,8 @@ const handleDeleteComment = async (commentId: string) => {
         hasTrackedAnonymousView.current = true;
       }
     }
-  }, [loading, post, user, subscriptionStatus]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, post, user, subscriptionStatus, expirationDate]);
 
   // Incrementar vistas cuando el post se carga exitosamente (solo una vez)
   useEffect(() => {
