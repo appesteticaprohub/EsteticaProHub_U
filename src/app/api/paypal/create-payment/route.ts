@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createPayPalPayment, createPayPalSubscription, createOrGetPayPalSubscriptionPlan, getDynamicPrice } from '@/lib/paypal';
 import { isAutoRenewalEnabled } from '@/lib/settings';
@@ -10,7 +10,7 @@ function generateExternalReference(): string {
   return `${timestamp}-${random}`;
 }
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       subscription_type: isAutoRenewal ? 'recurring' : 'one_time'
     };
 
-    const { data: session, error: dbError } = await supabase
+    const { error: dbError } = await supabase
       .from('payment_sessions')
       .insert(sessionData)
       .select()
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
         console.log('🔗 Links disponibles:', JSON.stringify(paypalSubscription.links, null, 2));
         
         const approvalUrl = paypalSubscription.links?.find(
-          (link: any) => link.rel === 'approve'
+          (link: { rel: string; href: string }) => link.rel === 'approve'
         )?.href;
 
         if (!approvalUrl) {
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
 
       // Encontrar URL de aprobación de PayPal
       const approvalUrl = paypalPayment.links?.find(
-        (link: any) => link.rel === 'approval_url'
+        (link: { rel: string; href: string }) => link.rel === 'approval_url'
       )?.href;
 
       return NextResponse.json({
