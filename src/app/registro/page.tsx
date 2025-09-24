@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -8,7 +8,7 @@ import SpecialtySelect from '@/components/SpecialtySelect';
 import CountrySelect from '@/components/CountrySelect';
 import DateSelect from '@/components/DateSelect';
 
-export default function Registro() {
+function RegistroContent() {
   const [formData, setFormData] = useState({
   nombre: '',
   apellido: '',
@@ -545,4 +545,12 @@ const handleSubmit = async (e: React.FormEvent) =>  {
       </div>
     </main>
   );
+}
+
+export default function Registro() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <RegistroContent />
+    </Suspense>
+  )
 }
