@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext } from 'react'
 import useSWR, { mutate } from 'swr'
 import { apiClient } from '@/lib/api-client'
 
@@ -47,6 +47,7 @@ const fetcher = async (url: string): Promise<AuthData> => {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data, error, isLoading, mutate: mutateAuth } = useSWR<AuthData>(
     '/auth/session',
     fetcher,
@@ -80,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       return { error: null }
-    } catch (error) {
+    } catch {
       return { error: { message: 'Network error' } }
     }
   }
@@ -107,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return { error: null }
-  } catch (error) {
+  } catch {
     return { error: { message: 'Network error' } }
   }
 }
