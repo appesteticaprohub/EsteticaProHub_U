@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -25,13 +25,13 @@ export default function Registro() {
   
   const [loading, setLoading] = useState(false);
   const [paymentValidated, setPaymentValidated] = useState<boolean | null>(null);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [, setPaymentError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const paymentRef = searchParams.get('ref');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const router = useRouter();
   const [isRenewal, setIsRenewal] = useState<boolean>(false);
-  const [renewalProcessed, setRenewalProcessed] = useState<boolean>(false);
+  const [, setRenewalProcessed] = useState<boolean>(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -59,10 +59,10 @@ const handleDateChange = (field: 'day' | 'month' | 'year', value: string) => {
   }));
 };
 
-  const { signUp, user } = useAuth();
+  const { signUp } = useAuth();
 
   // Función para procesar renovación de usuario existente
-  const processRenewal = async (paymentRef: string) => {
+  const processRenewal = useCallback(async (paymentRef: string) => {
     try {
       console.log('🔄 Procesando renovación para usuario existente');
       console.log('🔄 Payment ref:', paymentRef);
@@ -114,7 +114,7 @@ const handleDateChange = (field: 'day' | 'month' | 'year', value: string) => {
       console.error('❌ Error inesperado en renovación:', error);
       setPaymentError('Error inesperado al procesar la renovación');
     }
-  };
+  }, [router, setPaymentError, setRenewalProcessed, setMessage]);
 
   // Validar payment session al cargar la página
 useEffect(() => {
@@ -256,9 +256,9 @@ useEffect(() => {
   };
 
   validatePayment();
-}, [paymentRef, searchParams]);
+}, [paymentRef, searchParams, processRenewal]);
 
-const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) =>  {
   e.preventDefault();
   
   if (!paymentValidated) {
@@ -323,7 +323,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         }
       });
     }
-  } catch (error) {
+  } catch {
     setMessage({
       type: 'error',
       text: 'Error inesperado. Por favor intenta de nuevo.'
