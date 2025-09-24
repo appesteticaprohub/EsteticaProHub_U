@@ -1,9 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function Suscripcion() {
-  const router = useRouter();
   const [isAutoRenewal, setIsAutoRenewal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [subscriptionPrice, setSubscriptionPrice] = useState(10.00);
@@ -28,7 +26,7 @@ export default function Suscripcion() {
         const priceData = await priceResponse.json();
         setSubscriptionPrice(priceData.price);
       }
-    } catch (error) {
+    } catch {
       setIsAutoRenewal(false);
       setSubscriptionPrice(10.00); // Fallback
     } finally {
