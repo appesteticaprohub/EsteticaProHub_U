@@ -92,7 +92,7 @@ if (data.user) {
         const expirationDate = new Date();
         expirationDate.setMonth(expirationDate.getMonth() + 1);
 
-        const profileUpdateData: any = {
+        const profileUpdateData: Record<string, unknown> = {
           subscription_status: 'Active',
           subscription_expires_at: expirationDate.toISOString(),
           user_type: 'premium',
@@ -131,7 +131,7 @@ return NextResponse.json({
   error: null
 })
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Internal server error' },
       { status: 500 }
