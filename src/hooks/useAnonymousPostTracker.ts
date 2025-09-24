@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import useSWR, { mutate } from 'swr'
+import useSWR from 'swr'
 import { apiClient } from '@/lib/api-client'
 
 interface AnonymousData {
@@ -17,7 +16,7 @@ const fetcher = async (url: string): Promise<AnonymousData> => {
 }
 
 export function useAnonymousPostTracker() {
-  const { data, error, mutate: mutateTracker } = useSWR<AnonymousData>(
+  const { data, mutate: mutateTracker } = useSWR<AnonymousData>(
     '/anonymous/track',
     fetcher,
     {
