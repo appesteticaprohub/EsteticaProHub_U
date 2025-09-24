@@ -12,11 +12,6 @@ interface Post {
   comments_count: number;
 }
 
-interface PostsResponse {
-  data: Post[] | null;
-  error: string | null;
-}
-
 // Fetcher function para SWR
 const fetcher = async (url: string): Promise<Post[]> => {
   const { data, error } = await apiClient.get<Post[]>(url)
