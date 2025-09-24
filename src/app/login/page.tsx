@@ -30,7 +30,7 @@ export default function Login() {
       } else {
         router.push('/')
       }
-    } catch (err) {
+    } catch {
       setError('Error inesperado al iniciar sesión')
     } finally {
       setLoading(false)
