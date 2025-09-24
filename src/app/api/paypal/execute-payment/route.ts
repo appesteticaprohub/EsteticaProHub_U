@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { verifyPayPalPayment, verifyPayPalSubscription } from '@/lib/paypal';
+import { verifyPayPalSubscription } from '@/lib/paypal';
 import { isAutoRenewalEnabled } from '@/lib/settings';
 
 // Función para obtener token de acceso
