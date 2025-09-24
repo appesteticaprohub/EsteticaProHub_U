@@ -53,7 +53,7 @@ export function useSubscriptionStatus() {
             auto_renewal_enabled: false
           })
         } else if (data && typeof data === 'object') {
-          const subscriptionData = data as any // Casting temporal para evitar errores de tipo
+          const subscriptionData = data as SubscriptionData // Usar el tipo específico definido
           setSubscriptionData({
             subscription_status: subscriptionData.subscription_status || null,
             subscription_expires_at: subscriptionData.subscription_expires_at || null,
