@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ data, error: null })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Internal server error' },
       { status: 500 }
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ data, error: null })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Internal server error' },
       { status: 500 }
