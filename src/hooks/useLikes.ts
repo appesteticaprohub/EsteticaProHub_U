@@ -23,7 +23,7 @@ const fetcher = async (url: string): Promise<LikesData> => {
 export function useLikes(postId: string | null) {
   const [loading, setLoading] = useState(false)
   
-  const { data, error, mutate: mutateLikes } = useSWR<LikesData>(
+  const { data, mutate: mutateLikes } = useSWR<LikesData>(
     postId ? `/posts/${postId}/likes` : null,
     fetcher,
     {
