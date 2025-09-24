@@ -99,7 +99,7 @@ export async function createOrGetPayPalProduct() {
     if (searchResponse.ok) {
       const searchData = await searchResponse.json();
       const existingProduct = searchData.products?.find(
-        (product: any) => product.name === "EsteticaProHub Premium"
+        (product: { id: string; name: string }) => product.name === "EsteticaProHub Premium"
       );
 
       if (existingProduct) {
@@ -107,7 +107,7 @@ export async function createOrGetPayPalProduct() {
         return existingProduct;
       }
     }
-  } catch (error) {
+  } catch {
     console.log('⚠️ Error buscando productos existentes, creando nuevo...');
   }
 
@@ -166,7 +166,7 @@ export async function createOrGetPayPalSubscriptionPlan(dynamicPrice?: string) {
       const searchData = await searchResponse.json();
       const targetPrice = dynamicPrice || PAYPAL_CONFIG.amount;
       const existingPlan = searchData.plans?.find(
-        (plan: any) => plan.name === "EsteticaProHub Premium Monthly" && 
+        (plan: { id: string; name: string; status: string; billing_cycles?: Array<{ pricing_scheme?: { fixed_price?: { value: string } } }> }) => plan.name === "EsteticaProHub Premium Monthly" &&
                       plan.status === "ACTIVE" &&
                       plan.billing_cycles?.[0]?.pricing_scheme?.fixed_price?.value === targetPrice
       );
@@ -176,7 +176,7 @@ export async function createOrGetPayPalSubscriptionPlan(dynamicPrice?: string) {
         return existingPlan;
       }
     }
-  } catch (error) {
+  } catch {
     console.log('⚠️ Error buscando planes existentes, creando nuevo...');
   }
 
@@ -293,16 +293,6 @@ export async function cancelPayPalSubscription(subscriptionId: string, reason: s
 export async function updatePayPalSubscriptionPrice(subscriptionId: string, newPrice: string) {
   const accessToken = await getPayPalAccessToken();
   
-  const updateData = {
-    plan_id: null, // No cambiamos el plan, solo el precio
-    pricing_scheme: {
-      fixed_price: {
-        value: newPrice,
-        currency_code: PAYPAL_CONFIG.currency
-      }
-    }
-  };
-
   const response = await fetch(`${PAYPAL_BASE_URL}/v1/billing/subscriptions/${subscriptionId}/revise`, {
     method: 'POST',
     headers: {
