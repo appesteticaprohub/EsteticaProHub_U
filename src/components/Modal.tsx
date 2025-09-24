@@ -7,6 +7,7 @@ interface ModalProps {
   children: React.ReactNode;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function Modal({ isOpen, onClose, children }: ModalProps) {
   return (
     <Transition appear show={isOpen} as={Fragment}>
