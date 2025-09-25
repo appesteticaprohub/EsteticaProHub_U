@@ -40,12 +40,19 @@ export interface SendEmailOptions {
 // Función principal para enviar emails
 export async function sendEmail(options: SendEmailOptions) {
   try {
+    console.log('📧 Intentando enviar email a:', options.to)
+    console.log('📧 Subject:', options.subject)
+    console.log('📧 From:', EMAIL_CONFIG.from)
+    console.log('📧 API Key existe:', !!process.env.RESEND_API_KEY)
+    
     const response = await resend.emails.send({
       from: EMAIL_CONFIG.from,
       to: options.to,
       subject: options.subject,
       html: options.html,
     })
+
+    console.log('📧 Respuesta de Resend:', response)
 
     // Log del envío en la base de datos si se proporciona templateKey y userId
     if (options.templateKey && options.userId) {
@@ -65,7 +72,7 @@ export async function sendEmail(options: SendEmailOptions) {
     }
 
   } catch (error) {
-    console.error('Error enviando email:', error)
+    console.error('❌ Error enviando email:', error)
     
     // Log del error si se proporciona la información
     if (options.templateKey && options.userId) {
@@ -87,6 +94,7 @@ export async function sendEmail(options: SendEmailOptions) {
 }
 
 // Función para registrar el envío de email en la base de datos
+// Función para registrar el envío de email en la base de datos
 async function logEmailSend(logData: {
   user_id: string
   template_key: string
@@ -98,9 +106,17 @@ async function logEmailSend(logData: {
   try {
     const supabase = await createServerSupabaseClient()
     
-    await supabase.from('email_logs').insert(logData)
+    console.log('🔍 Intentando guardar log de email:', logData)
+    
+    const { data, error } = await supabase.from('email_logs').insert(logData).select()
+    
+    if (error) {
+      console.error('❌ Error guardando log de email:', error)
+    } else {
+      console.log('✅ Log de email guardado correctamente:', data)
+    }
   } catch (error) {
-    console.error('Error logging email send:', error)
+    console.error('❌ Error en logEmailSend:', error)
   }
 }
 

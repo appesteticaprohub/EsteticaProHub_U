@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/server-supabase'
 import { createClient } from '@supabase/supabase-js'
+import { NotificationService } from '@/lib/notification-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -117,11 +118,30 @@ if (data.user) {
           if (fullSessionData?.paypal_subscription_id) {
             console.log(`✅ PayPal Subscription ID transferred successfully: ${fullSessionData.paypal_subscription_id}`)
           }
-        }
+          }
+
+            // Enviar email de bienvenida automáticamente
+            try {
+              const welcomeResult = await NotificationService.sendWelcomeEmail(
+                data.user.id,
+                data.user.email || email,
+                fullName || data.user.email?.split('@')[0] || 'Usuario'
+              )
+              
+              if (welcomeResult.success) {
+                console.log('✅ Email de bienvenida enviado a:', email)
+              } else {
+                console.error('❌ Error enviando email de bienvenida:', welcomeResult.error)
+              }
+            } catch (emailError) {
+              console.error('❌ Error en servicio de email de bienvenida:', emailError)
+            }
       }
     }
   }
 }
+
+
 
 return NextResponse.json({
   data: {
