@@ -69,6 +69,89 @@ export interface Session {
   }
 }
 
+// Tipos para Notificaciones
+export interface Notification {
+  id: string
+  user_id: string
+  type: 'email' | 'in_app'
+  category: 'critical' | 'important' | 'normal' | 'promotional'
+  title: string
+  message: string
+  cta_text: string | null
+  cta_url: string | null
+  is_read: boolean
+  expires_at: string | null
+  created_at: string
+  created_by_admin_id: string | null
+}
+
+export interface EmailTemplate {
+  id: string
+  template_key: string
+  subject: string
+  html_content: string
+  is_active: boolean
+  is_system: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface EmailLog {
+  id: string
+  user_id: string
+  template_key: string
+  email: string
+  status: 'sent' | 'failed' | 'delivered'
+  resend_id: string | null
+  error_message: string | null
+  sent_at: string
+}
+
+export interface NotificationPreferences {
+  user_id: string
+  email_promotional: boolean
+  email_content: boolean
+  email_administrative: boolean
+  in_app_notifications: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface NewsletterSettings {
+  id: string
+  is_enabled: boolean
+  last_sent_at: string | null
+  posts_to_include: number
+  created_at: string
+  updated_at: string
+}
+
+// Tipos para requests de notificaciones
+export interface CreateNotificationRequest {
+  user_id?: string
+  type: 'email' | 'in_app'
+  category: 'critical' | 'important' | 'normal' | 'promotional'
+  title: string
+  message: string
+  cta_text?: string
+  cta_url?: string
+  expires_at?: string
+}
+
+export interface UpdateNotificationPreferencesRequest {
+  email_promotional?: boolean
+  email_content?: boolean
+  in_app_notifications?: boolean
+}
+
+export interface NotificationFilters {
+  type?: 'email' | 'in_app'
+  category?: 'critical' | 'important' | 'normal' | 'promotional'
+  is_read?: boolean
+  limit?: number
+  offset?: number
+}
+
 export interface AuthResponse {
   session: Session | null
   user: Profile | null
