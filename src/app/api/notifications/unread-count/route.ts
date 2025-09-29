@@ -28,8 +28,7 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      data: { count: count || 0 },
-      error: null
+      count: count || 0
     })
 
   } catch (error) {

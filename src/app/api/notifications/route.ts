@@ -53,9 +53,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Obtener total de notificaciones para paginación
+    const { count } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .or('expires_at.is.null,expires_at.gt.now()')
+
     return NextResponse.json({
-      data: notifications,
-      error: null
+      notifications: notifications || [],
+      total: count || 0
     })
 
   } catch (error) {
