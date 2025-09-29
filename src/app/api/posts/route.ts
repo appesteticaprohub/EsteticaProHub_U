@@ -52,13 +52,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Obtener la hora actual en UTC correctamente
+    const now = new Date().toISOString()
+    
     const { data, error } = await supabase
       .from('posts')
       .insert({
         title,
         content,
         category,
-        author_id: authorId
+        author_id: authorId,
+        created_at: now
       })
       .select()
       .single()
