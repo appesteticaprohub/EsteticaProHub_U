@@ -7,10 +7,12 @@ import { Notification, UnreadCountResponse, NotificationsResponse } from '@/type
 interface UseNotificationsOptions {
   limit?: number;
   onlyUnread?: boolean;
+  type?: 'email' | 'in_app';
+  category?: 'critical' | 'important' | 'normal' | 'promotional';
 }
 
 export function useNotifications(options: UseNotificationsOptions = {}) {
-  const { limit = 5, onlyUnread = false } = options;
+  const { limit = 5, onlyUnread = false, type, category } = options;
 
   // Obtener contador de no leídas
   const { data: unreadData, mutate: mutateUnread } = useSWR<UnreadCountResponse>(
@@ -29,8 +31,14 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   // Obtener notificaciones
   const queryParams = new URLSearchParams({
     limit: limit.toString(),
-    ...(onlyUnread && { onlyUnread: 'true' }),
+    ...(type && { type }),
+    ...(category && { category }),
   });
+
+  // Si onlyUnread es true, agregar is_read=false
+  if (onlyUnread) {
+    queryParams.append('is_read', 'false');
+  }
 
   const { data: notificationsData, mutate: mutateNotifications, isLoading } = useSWR<NotificationsResponse>(
     `/notifications?${queryParams}`,
