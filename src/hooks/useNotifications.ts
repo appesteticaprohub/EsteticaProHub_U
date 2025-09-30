@@ -75,12 +75,36 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     }
   };
 
+  // Marcar todas como leídas
+  const markAllAsRead = async () => {
+    try {
+      const { error } = await apiClient.patch(`/notifications`, {
+        mark_all_as_read: true,
+      });
+
+      if (error) {
+        console.error('Error marking all notifications as read:', error);
+        return false;
+      }
+
+      // Actualizar ambas cachés
+      await mutateNotifications();
+      await mutateUnread();
+      
+      return true;
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      return false;
+    }
+  };
+
   return {
     notifications: notificationsData?.notifications || [],
     total: notificationsData?.total || 0,
     unreadCount: unreadData?.count || 0,
     isLoading,
     markAsRead,
+    markAllAsRead,
     refresh: () => {
       mutateNotifications();
       mutateUnread();

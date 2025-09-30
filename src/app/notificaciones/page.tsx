@@ -24,7 +24,7 @@ export default function NotificationsPage() {
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [limit, setLimit] = useState(20);
 
-  const { notifications, total, unreadCount, isLoading, markAsRead, refresh } = useNotifications({ 
+  const { notifications, total, unreadCount, isLoading, markAsRead, markAllAsRead, refresh } = useNotifications({
     limit,
     onlyUnread,
     type: selectedType === 'all' ? undefined : selectedType,
@@ -46,6 +46,13 @@ export default function NotificationsPage() {
       case 'important': return 'bg-yellow-500 text-white';
       case 'promotional': return 'bg-purple-500 text-white';
       default: return 'bg-blue-500 text-white';
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    const success = await markAllAsRead();
+    if (success) {
+      refresh();
     }
   };
 
@@ -154,13 +161,21 @@ export default function NotificationsPage() {
           </div>
 
           {/* Acciones rápidas */}
-          <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 mt-4 pt-4 border-gray-200">
             <button
               onClick={refresh}
               className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
             >
               🔄 Actualizar
             </button>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllAsRead}
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+              >
+                ✓ Marcar todas como leídas
+              </button>
+            )}
           </div>
         </div>
       </div>
