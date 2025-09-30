@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/server-supabase'
 import { Comment } from '@/types/api'
+import { createSocialNotification } from '@/lib/social-notification-service'
 
 export async function GET(
   request: NextRequest,
@@ -209,6 +210,55 @@ export async function POST(
 
       if (updateError) {
         console.error('Error updating comments count:', updateError)
+      }
+    }
+
+    // Obtener información del post para la notificación
+    const { data: postData } = await supabase
+      .from('posts')
+      .select('author_id, title')
+      .eq('id', id)
+      .single()
+
+    // Obtener nombre del usuario que comentó
+    const { data: commenterProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+
+    // Crear notificaciones según el caso
+    if (postData && commenterProfile) {
+      if (!parent_id) {
+        // Es un comentario nuevo en el post
+        await createSocialNotification({
+          recipientUserId: postData.author_id,
+          actorUserId: user.id,
+          actorName: commenterProfile.full_name || 'Un usuario',
+          type: 'comment',
+          postId: id,
+          postTitle: postData.title
+        })
+      } else {
+        // Es una respuesta a un comentario
+        // Obtener el comentario padre para notificar a su autor
+        const { data: parentComment } = await supabase
+          .from('comments')
+          .select('user_id')
+          .eq('id', parent_id)
+          .single()
+
+        if (parentComment) {
+          await createSocialNotification({
+            recipientUserId: parentComment.user_id,
+            actorUserId: user.id,
+            actorName: commenterProfile.full_name || 'Un usuario',
+            type: 'reply',
+            postId: id,
+            postTitle: postData.title,
+            commentId: parent_id
+          })
+        }
       }
     }
 

@@ -9,14 +9,15 @@ interface UseNotificationsOptions {
   onlyUnread?: boolean;
   type?: 'email' | 'in_app';
   category?: 'critical' | 'important' | 'normal' | 'promotional';
+  enabled?: boolean;
 }
 
 export function useNotifications(options: UseNotificationsOptions = {}) {
-  const { limit = 5, onlyUnread = false, type, category } = options;
+  const { limit = 5, onlyUnread = false, type, category, enabled = true } = options;
 
   // Obtener contador de no leídas
   const { data: unreadData, mutate: mutateUnread } = useSWR<UnreadCountResponse>(
-    '/notifications/unread-count',
+    enabled ? '/notifications/unread-count' : null,
     async (url) => {
       const { data, error } = await apiClient.get<UnreadCountResponse>(url);
       if (error) throw new Error(error);
@@ -41,7 +42,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   }
 
   const { data: notificationsData, mutate: mutateNotifications, isLoading } = useSWR<NotificationsResponse>(
-    `/notifications?${queryParams}`,
+    enabled ? `/notifications?${queryParams}` : null,
     async (url) => {
       const { data, error } = await apiClient.get<NotificationsResponse>(url);
       if (error) throw new Error(error);

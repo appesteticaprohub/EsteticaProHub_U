@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, getCurrentUser } from '@/lib/server-supabase'
+import { createSocialNotification } from '@/lib/social-notification-service'
 
 export async function GET(
   request: NextRequest,
@@ -135,7 +136,7 @@ export async function POST(
       // Incrementar contador
       const { data: currentPost } = await supabase
         .from('posts')
-        .select('likes_count')
+        .select('likes_count, author_id, title')
         .eq('id', postId)
         .single()
 
@@ -146,6 +147,25 @@ export async function POST(
           .from('posts')
           .update({ likes_count: newCount })
           .eq('id', postId)
+
+        // Obtener nombre del usuario que dio like
+        const { data: likerProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single()
+
+        // Crear notificación de like
+        if (likerProfile) {
+          await createSocialNotification({
+            recipientUserId: currentPost.author_id,
+            actorUserId: user.id,
+            actorName: likerProfile.full_name || 'Un usuario',
+            type: 'like',
+            postId: postId,
+            postTitle: currentPost.title
+          })
+        }
 
         return NextResponse.json({
           data: {

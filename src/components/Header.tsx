@@ -21,7 +21,10 @@ const formatDateColombia = (utcDate: string) => {
 
 export default function Header() {
   const { user, loading, signOut } = useAuth();
-  const { notifications, unreadCount, markAsRead, refresh, isLoading: notificationsLoading } = useNotifications({ limit: 5 });
+  const { notifications, unreadCount, markAsRead, refresh, isLoading: notificationsLoading } = useNotifications({ 
+    limit: 5,
+    enabled: !!user && !loading  // Solo llamar si hay usuario y no está cargando
+  });
 const [showNotifications, setShowNotifications] = useState(false);
 const dropdownRef = useRef<HTMLDivElement>(null);
 

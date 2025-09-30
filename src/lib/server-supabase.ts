@@ -51,3 +51,21 @@ export async function getCurrentUser() {
     return { user: null, error }
   }
 }
+
+// Cliente admin que bypassa RLS - solo para operaciones del sistema
+export function createServerSupabaseAdminClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return []
+        },
+        setAll() {
+          // No-op para el cliente admin
+        },
+      },
+    }
+  )
+}
