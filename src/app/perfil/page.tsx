@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus'
 import PaymentRecoveryModal from '@/components/PaymentRecoveryModal'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import type { NotificationPreferences } from '@/types/notifications'
 import CancelSubscriptionModal from '@/components/CancelSubscriptionModal'
 
 
@@ -15,6 +16,10 @@ export default function MiPerfil() {
   const router = useRouter()
   const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [activeTab, setActiveTab] = useState<'perfil' | 'notificaciones'>('perfil')
+  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null)
+  const [loadingPreferences, setLoadingPreferences] = useState(false)
+  const [savingPreferences, setSavingPreferences] = useState(false)
 
   const handleSignOut = async () => {
     await signOut()
@@ -42,6 +47,59 @@ export default function MiPerfil() {
   } catch (error) {
     console.error('Error:', error)
     alert('Error cancelando suscripción')
+  }
+}
+
+const loadPreferences = async () => {
+  setLoadingPreferences(true)
+  try {
+    const response = await fetch('/api/notifications/preferences')
+    if (response.ok) {
+      const result = await response.json()
+      setPreferences(result.data)
+    } else {
+      console.error('Error loading preferences:', response.status)
+    }
+  } catch (error) {
+    console.error('Error loading preferences:', error)
+  } finally {
+    setLoadingPreferences(false)
+  }
+}
+
+const handlePreferenceChange = (key: keyof NotificationPreferences, value: boolean) => {
+  if (preferences) {
+    setPreferences({ ...preferences, [key]: value })
+  }
+}
+
+const savePreferences = async () => {
+  if (!preferences) return
+  
+  setSavingPreferences(true)
+  try {
+    const response = await fetch('/api/notifications/preferences', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email_promotional: preferences.email_promotional,
+        email_content: preferences.email_content,
+        in_app_notifications: preferences.in_app_notifications,
+      }),
+    })
+
+    if (response.ok) {
+      const result = await response.json()
+      setPreferences(result.data)
+      // Opcional: podrías agregar un toast notification aquí en el futuro
+    } else {
+      alert('Error al guardar preferencias')
+    }
+  } catch (error) {
+    console.error('Error saving preferences:', error)
+    alert('Error al guardar preferencias')
+  } finally {
+    setSavingPreferences(false)
   }
 }
 
@@ -79,6 +137,12 @@ const handleReactivateSubscription = async () => {
     })
   }
 
+  useEffect(() => {
+  if (user && activeTab === 'notificaciones') {
+    loadPreferences()
+  }
+}, [user, activeTab])
+
   if (loading || statusLoading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -112,9 +176,36 @@ const handleReactivateSubscription = async () => {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white shadow rounded-lg">
           <div className="px-6 py-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-6">
               Mi Perfil
             </h1>
+
+            {/* Pestañas */}
+            <div className="flex border-b border-gray-200 mb-8">
+              <button
+                onClick={() => setActiveTab('perfil')}
+                className={`px-6 py-3 font-medium transition-colors ${
+                  activeTab === 'perfil'
+                    ? 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Perfil
+              </button>
+              <button
+                onClick={() => setActiveTab('notificaciones')}
+                className={`px-6 py-3 font-medium transition-colors ${
+                  activeTab === 'notificaciones'
+                    ? 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Notificaciones
+              </button>
+            </div>
+
+            {/* Contenido Pestaña Perfil */}
+            {activeTab === 'perfil' && (
             
             <div className="space-y-6">
               <div>
@@ -232,6 +323,117 @@ const handleReactivateSubscription = async () => {
                 </div>
               )}
             </div>
+            )}
+
+            {/* Contenido Pestaña Notificaciones */}
+              {activeTab === 'notificaciones' && (
+                <div className="space-y-6">
+                  {loadingPreferences ? (
+                    <div className="text-center py-8">
+                      <div className="text-lg text-gray-600">Cargando preferencias...</div>
+                    </div>
+                  ) : preferences ? (
+                    <>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <p className="text-sm text-blue-800">
+                          Configura cómo deseas recibir notificaciones. Los emails administrativos (pagos, cambios de precio, etc.) siempre se enviarán.
+                        </p>
+                      </div>
+
+                      {/* Email Promocional */}
+                      <div className="flex items-center justify-between py-4 border-b border-gray-200">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-gray-900">Emails Promocionales</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Recibe ofertas, descuentos y promociones especiales por email
+                          </p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer ml-4">
+                          <input
+                            type="checkbox"
+                            checked={preferences.email_promotional}
+                            onChange={(e) => handlePreferenceChange('email_promotional', e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+
+                      {/* Email Contenido (Newsletter) */}
+                      <div className="flex items-center justify-between py-4 border-b border-gray-200">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-gray-900">Newsletter con Posts</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Recibe resúmenes de los posts más recientes de la comunidad
+                          </p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer ml-4">
+                          <input
+                            type="checkbox"
+                            checked={preferences.email_content}
+                            onChange={(e) => handlePreferenceChange('email_content', e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+
+                      {/* Notificaciones In-App */}
+                      <div className="flex items-center justify-between py-4 border-b border-gray-200">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-gray-900">Notificaciones en la App</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Recibe notificaciones dentro de la plataforma
+                          </p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer ml-4">
+                          <input
+                            type="checkbox"
+                            checked={preferences.in_app_notifications}
+                            onChange={(e) => handlePreferenceChange('in_app_notifications', e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+
+                      {/* Email Administrativo (bloqueado) */}
+                      <div className="flex items-center justify-between py-4 border-b border-gray-200 opacity-60">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-gray-900">Emails Administrativos</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Notificaciones importantes sobre pagos, suscripción y cambios de precio (siempre activo)
+                          </p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-not-allowed ml-4">
+                          <input
+                            type="checkbox"
+                            checked={preferences.email_administrative}
+                            disabled
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-400"></div>
+                        </label>
+                      </div>
+
+                      {/* Botón Guardar */}
+                      <div className="pt-4">
+                        <button
+                          onClick={savePreferences}
+                          disabled={savingPreferences}
+                          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 px-6 rounded-md transition duration-200"
+                        >
+                          {savingPreferences ? 'Guardando...' : 'Guardar Preferencias'}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="text-lg text-gray-600">Error al cargar preferencias</div>
+                    </div>
+                  )}
+                </div>
+              )}
             
             <div className="mt-8 pt-6 border-t border-gray-200">
               <button

@@ -23,6 +23,10 @@ export interface NotificationPreferences {
   updated_at: string;
 }
 
+export interface NotificationPreferencesResponse {
+  preferences: NotificationPreferences;
+}
+
 export interface UnreadCountResponse {
   count: number;
 }
