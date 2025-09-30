@@ -21,7 +21,7 @@ const formatDateColombia = (utcDate: string) => {
 
 export default function Header() {
   const { user, loading, signOut } = useAuth();
-  const { notifications, unreadCount, markAsRead, isLoading: notificationsLoading } = useNotifications({ limit: 5 });
+  const { notifications, unreadCount, markAsRead, refresh, isLoading: notificationsLoading } = useNotifications({ limit: 5 });
 const [showNotifications, setShowNotifications] = useState(false);
 const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -96,11 +96,49 @@ const getCategoryColor = (category: string) => {
 
               {/* Dropdown de notificaciones */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
-                  <div className="p-4 border-b border-gray-200">
+                <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[500px] overflow-y-auto">
+                  {/* Header con botón refrescar */}
+                  <div className="p-4 border-b border-gray-200 flex justify-between items-center">
                     <h3 className="font-semibold text-gray-800">Notificaciones</h3>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        refresh();
+                      }}
+                      className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                      title="Refrescar notificaciones"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 text-gray-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                    </button>
                   </div>
 
+                  {/* Link Ver todas - ARRIBA */}
+                  {notifications.length > 0 && (
+                    <div className="p-3 border-b border-gray-200 bg-gray-50">
+                      <Link
+                        href="/notificaciones"
+                        className="block text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        onClick={() => setShowNotifications(false)}
+                      >
+                        Ver todas las notificaciones →
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* Lista de notificaciones */}
                   {notificationsLoading ? (
                     <div className="p-4 text-center text-gray-500">
                       Cargando...
@@ -128,12 +166,12 @@ const getCategoryColor = (category: string) => {
                       {notifications.map((notification) => (
                         <div
                           key={notification.id}
-                          className={`p-5 hover:bg-gray-50 transition-colors cursor-pointer ${
+                          className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
                             !notification.is_read ? 'bg-blue-50' : ''
                           }`}
                           onClick={() => handleNotificationClick(notification.id, notification.cta_url)}
                         >
-                          <div className={`border-l-4 px-4 py-2 ${getCategoryColor(notification.category)}`}>
+                          <div className={`border-l-4 px-3 py-2 ${getCategoryColor(notification.category)}`}>
                             <div className="flex justify-between items-start mb-1">
                               <h4 className="font-semibold text-sm text-gray-800">
                                 {notification.title}
@@ -157,18 +195,6 @@ const getCategoryColor = (category: string) => {
                           </div>
                         </div>
                       ))}
-                    </div>
-                  )}
-
-                  {notifications.length > 0 && (
-                    <div className="p-3 border-t border-gray-200 text-center">
-                      <Link
-                        href="/notificaciones"
-                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                        onClick={() => setShowNotifications(false)}
-                      >
-                        Ver todas las notificaciones
-                      </Link>
                     </div>
                   )}
                 </div>
