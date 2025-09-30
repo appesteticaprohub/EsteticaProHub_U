@@ -142,3 +142,77 @@ export async function PATCH(request: NextRequest) {
     )
   }
 }
+
+// DELETE - Eliminar notificación (solo normal y promotional)
+export async function DELETE(request: NextRequest) {
+  try {
+    const { user, error: authError } = await getCurrentUser()
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { data: null, error: 'No autorizado' },
+        { status: 401 }
+      )
+    }
+
+    const body = await request.json()
+    const { notification_id } = body
+
+    if (!notification_id) {
+      return NextResponse.json(
+        { data: null, error: 'notification_id es requerido' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = await createServerSupabaseClient()
+
+    // Primero verificar que la notificación pertenece al usuario y obtener su categoría
+    const { data: notification, error: fetchError } = await supabase
+      .from('notifications')
+      .select('category')
+      .eq('id', notification_id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (fetchError || !notification) {
+      return NextResponse.json(
+        { data: null, error: 'Notificación no encontrada' },
+        { status: 404 }
+      )
+    }
+
+    // Solo permitir eliminar notificaciones normales y promocionales
+    if (notification.category !== 'normal' && notification.category !== 'promotional') {
+      return NextResponse.json(
+        { data: null, error: 'No puedes eliminar notificaciones críticas o importantes' },
+        { status: 403 }
+      )
+    }
+
+    // Eliminar la notificación
+    const { error: deleteError } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notification_id)
+      .eq('user_id', user.id)
+
+    if (deleteError) {
+      return NextResponse.json(
+        { data: null, error: deleteError.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      data: { message: 'Notificación eliminada correctamente' },
+      error: null
+    })
+
+  } catch (error) {
+    return NextResponse.json(
+      { data: null, error: 'Error interno del servidor' },
+      { status: 500 }
+    )
+  }
+}

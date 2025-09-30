@@ -24,7 +24,7 @@ export default function NotificationsPage() {
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [limit, setLimit] = useState(20);
 
-  const { notifications, total, unreadCount, isLoading, markAsRead, markAllAsRead, refresh } = useNotifications({
+  const { notifications, total, unreadCount, isLoading, markAsRead, markAllAsRead, deleteNotification, refresh } = useNotifications({
     limit,
     onlyUnread,
     type: selectedType === 'all' ? undefined : selectedType,
@@ -46,6 +46,27 @@ export default function NotificationsPage() {
       case 'important': return 'bg-yellow-500 text-white';
       case 'promotional': return 'bg-purple-500 text-white';
       default: return 'bg-blue-500 text-white';
+    }
+  };
+
+  const canDeleteNotification = (category: string) => {
+    return category === 'normal' || category === 'promotional';
+  };
+
+  const handleDeleteNotification = async (e: React.MouseEvent, notificationId: string, category: string) => {
+    e.stopPropagation(); // Evitar que se active el click de la notificación
+    
+    if (!canDeleteNotification(category)) {
+      alert('No puedes eliminar notificaciones críticas o importantes');
+      return;
+    }
+
+    if (confirm('¿Estás seguro de que deseas eliminar esta notificación?')) {
+      const result = await deleteNotification(notificationId);
+      if (!result.success) {
+        alert(result.error || 'Error al eliminar la notificación');
+      }
+      // No necesitamos refresh() porque deleteNotification ya actualiza las cachés
     }
   };
 
@@ -218,7 +239,7 @@ export default function NotificationsPage() {
                 }`}
                 onClick={() => handleNotificationClick(notification.id, notification.cta_url, notification.is_read)}
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
                   {/* Contenido principal */}
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -254,8 +275,9 @@ export default function NotificationsPage() {
                     </div>
                   </div>
 
-                  {/* Badge de tipo */}
-                  <div className="flex-shrink-0">
+                  {/* Acciones */}
+                  <div className="flex-shrink-0 flex items-center gap-2">
+                    {/* Badge de tipo */}
                     {notification.type === 'email' ? (
                       <div className="text-gray-400" title="Enviada por email">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -268,6 +290,19 @@ export default function NotificationsPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
                       </div>
+                    )}
+                    
+                    {/* Botón eliminar (solo para normal y promotional) */}
+                    {canDeleteNotification(notification.category) && (
+                      <button
+                        onClick={(e) => handleDeleteNotification(e, notification.id, notification.category)}
+                        className="text-red-400 hover:text-red-600 transition-colors p-1"
+                        title="Eliminar notificación"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     )}
                   </div>
                 </div>

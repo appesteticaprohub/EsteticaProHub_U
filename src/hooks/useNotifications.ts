@@ -98,6 +98,38 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     }
   };
 
+  // Eliminar notificación
+  const deleteNotification = async (notificationId: string) => {
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notification_id: notificationId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        console.error('Error deleting notification:', result.error);
+        return { success: false, error: result.error };
+      }
+
+      // Actualizar ambas cachés forzando revalidación
+      await mutateNotifications(undefined, { revalidate: true });
+      await mutateUnread(undefined, { revalidate: true });
+      
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      return { success: false, error: 'Error al eliminar la notificación' };
+    }
+  };
+
+
   return {
     notifications: notificationsData?.notifications || [],
     total: notificationsData?.total || 0,
@@ -105,6 +137,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     isLoading,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
     refresh: () => {
       mutateNotifications();
       mutateUnread();
