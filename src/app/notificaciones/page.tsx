@@ -54,21 +54,14 @@ export default function NotificationsPage() {
   };
 
   const handleDeleteNotification = async (e: React.MouseEvent, notificationId: string, category: string) => {
-    e.stopPropagation(); // Evitar que se active el click de la notificación
-    
-    if (!canDeleteNotification(category)) {
-      alert('No puedes eliminar notificaciones críticas o importantes');
-      return;
-    }
+  e.stopPropagation();
+  
+  if (!canDeleteNotification(category)) {
+    return;
+  }
 
-    if (confirm('¿Estás seguro de que deseas eliminar esta notificación?')) {
-      const result = await deleteNotification(notificationId);
-      if (!result.success) {
-        alert(result.error || 'Error al eliminar la notificación');
-      }
-      // No necesitamos refresh() porque deleteNotification ya actualiza las cachés
-    }
-  };
+  await deleteNotification(notificationId);
+};
 
   const handleMarkAllAsRead = async () => {
     const success = await markAllAsRead();
