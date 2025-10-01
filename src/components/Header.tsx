@@ -263,22 +263,24 @@ const getCategoryColor = (category: string) => {
             </button>
           </>
         ) : (
-          <Link href="/login">
-            <button 
-              className="px-3 py-2 md:px-5 md:py-2.5 rounded-lg transition-colors text-white font-medium text-sm md:text-base"
-              style={{ backgroundColor: hoveredButton === 'login' ? '#4a6bb8' : '#557DCE' }}
-              onMouseEnter={() => setHoveredButton('login')}
-              onMouseLeave={() => setHoveredButton(null)}
-            >
-              Iniciar Sesión
-            </button>
+          <Link 
+            href="/login"
+            className="px-2 py-1.5 md:px-4 md:py-2 text-xs md:text-base font-bold transition-colors rounded-lg border-2"
+            style={{ 
+              color: hoveredButton === 'login' ? '#5a5fb5' : '#7073CA',
+              borderColor: hoveredButton === 'login' ? '#5a5fb5' : '#7073CA'
+            }}
+            onMouseEnter={() => setHoveredButton('login')}
+            onMouseLeave={() => setHoveredButton(null)}
+          >
+            Iniciar Sesión
           </Link>
         )}
         {!user && (
           <Link href="/suscripcion">
             <button 
-              className="px-3 py-2 md:px-5 md:py-2.5 rounded-lg transition-colors text-white font-medium text-sm md:text-base"
-              style={{ backgroundColor: hoveredButton === 'subscribe' ? '#9a4391' : '#AF4CA4' }}
+              className="px-2 py-2 md:px-5 md:py-2.5 rounded-lg transition-colors text-white font-medium text-xs md:text-base"
+              style={{ backgroundColor: hoveredButton === 'subscribe' ? '#BD3B8F' : '#8868C2' }}
               onMouseEnter={() => setHoveredButton('subscribe')}
               onMouseLeave={() => setHoveredButton(null)}
             >
