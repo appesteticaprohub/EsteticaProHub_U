@@ -64,14 +64,11 @@ const getCategoryColor = (category: string) => {
     <div className="w-full bg-white shadow-sm flex justify-between items-center h-16 py-4 px-4 md:px-6">
       <Link href="/" className="flex items-center">
         {/* Vista móvil: Logo apilado (ícono arriba, texto abajo) */}
-        <div className="flex md:hidden flex-col items-center gap-1">
-          <img 
-            src="/logo.svg" 
-            alt="EsteticaPro Hub" 
-            className="h-8 w-auto"
-          />
-          <span className="text-xs font-semibold text-gray-700">EsteticaPro Hub</span>
-        </div>
+        <img 
+          src="/logo.svg" 
+          alt="EsteticaPro Hub" 
+          className="md:hidden h-8 w-auto"
+        />
         
         {/* Vista desktop: Logo + texto horizontal */}
         <div className="hidden md:flex items-center gap-3">
@@ -80,7 +77,9 @@ const getCategoryColor = (category: string) => {
             alt="EsteticaPro Hub Logo" 
             className="h-10 w-auto"
           />
-          <span className="font-semibold text-lg text-gray-800">EsteticaPro Hub</span>
+          <span className="font-medium text-lg text-white px-3 py-1.5 rounded" style={{ backgroundColor: '#8868C2' }}>
+            EsteticaPro Hub
+          </span>
         </div>
       </Link>
       <div className="flex gap-3 md:gap-4 items-center">
@@ -267,8 +266,8 @@ const getCategoryColor = (category: string) => {
             href="/login"
             className="px-2 py-1.5 md:px-4 md:py-2 text-xs md:text-base font-bold transition-colors rounded-lg border-2"
             style={{ 
-              color: hoveredButton === 'login' ? '#5a5fb5' : '#7073CA',
-              borderColor: hoveredButton === 'login' ? '#5a5fb5' : '#7073CA'
+              color: hoveredButton === 'login' ? '#BD3B8F' : '#7073CA',
+              borderColor: hoveredButton === 'login' ? '#BD3B8F' : '#7073CA'
             }}
             onMouseEnter={() => setHoveredButton('login')}
             onMouseLeave={() => setHoveredButton(null)}
