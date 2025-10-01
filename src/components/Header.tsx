@@ -223,11 +223,13 @@ const getCategoryColor = (category: string) => {
             </button>
           </Link>
         )}
-        <Link href="/suscripcion">
-          <button className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors">
-            Suscribirse
-          </button>
-        </Link>
+        {!user && (
+          <Link href="/suscripcion">
+            <button className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors">
+              Suscribirse
+            </button>
+          </Link>
+        )}
       </div>
     </div>
   );
