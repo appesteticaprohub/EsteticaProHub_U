@@ -8,6 +8,8 @@ import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import Modal from '@/components/Modal';
 import PaymentRecoveryModal from '@/components/PaymentRecoveryModal';
 import { createPost } from '@/lib/supabase';
+import ImageUploader from '@/components/ImageUploader';
+import { ImageSettings } from '@/types/api';
 
 // Tipo para la respuesta del post creado
 interface CreatedPost {
@@ -35,6 +37,24 @@ export default function CrearPost() {
   const [categoria, setCategoria] = useState('');
   const [titulo, setTitulo] = useState('');
   const [contenido, setContenido] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageSettings, setImageSettings] = useState<ImageSettings | null>(null);
+
+  // Cargar configuración de imágenes
+  useEffect(() => {
+    const loadImageSettings = async () => {
+      try {
+        const response = await fetch('/api/settings?key=image_settings');
+        const result = await response.json();
+        if (result.data) {
+          setImageSettings(result.data);
+        }
+      } catch (error) {
+        console.error('Error al cargar configuración de imágenes:', error);
+      }
+    };
+    loadImageSettings();
+  }, []);
 
   // Categorías de ejemplo para estética profesional
   const categorias = [
@@ -114,7 +134,8 @@ export default function CrearPost() {
       title: titulo,
       content: contenido,
       category: categoria,
-      authorId: user.id
+      authorId: user.id,
+      images: imageUrls
     }) as { data: CreatedPost | null; error: string | null };
 
     if (error) {
@@ -275,6 +296,25 @@ export default function CrearPost() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical"
             />
           </div>
+
+          {/* Imágenes */}
+          {imageSettings && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Imágenes (opcional)
+              </label>
+              <ImageUploader
+                settings={imageSettings}
+                onImagesUploaded={(urls) => setImageUrls(urls)}
+                disabled={!user}
+              />
+              {imageUrls.length > 0 && (
+                <div className="mt-3 text-sm text-green-600">
+                  {imageUrls.length} {imageUrls.length === 1 ? 'imagen subida' : 'imágenes subidas'} correctamente
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Botones */}
           <div className="flex gap-4 pt-4">

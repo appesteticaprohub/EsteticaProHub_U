@@ -8,20 +8,22 @@ export async function createPost({
   title,
   content,
   category,
-  authorId
+  authorId,
+  images
 }: {
   title: string
   content: string
   category: string
   authorId: string
+  images?: string[]
 }) {
   const { data, error } = await apiClient.post('/posts', {
     title,
     content,
     category,
-    authorId
+    authorId,
+    images
   })
-
   return { data, error }
 }
 

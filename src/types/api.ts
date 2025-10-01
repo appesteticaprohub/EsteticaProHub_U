@@ -15,6 +15,7 @@ export interface Post {
   likes_count: number
   comments_count: number
   category: string | null
+  images: string[] // NUEVO: Array de URLs de imágenes
 }
 
 export interface CreatePostRequest {
@@ -22,6 +23,7 @@ export interface CreatePostRequest {
   content: string
   category: string
   authorId: string
+  images?: string[] // NUEVO: URLs de imágenes (opcional)
 }
 
 // Tipos para Likes
@@ -155,4 +157,26 @@ export interface NotificationFilters {
 export interface AuthResponse {
   session: Session | null
   user: Profile | null
+}
+
+// Tipos para gestión de imágenes
+export interface ImageSettings {
+  max_images_per_post: number
+  max_image_size_mb: number
+  allowed_formats: string[]
+  compression_quality: number
+  max_width: number
+  max_height: number
+}
+
+export interface ImageUploadResponse {
+  urls: string[]
+  error?: string
+}
+
+export interface StorageStats {
+  total_images: number
+  storage_used_mb: number
+  images_this_month: number
+  average_images_per_post: number
 }

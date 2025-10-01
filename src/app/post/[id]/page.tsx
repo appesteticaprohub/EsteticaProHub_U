@@ -12,6 +12,7 @@ import SnackBar from '@/components/Snackbar';
 import { useLikes } from '@/hooks/useLikes';
 import { useCommentsWithActions } from '@/hooks/useComments';
 import { Comment } from '@/types/api';
+import ImageGallery from '@/components/ImageGallery';
 
 
 interface PostPageProps {
@@ -632,14 +633,21 @@ const handleDeleteComment = async (commentId: string) => {
           <div className="prose prose-lg max-w-none">
             {shouldShowTruncatedContent() ? (
               <div className="relative">
-                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed break-words overflow-wrap-anywhere">
                   {contentToShow}
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-none"></div>
               </div>
             ) : (
-              <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+              <div className="whitespace-pre-wrap text-gray-800 leading-relaxed break-words overflow-wrap-anywhere">
                 {contentToShow}
+              </div>
+            )}
+
+            {/* Galería de imágenes */}
+            {post.images && post.images.length > 0 && !shouldShowTruncatedContent() && (
+              <div className="mt-8">
+                <ImageGallery images={post.images} alt={post.title} />
               </div>
             )}
             

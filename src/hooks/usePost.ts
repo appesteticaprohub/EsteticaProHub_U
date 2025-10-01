@@ -10,6 +10,7 @@ interface PostWithoutCategory {
   views_count: number;
   likes_count: number;
   comments_count: number;
+  images: string[];
 }
 
 // Fetcher function para SWR
