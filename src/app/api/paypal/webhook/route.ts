@@ -115,22 +115,46 @@ export async function POST(request: NextRequest) {
       const subscriptionId = body.resource?.id;
 
       if (!subscriptionId) {
-        console.error('Missing subscription ID in cancellation event');
+        console.error('❌ Missing subscription ID in cancellation event');
         return NextResponse.json({ error: 'Missing subscription ID' }, { status: 400 });
       }
 
-      // Actualizar estado de la sesión
-      const { error } = await supabase
-        .from('payment_sessions')
-        .update({ status: 'cancelled_subscription' })
-        .eq('paypal_subscription_id', subscriptionId);
+      // Buscar el usuario asociado a esta suscripción
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, subscription_expires_at')
+        .eq('paypal_subscription_id', subscriptionId)
+        .single();
 
-      if (error) {
-        console.error('Database error cancelling subscription:', error);
-        return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
+      if (profile) {
+        const userId = profile.id;
+
+        // Actualizar estado a Cancelled (mantiene acceso hasta expiración)
+        await supabase
+          .from('profiles')
+          .update({ 
+            subscription_status: 'Cancelled',
+            auto_renewal_enabled: false
+          })
+          .eq('id', userId);
+
+        console.log(`✅ Subscription ${subscriptionId} cancelled for user ${userId}`);
+
+        // ENVIAR NOTIFICACIONES
+        const userName = profile.full_name || profile.email.split('@')[0];
+        const expirationDate = profile.subscription_expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+        console.log('📧 Enviando notificación de cancelación...');
+        await NotificationService.sendSubscriptionCancelledNotification(
+          userId,
+          profile.email,
+          userName,
+          expirationDate
+        );
+      } else {
+        console.error('❌ Profile not found for subscription:', subscriptionId);
       }
 
-      console.log(`Subscription ${subscriptionId} cancelled`);
       return NextResponse.json({ message: 'Subscription cancelled' });
     }
 
