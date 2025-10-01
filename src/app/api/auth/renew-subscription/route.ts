@@ -39,12 +39,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Obtener estado anterior del usuario para detectar reactivación
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('subscription_status, email, full_name')
+      .eq('id', user.id)
+      .single()
+
+    const wasInactive = currentProfile && ['Cancelled', 'Expired', 'Grace_Period', 'Payment_Failed'].includes(currentProfile.subscription_status)
+
     // Actualizar el perfil del usuario con nueva fecha de expiración
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ 
         subscription_status: 'Active',
         subscription_expires_at: subscription_expires_at,
+        auto_renewal_enabled: true,
         // Resetear campos de problemas de pago
         payment_retry_count: 0,
         last_payment_attempt: null,
@@ -69,6 +79,19 @@ export async function POST(request: NextRequest) {
     if (linkError) {
       console.error('Error linking payment session:', linkError)
       // No es crítico, el usuario ya fue actualizado
+    }
+
+    // Si era una reactivación, enviar notificación
+    if (wasInactive && currentProfile) {
+      const { NotificationService } = await import('@/lib/notification-service')
+      const userName = currentProfile.full_name || currentProfile.email.split('@')[0]
+      
+      console.log('📧 Enviando notificación de reactivación...')
+      await NotificationService.sendSubscriptionReactivatedNotification(
+        user.id,
+        currentProfile.email,
+        userName
+      )
     }
 
     return NextResponse.json({
