@@ -26,6 +26,7 @@ export default function Header() {
     enabled: !!user && !loading  // Solo llamar si hay usuario y no está cargando
   });
 const [showNotifications, setShowNotifications] = useState(false);
+const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 const dropdownRef = useRef<HTMLDivElement>(null);
 
 // Cerrar dropdown al hacer click afuera
@@ -60,9 +61,9 @@ const getCategoryColor = (category: string) => {
 };
 
   return (
-    <div className="w-full bg-white shadow-sm flex justify-between items-center h-16 py-4 px-6">
-      <div className="font-semibold text-lg">EsteticaPro Hub</div>
-      <div className="flex space-x-3 items-center">
+    <div className="w-full bg-white shadow-sm flex justify-between items-center h-16 py-4 px-4 md:px-6">
+      <div className="font-semibold text-sm md:text-lg">EsteticaPro Hub</div>
+      <div className="flex gap-3 md:gap-4 items-center">
         {loading ? (
           <div className="bg-gray-300 text-gray-600 px-4 py-2 rounded-lg">
             Cargando...
@@ -204,28 +205,63 @@ const getCategoryColor = (category: string) => {
               )}
             </div>
 
-            <Link href="/perfil">
-              <button className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
-                Mi Perfil
-              </button>
+            <Link href="/perfil" className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Mi Perfil">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6 text-gray-700"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
             </Link>
             <button 
               onClick={() => signOut()}
-              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Cerrar Sesión"
             >
-              Cerrar Sesión
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6 text-gray-700"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
             </button>
           </>
         ) : (
           <Link href="/login">
-            <button className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+            <button 
+              className="px-3 py-2 md:px-5 md:py-2.5 rounded-lg transition-colors text-white font-medium text-sm md:text-base"
+              style={{ backgroundColor: hoveredButton === 'login' ? '#4a6bb8' : '#557DCE' }}
+              onMouseEnter={() => setHoveredButton('login')}
+              onMouseLeave={() => setHoveredButton(null)}
+            >
               Iniciar Sesión
             </button>
           </Link>
         )}
         {!user && (
           <Link href="/suscripcion">
-            <button className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors">
+            <button 
+              className="px-3 py-2 md:px-5 md:py-2.5 rounded-lg transition-colors text-white font-medium text-sm md:text-base"
+              style={{ backgroundColor: hoveredButton === 'subscribe' ? '#9a4391' : '#AF4CA4' }}
+              onMouseEnter={() => setHoveredButton('subscribe')}
+              onMouseLeave={() => setHoveredButton(null)}
+            >
               Suscribirse
             </button>
           </Link>
