@@ -62,7 +62,27 @@ const getCategoryColor = (category: string) => {
 
   return (
     <div className="w-full bg-white shadow-sm flex justify-between items-center h-16 py-4 px-4 md:px-6">
-      <div className="font-semibold text-sm md:text-lg">EsteticaPro Hub</div>
+      <Link href="/" className="flex items-center">
+        {/* Vista móvil: Logo apilado (ícono arriba, texto abajo) */}
+        <div className="flex md:hidden flex-col items-center gap-1">
+          <img 
+            src="/logo.svg" 
+            alt="EsteticaPro Hub" 
+            className="h-8 w-auto"
+          />
+          <span className="text-xs font-semibold text-gray-700">EsteticaPro Hub</span>
+        </div>
+        
+        {/* Vista desktop: Logo + texto horizontal */}
+        <div className="hidden md:flex items-center gap-3">
+          <img 
+            src="/logo.svg" 
+            alt="EsteticaPro Hub Logo" 
+            className="h-10 w-auto"
+          />
+          <span className="font-semibold text-lg text-gray-800">EsteticaPro Hub</span>
+        </div>
+      </Link>
       <div className="flex gap-3 md:gap-4 items-center">
         {loading ? (
           <div className="bg-gray-300 text-gray-600 px-4 py-2 rounded-lg">
