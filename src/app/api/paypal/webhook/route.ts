@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { verifyPayPalPayment } from '@/lib/paypal';
+import { createServerSupabaseAdminClient } from '@/lib/server-supabase';
+import { NotificationService } from '@/lib/notification-service';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log('PayPal Webhook received:', body);
+    console.log('🔔 PayPal Webhook received:', body.event_type);
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServerSupabaseAdminClient();
 
     // ==================== EVENTOS DE PAGO ÚNICO ====================
     if (body.event_type === 'PAYMENT.SALE.COMPLETED') {
@@ -79,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     // Pago de suscripción completado (renovación mensual)
     if (body.event_type === 'BILLING.SUBSCRIPTION.PAYMENT.COMPLETED') {
-      const subscriptionId = body.resource?.billing_agreement_id;
+      const subscriptionId = body.resource?.id;
       
       if (!subscriptionId) {
         console.error('Missing subscription ID in payment completed event');
@@ -138,30 +136,23 @@ export async function POST(request: NextRequest) {
 
     // Pago de suscripción fallido
     if (body.event_type === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED') {
-      const subscriptionId = body.resource?.billing_agreement_id;
+      const subscriptionId = body.resource?.id;
       
       if (!subscriptionId) {
-        console.error('Missing subscription ID in payment failed event');
+        console.error('❌ Missing subscription ID in payment failed event');
         return NextResponse.json({ error: 'Missing subscription ID' }, { status: 400 });
       }
 
-      // Buscar el usuario asociado a esta suscripción
-      const { data: session } = await supabase
-        .from('payment_sessions')
-        .select('user_id')
+      // Buscar el usuario asociado a esta suscripción (directamente en profiles)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, payment_retry_count, subscription_expires_at')
         .eq('paypal_subscription_id', subscriptionId)
-        .eq('status', 'active_subscription')
         .single();
 
-      if (session && session.user_id) {
-        // Obtener información actual del usuario
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('payment_retry_count')
-          .eq('id', session.user_id)
-          .single();
-
-        const currentRetryCount = profile?.payment_retry_count || 0;
+      if (profile) {
+        const userId = profile.id;
+        const currentRetryCount = profile.payment_retry_count || 0;
         const newRetryCount = currentRetryCount + 1;
 
         // Actualizar estado a Payment_Failed con contador de intentos
@@ -172,12 +163,44 @@ export async function POST(request: NextRequest) {
             payment_retry_count: newRetryCount,
             last_payment_attempt: new Date().toISOString()
           })
-          .eq('id', session.user_id);
+          .eq('id', userId);
 
-        console.log(`Subscription ${subscriptionId} payment failed. Retry count: ${newRetryCount}`);
+        console.log(`⚠️ Subscription ${subscriptionId} payment failed. Retry count: ${newRetryCount}`);
 
-        // Si es el tercer intento fallido, activar período de gracia
-        if (newRetryCount >= 3) {
+        // ENVIAR NOTIFICACIÓN SEGÚN EL INTENTO
+        // Obtener el precio real de la base de datos
+        const { data: settings } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'subscription_price')
+          .single();
+        
+        const amount = settings?.value || body.resource?.amount?.total || '20.00';
+        const userName = profile.full_name || profile.email.split('@')[0];
+
+        if (newRetryCount === 1) {
+          // Primer fallo: notificación inmediata
+          console.log('📧 Enviando notificación de primer fallo de pago...');
+          await NotificationService.sendPaymentFailedNotification(
+            userId,
+            profile.email,
+            userName,
+            amount
+          );
+        } else if (newRetryCount === 2) {
+          // Segundo fallo: recordatorio (día 3 aproximadamente)
+          console.log('📧 Enviando recordatorio de pago (intento 2)...');
+          await NotificationService.sendPaymentRetryNotification(
+            userId,
+            profile.email,
+            userName,
+            amount,
+            newRetryCount
+          );
+        } else if (newRetryCount >= 3) {
+          // Tercer fallo: activar período de gracia y enviar última oportunidad
+          console.log('⏰ Activando período de gracia (intento 3+)...');
+          
           const gracePeriodEnd = new Date();
           gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 7); // 7 días de gracia
 
@@ -187,10 +210,22 @@ export async function POST(request: NextRequest) {
               subscription_status: 'Grace_Period',
               grace_period_ends: gracePeriodEnd.toISOString()
             })
-            .eq('id', session.user_id);
+            .eq('id', userId);
 
-          console.log(`Activating grace period for user ${session.user_id} until ${gracePeriodEnd.toISOString()}`);
+          // Enviar última oportunidad
+          console.log('📧 Enviando última oportunidad de pago...');
+          await NotificationService.sendPaymentRetryNotification(
+            userId,
+            profile.email,
+            userName,
+            amount,
+            newRetryCount
+          );
+
+          console.log(`⏰ Grace period activated until ${gracePeriodEnd.toISOString()}`);
         }
+      } else {
+        console.error('❌ Profile not found for subscription:', subscriptionId);
       }
 
       return NextResponse.json({ message: 'Subscription payment failure processed' });

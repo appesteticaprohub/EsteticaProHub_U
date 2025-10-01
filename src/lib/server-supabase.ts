@@ -54,18 +54,16 @@ export async function getCurrentUser() {
 
 // Cliente admin que bypassa RLS - solo para operaciones del sistema
 export function createServerSupabaseAdminClient() {
-  return createServerClient(
+  const { createClient } = require('@supabase/supabase-js')
+  
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: {
-        getAll() {
-          return []
-        },
-        setAll() {
-          // No-op para el cliente admin
-        },
-      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     }
   )
 }
