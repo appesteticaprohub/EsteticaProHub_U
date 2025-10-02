@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
-import Link from 'next/link';
 
 // Formatear fecha usando componentes UTC directamente
 const formatDateColombia = (utcDate: string) => {
@@ -110,7 +109,7 @@ export default function NotificationsPage() {
               </label>
               <select
                 value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value as any)}
+                onChange={(e) => setSelectedType(e.target.value as 'all' | 'email' | 'in_app')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">Todas</option>
@@ -126,7 +125,7 @@ export default function NotificationsPage() {
               </label>
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value as any)}
+                onChange={(e) => setSelectedCategory(e.target.value as 'all' | 'critical' | 'important' | 'normal' | 'promotional')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">Todas</option>
