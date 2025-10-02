@@ -35,7 +35,12 @@ export async function POST(request: NextRequest) {
     }
     
     // Construir objeto de configuración desde las settings individuales
-    const imageSettings: any = {}
+    const imageSettings: {
+      max_images_per_post?: number;
+      max_image_size_mb?: number;
+      allowed_formats?: string[];
+      [key: string]: number | string | string[] | undefined;
+    } = {}
     settings.forEach((setting: { key: string; value: string }) => {
       try {
         imageSettings[setting.key] = JSON.parse(setting.value)
