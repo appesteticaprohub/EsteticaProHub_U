@@ -180,3 +180,14 @@ export interface StorageStats {
   images_this_month: number
   average_images_per_post: number
 }
+
+// Tipos para configuración de la aplicación
+export interface AppSettings {
+  max_images_per_post?: number
+  max_image_size_mb?: number
+  allowed_formats?: string[]
+  compression_quality?: number
+  max_width?: number
+  max_height?: number
+  [key: string]: number | string | string[] | boolean | undefined
+}

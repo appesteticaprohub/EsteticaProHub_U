@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/server-supabase'
+import { AppSettings } from '@/types/api'
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
       const value = typeof item.value === 'string' ? JSON.parse(item.value) : item.value
       acc[item.key] = value
       return acc
-    }, {} as Record<string, any>)
+    }, {} as AppSettings)
 
     return NextResponse.json({ data: settings, error: null })
 
