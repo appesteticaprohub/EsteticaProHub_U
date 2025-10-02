@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useState, useRef, useEffect } from 'react';
@@ -64,18 +65,23 @@ const getCategoryColor = (category: string) => {
     <div className="w-full bg-white shadow-sm flex justify-between items-center h-16 py-4 px-4 md:px-6">
       <Link href="/" className="flex items-center">
         {/* Vista móvil: Logo apilado (ícono arriba, texto abajo) */}
-        <img 
+        <Image 
           src="/logo.svg" 
           alt="EsteticaPro Hub" 
-          className="md:hidden h-8 w-auto"
+          width={32}
+          height={32}
+          className="md:hidden"
+          priority
         />
         
         {/* Vista desktop: Logo + texto horizontal */}
         <div className="hidden md:flex items-center gap-3">
-          <img 
+          <Image 
             src="/logo.svg" 
             alt="EsteticaPro Hub Logo" 
-            className="h-10 w-auto"
+            width={40}
+            height={40}
+            priority
           />
           <span className="font-medium text-lg text-white px-3 py-1.5 rounded" style={{ backgroundColor: '#8868C2' }}>
             EsteticaPro Hub
