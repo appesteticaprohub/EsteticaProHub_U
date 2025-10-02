@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import { apiClient } from '@/lib/api-client';
-import { Notification, UnreadCountResponse, NotificationsResponse } from '@/types/notifications';
+import { UnreadCountResponse, NotificationsResponse } from '@/types/notifications';
 
 interface UseNotificationsOptions {
   limit?: number;
