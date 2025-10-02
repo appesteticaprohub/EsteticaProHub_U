@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, getCurrentUser } from '@/lib/server-supabase'
+import { NotificationPreferences } from '@/types/notifications'
 
 // GET - Obtener preferencias del usuario
 export async function GET() {
@@ -33,7 +34,7 @@ export async function GET() {
       error: null
     })
 
-  } catch (error) {
+ } catch {
     return NextResponse.json(
       { data: null, error: 'Error interno del servidor' },
       { status: 500 }
@@ -58,7 +59,7 @@ export async function PUT(request: NextRequest) {
 
     const supabase = await createServerSupabaseClient()
 
-    const updateData: any = {}
+    const updateData: Partial<Pick<NotificationPreferences, 'email_promotional' | 'email_content' | 'in_app_notifications'>> = {}
     
     if (email_promotional !== undefined) updateData.email_promotional = email_promotional
     if (email_content !== undefined) updateData.email_content = email_content
@@ -83,7 +84,7 @@ export async function PUT(request: NextRequest) {
       error: null
     })
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Error interno del servidor' },
       { status: 500 }
