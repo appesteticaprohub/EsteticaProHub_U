@@ -31,7 +31,7 @@ export async function GET() {
       count: count || 0
     })
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Error interno del servidor' },
       { status: 500 }
