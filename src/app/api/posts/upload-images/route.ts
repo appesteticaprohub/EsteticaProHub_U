@@ -20,26 +20,34 @@ export async function POST(request: NextRequest) {
     const supabase = await createServerSupabaseClient()
     const { data: settings, error: settingsError } = await supabase
       .from('app_settings')
-      .select('value')
-      .eq('key', 'image_settings')
-      .single()
-
+      .select('key, value')
+      .in('key', [
+        'max_images_per_post',
+        'max_image_size_mb',
+        'allowed_formats'
+      ])
+    
     if (settingsError || !settings) {
       return NextResponse.json(
         { error: 'Error al obtener configuración' },
         { status: 500 }
       )
     }
-
-    // Parsear el valor si es string JSON
-    const imageSettings = typeof settings.value === 'string' 
-      ? JSON.parse(settings.value) 
-      : settings.value
+    
+    // Construir objeto de configuración desde las settings individuales
+    const imageSettings: any = {}
+    settings.forEach((setting: { key: string; value: string }) => {
+      try {
+        imageSettings[setting.key] = JSON.parse(setting.value)
+      } catch {
+        imageSettings[setting.key] = setting.value
+      }
+    })
 
     const {
-      max_images_per_post,
-      max_image_size_mb,
-      allowed_formats
+      max_images_per_post = 3,
+      max_image_size_mb = 2,
+      allowed_formats = ['image/jpeg', 'image/png', 'image/webp']
     } = imageSettings
 
     // Validar que la configuración existe

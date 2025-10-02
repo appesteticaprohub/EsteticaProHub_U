@@ -44,10 +44,19 @@ export default function CrearPost() {
   useEffect(() => {
     const loadImageSettings = async () => {
       try {
-        const response = await fetch('/api/settings?key=image_settings');
+        const response = await fetch('/api/settings');
         const result = await response.json();
         if (result.data) {
-          setImageSettings(result.data);
+          // Construir objeto ImageSettings desde las configuraciones individuales
+          const settings: ImageSettings = {
+            max_images_per_post: result.data.max_images_per_post || 3,
+            max_image_size_mb: result.data.max_image_size_mb || 2,
+            allowed_formats: result.data.allowed_formats || ['image/jpeg', 'image/png', 'image/webp'],
+            compression_quality: result.data.compression_quality || 0.8,
+            max_width: result.data.max_width || 1920,
+            max_height: result.data.max_height || 1920
+          };
+          setImageSettings(settings);
         }
       } catch (error) {
         console.error('Error al cargar configuración de imágenes:', error);
