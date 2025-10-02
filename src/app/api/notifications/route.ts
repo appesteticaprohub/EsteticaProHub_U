@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, getCurrentUser } from '@/lib/server-supabase'
-import type { NotificationFilters } from '@/types/api'
+
 
 // GET - Obtener notificaciones del usuario
 export async function GET(request: NextRequest) {
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       total: count || 0
     })
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Error interno del servidor' },
       { status: 500 }
@@ -135,7 +135,7 @@ export async function PATCH(request: NextRequest) {
       error: null
     })
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Error interno del servidor' },
       { status: 500 }
@@ -209,7 +209,7 @@ export async function DELETE(request: NextRequest) {
       error: null
     })
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { data: null, error: 'Error interno del servidor' },
       { status: 500 }
