@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 
 interface ImageGalleryProps {
   images: string[]
@@ -54,11 +55,12 @@ export default function ImageGallery({ images, alt = 'Post image' }: ImageGaller
             className="relative aspect-video cursor-pointer overflow-hidden rounded-lg bg-gray-100 hover:opacity-90 transition-opacity"
             onClick={() => openModal(index)}
           >
-            <img
+            <Image
               src={image}
               alt={`${alt} ${index + 1}`}
-              className="w-full h-full object-cover"
-              loading="lazy"
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />
           </div>
         ))}
@@ -101,10 +103,13 @@ export default function ImageGallery({ images, alt = 'Post image' }: ImageGaller
 
           {/* Imagen ampliada */}
           <div className="max-w-7xl max-h-full" onClick={(e) => e.stopPropagation()}>
-            <img
+            <Image
               src={images[selectedImage]}
               alt={`${alt} ${selectedImage + 1}`}
+              width={1920}
+              height={1080}
               className="max-w-full max-h-[90vh] object-contain"
+              quality={90}
             />
           </div>
 
