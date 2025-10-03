@@ -28,9 +28,20 @@ export async function POST(request: NextRequest) {
     // Obtener el perfil del usuario
     const { data: profile } = await supabase
       .from('profiles')
-      .select('user_type, subscription_status, subscription_expires_at')
+      .select('user_type, subscription_status, subscription_expires_at, is_banned')
       .eq('id', data.user.id)
       .single()
+
+    // Validar si el usuario está banneado
+    if (profile?.is_banned) {
+      // Destruir la sesión inmediatamente
+      await supabase.auth.signOut()
+      
+      return NextResponse.json(
+        { data: null, error: 'Tu cuenta ha sido suspendida. Contacta a soporte si crees que esto es un error.' },
+        { status: 403 }
+      )
+    }
 
     // Verificar y actualizar estado de suscripción si es necesario
     if (profile) {

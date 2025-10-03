@@ -24,6 +24,7 @@ interface AuthData {
   session: Session | null
   userType: string
   subscriptionStatus: string | null
+  isBanned: boolean
 }
 
 interface AuthContextType {
@@ -31,6 +32,7 @@ interface AuthContextType {
   session: Session | null
   userType: string | null
   subscriptionStatus: string | null
+  isBanned: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: { message: string } | null }>
   signUp: (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string, paymentReference?: string) => Promise<{ error: { message: string } | null }>
@@ -43,7 +45,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const fetcher = async (url: string): Promise<AuthData> => {
   const { data, error } = await apiClient.get<AuthData>(url)
   if (error) throw new Error(error)
-  return data || { user: null, session: null, userType: 'anonymous', subscriptionStatus: null }
+  return data || { user: null, session: null, userType: 'anonymous', subscriptionStatus: null, isBanned: false }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -63,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const userType = data?.userType || 'anonymous'
   const subscriptionStatus = data?.subscriptionStatus || null
   const loading = isLoading
+  const isBanned = data?.isBanned || false
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -119,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Limpiar cache de auth inmediatamente
       mutateAuth(
-        { user: null, session: null, userType: 'anonymous', subscriptionStatus: null },
+        { user: null, session: null, userType: 'anonymous', subscriptionStatus: null, isBanned: false },
         false
       )
 
@@ -141,6 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     userType,
     subscriptionStatus,
+    isBanned,
     loading,
     signIn,
     signUp,

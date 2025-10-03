@@ -38,6 +38,11 @@ export async function updateExpiredSubscription(userId: string) {
   return true
 }
 
+export function isUserBanned(profile: { is_banned?: boolean } | null): boolean {
+  if (!profile) return false;
+  return profile.is_banned === true;
+}
+
 export async function getUserProfile(userId: string) {
   const cookieStore = await cookies()
   

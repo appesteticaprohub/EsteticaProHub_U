@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/server-supabase'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -89,6 +90,25 @@ export async function middleware(request: NextRequest) {
 
   // Verificación de suscripciones para rutas específicas cuando hay usuario
   if ((isFullyProtected || needsSubscriptionCheck) && user) {
+
+    // VALIDACIÓN DE BANEO - PRIORIDAD MÁXIMA
+    try {
+      const { getUserProfile, isUserBanned } = await import('@/lib/subscription-utils')
+      const profile = await getUserProfile(user.id)
+      
+      if (isUserBanned(profile)) {
+        console.log('Usuario banneado detectado, redirigiendo a /banned')
+        
+        // Destruir sesión del usuario banneado
+        const supabaseDestroy = await createServerSupabaseClient()
+        await supabaseDestroy.auth.signOut()
+        
+        return NextResponse.redirect(new URL('/banned', request.url))
+      }
+    } catch (error) {
+      console.error('Error en verificación de baneo:', error)
+    }
+
     console.log('Verificando suscripción para usuario:', user.email)
     
     try {

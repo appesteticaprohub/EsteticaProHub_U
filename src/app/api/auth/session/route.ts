@@ -12,7 +12,8 @@ export async function GET() {
           user: null,
           session: null,
           userType: 'anonymous',
-          subscriptionStatus: null
+          subscriptionStatus: null,
+          isBanned: false
         },
         error: null
       })
@@ -21,16 +22,34 @@ export async function GET() {
     // Obtener el perfil del usuario
     const { data: profile } = await supabase
       .from('profiles')
-      .select('user_type, subscription_status')
+      .select('user_type, subscription_status, is_banned')
       .eq('id', session.user.id)
       .single()
+
+    // Validar si el usuario fue banneado mientras tenía sesión activa
+    if (profile?.is_banned) {
+      // Destruir la sesión inmediatamente
+      await supabase.auth.signOut()
+      
+      return NextResponse.json({
+        data: {
+          user: null,
+          session: null,
+          userType: 'anonymous',
+          subscriptionStatus: null,
+          isBanned: true
+        },
+        error: null
+      })
+    }
 
     return NextResponse.json({
       data: {
         user: session.user,
         session,
         userType: profile?.user_type || 'anonymous',
-        subscriptionStatus: profile?.subscription_status || null
+        subscriptionStatus: profile?.subscription_status || null,
+        isBanned: false
       },
       error: null
     })
