@@ -54,11 +54,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     '/auth/session',
     fetcher,
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      refreshInterval: 0,
+      refreshInterval: 30000,
+      onError: (err) => {
+        console.error('Error en AuthContext:', err)
+      }
     }
   )
+
+  // Detector de sesión invalidada (solo en el cliente)
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    // Guardar el estado anterior del usuario
+    const previousUser = sessionStorage.getItem('prev_user_id')
+    const currentUser = data?.user?.id || null
+
+    if (previousUser && !currentUser && !isLoading) {
+      // El usuario TENÍA sesión y ahora no la tiene = fue invalidado
+      console.log('🔒 Sesión invalidada detectada, redirigiendo...')
+      sessionStorage.removeItem('prev_user_id')
+      
+      const currentPath = window.location.pathname
+      if (currentPath !== '/login' && currentPath !== '/registro' && currentPath !== '/') {
+        window.location.href = '/login?session_expired=true'
+      }
+    } else if (currentUser && currentUser !== previousUser) {
+      // Actualizar el usuario previo cuando hay login
+      sessionStorage.setItem('prev_user_id', currentUser)
+    } else if (!currentUser && !previousUser) {
+      // Usuario anónimo legítimo, no hacer nada
+    }
+  }, [data?.user?.id, isLoading])
 
   const user = data?.user || null
   const session = data?.session || null

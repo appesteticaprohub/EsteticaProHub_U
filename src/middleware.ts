@@ -56,10 +56,42 @@ export async function middleware(request: NextRequest) {
   )
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  data: { user },
+} = await supabase.auth.getUser()
 
-  console.log('Usuario en middleware:', user?.email || 'No autenticado')
+  // VALIDACIÓN CRÍTICA: Verificar que el usuario existe en profiles
+  if (user) {
+    try {
+      const supabaseServer = await createServerSupabaseClient()
+      const { data: profile, error: profileError } = await supabaseServer
+        .from('profiles')
+        .select('id, is_banned, role')
+        .eq('id', user.id)
+        .single()
+
+      // Si el usuario no existe en profiles, invalidar sesión
+      if (profileError || !profile) {
+        console.log('⚠️ Usuario eliminado detectado - invalidando sesión')
+        
+        // Destruir la sesión
+        await supabase.auth.signOut()
+        
+        // Redirigir a login
+        return NextResponse.redirect(new URL('/login?session_expired=true', request.url))
+      }
+
+      console.log('Usuario en middleware:', user.email || 'No autenticado')
+      console.log('Perfil validado:', profile.role)
+    } catch (error) {
+      console.error('Error validando perfil:', error)
+      // En caso de error, cerrar sesión por seguridad
+      await supabase.auth.signOut()
+      return NextResponse.redirect(new URL('/login?error=validation', request.url))
+    }
+  } else {
+    console.log('Usuario en middleware: No autenticado')
+  }
+
   console.log('Ruta visitada:', request.nextUrl.pathname)
 
   // Definir rutas

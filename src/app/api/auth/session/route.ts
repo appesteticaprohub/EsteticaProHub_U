@@ -20,14 +20,31 @@ export async function GET() {
     }
 
     // Obtener el perfil del usuario
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('user_type, subscription_status, is_banned')
       .eq('id', session.user.id)
       .single()
 
+    // VALIDACIÓN CRÍTICA: Si el perfil no existe, el usuario fue eliminado
+    if (profileError || !profile) {
+      // Destruir la sesión inmediatamente
+      await supabase.auth.signOut()
+      
+      return NextResponse.json({
+        data: {
+          user: null,
+          session: null,
+          userType: 'anonymous',
+          subscriptionStatus: null,
+          isBanned: false
+        },
+        error: null
+      })
+    }
+    
     // Validar si el usuario fue banneado mientras tenía sesión activa
-    if (profile?.is_banned) {
+    if (profile.is_banned) {
       // Destruir la sesión inmediatamente
       await supabase.auth.signOut()
       
@@ -42,13 +59,13 @@ export async function GET() {
         error: null
       })
     }
-
+    
     return NextResponse.json({
       data: {
         user: session.user,
         session,
-        userType: profile?.user_type || 'anonymous',
-        subscriptionStatus: profile?.subscription_status || null,
+        userType: profile.user_type || 'anonymous',
+        subscriptionStatus: profile.subscription_status || null,
         isBanned: false
       },
       error: null

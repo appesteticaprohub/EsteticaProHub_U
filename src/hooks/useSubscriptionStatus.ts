@@ -43,7 +43,13 @@ export function useSubscriptionStatus() {
         const { data, error } = await apiClient.get('/subscription-status')
         
         if (error) {
-          console.error('Error fetching subscription status:', error)
+          // Si el error es "Not authenticated", no es un error crítico
+          if (error === 'Not authenticated') {
+            console.log('Usuario no autenticado en subscription status')
+          } else {
+            console.error('Error fetching subscription status:', error)
+          }
+          
           setSubscriptionData({
             subscription_status: null,
             subscription_expires_at: null,
@@ -53,7 +59,7 @@ export function useSubscriptionStatus() {
             auto_renewal_enabled: false
           })
         } else if (data && typeof data === 'object') {
-          const subscriptionData = data as SubscriptionData // Usar el tipo específico definido
+          const subscriptionData = data as SubscriptionData
           setSubscriptionData({
             subscription_status: subscriptionData.subscription_status || null,
             subscription_expires_at: subscriptionData.subscription_expires_at || null,
@@ -64,7 +70,8 @@ export function useSubscriptionStatus() {
           })
         }
       } catch (error) {
-        console.error('Error fetching subscription status:', error)
+        // Manejar errores de red silenciosamente
+        console.log('Error de red en subscription status:', error)
       } finally {
         setLoading(false)
       }
