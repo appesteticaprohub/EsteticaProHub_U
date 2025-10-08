@@ -59,7 +59,16 @@ export async function middleware(request: NextRequest) {
   data: { user },
 } = await supabase.auth.getUser()
 
-  // VALIDACIÓN CRÍTICA: Verificar que el usuario existe en profiles
+// Permitir acceso a /banned y rutas API sin validación de baneo
+  const isBannedPage = request.nextUrl.pathname === '/banned'
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+  
+  if (isBannedPage) {
+    console.log('✅ Permitiendo acceso directo a /banned')
+    return response
+  }
+
+  // VALIDACIÓN CRÍTICA: Verificar que el usuario existe en profiles y no está baneado
   if (user) {
     try {
       const supabaseServer = await createServerSupabaseClient()
@@ -78,6 +87,14 @@ export async function middleware(request: NextRequest) {
         
         // Redirigir a login
         return NextResponse.redirect(new URL('/login?session_expired=true', request.url))
+      }
+
+      // VALIDACIÓN DE BANEO - PRIORIDAD MÁXIMA (solo para rutas de páginas)
+      if (profile.is_banned === true && !isApiRoute && !isBannedPage) {
+        console.log('🚫 Usuario baneado detectado - redirigiendo a /banned')
+        
+        // Redirigir a /banned
+        return NextResponse.redirect(new URL('/banned', request.url))
       }
 
       console.log('Usuario en middleware:', user.email || 'No autenticado')
@@ -123,25 +140,6 @@ export async function middleware(request: NextRequest) {
 
   // Verificación de suscripciones para rutas específicas cuando hay usuario
   if ((isFullyProtected || needsSubscriptionCheck) && user) {
-
-    // VALIDACIÓN DE BANEO - PRIORIDAD MÁXIMA
-    try {
-      const { getUserProfile, isUserBanned } = await import('@/lib/subscription-utils')
-      const profile = await getUserProfile(user.id)
-      
-      if (isUserBanned(profile)) {
-        console.log('Usuario banneado detectado, redirigiendo a /banned')
-        
-        // Destruir sesión del usuario banneado
-        const supabaseDestroy = await createServerSupabaseClient()
-        await supabaseDestroy.auth.signOut()
-        
-        return NextResponse.redirect(new URL('/banned', request.url))
-      }
-    } catch (error) {
-      console.error('Error en verificación de baneo:', error)
-    }
-
     console.log('Verificando suscripción para usuario:', user.email)
     
     try {

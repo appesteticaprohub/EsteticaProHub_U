@@ -38,7 +38,11 @@ export async function POST(request: NextRequest) {
       await supabase.auth.signOut()
       
       return NextResponse.json(
-        { data: null, error: 'Tu cuenta ha sido suspendida. Contacta a soporte si crees que esto es un error.' },
+        { 
+          data: null, 
+          error: 'Tu cuenta ha sido suspendida. Contacta a soporte si crees que esto es un error.',
+          isBanned: true 
+        },
         { status: 403 }
       )
     }

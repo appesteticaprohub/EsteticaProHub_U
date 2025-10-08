@@ -34,7 +34,7 @@ interface AuthContextType {
   subscriptionStatus: string | null
   isBanned: boolean
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: { message: string } | null }>
+  signIn: (email: string, password: string) => Promise<{ error: { message: string; isBanned?: boolean } | null }>
   signUp: (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string, paymentReference?: string) => Promise<{ error: { message: string } | null }>
   signOut: () => Promise<void>
 }
@@ -63,9 +63,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   )
 
+  // Detector de usuario baneado
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return
+    
+    const currentPath = window.location.pathname
+    
+    // Si está baneado y NO está en /banned, redirigir
+    if (data?.isBanned === true && currentPath !== '/banned') {
+      console.log('🚫 Usuario baneado detectado en AuthContext - redirigiendo a /banned')
+      // Limpiar el usuario previo para evitar redirecciones
+      sessionStorage.removeItem('prev_user_id')
+      window.location.href = '/banned'
+    }
+  }, [data?.isBanned])
+
   // Detector de sesión invalidada (solo en el cliente)
   React.useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // No hacer nada si estamos en /banned
+    if (window.location.pathname === '/banned') {
+      return
+    }
 
     // Guardar el estado anterior del usuario
     const previousUser = sessionStorage.getItem('prev_user_id')
@@ -97,18 +117,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data: authData, error } = await apiClient.post<AuthData>('/auth/login', {
-        email,
-        password,
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       })
 
-      if (error) {
-        return { error: { message: error } }
+      const result = await response.json()
+
+      if (result.error) {
+        return { 
+          error: { 
+            message: result.error,
+            isBanned: result.isBanned || false
+          } 
+        }
       }
 
       // Actualizar cache inmediatamente
-      if (authData) {
-        mutateAuth(authData, false)
+      if (result.data) {
+        mutateAuth(result.data, false)
       }
 
       return { error: null }

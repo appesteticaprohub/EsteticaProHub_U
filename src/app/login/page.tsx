@@ -26,6 +26,12 @@ function LoginContent() {
       const { error } = await signIn(email, password)
       
       if (error) {
+        // Si el usuario está baneado, redirigir a /banned
+        if (error.isBanned) {
+          router.push('/banned')
+          return
+        }
+        
         setError(error.message)
       } else {
         router.push('/')

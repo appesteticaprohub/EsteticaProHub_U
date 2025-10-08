@@ -45,15 +45,15 @@ export async function GET() {
     
     // Validar si el usuario fue banneado mientras tenía sesión activa
     if (profile.is_banned) {
-      // Destruir la sesión inmediatamente
-      await supabase.auth.signOut()
+      // NO destruir sesión aquí - el middleware y la página /banned lo manejan
+      // Solo informar que está baneado
       
       return NextResponse.json({
         data: {
-          user: null,
-          session: null,
-          userType: 'anonymous',
-          subscriptionStatus: null,
+          user: session.user,
+          session,
+          userType: profile.user_type || 'anonymous',
+          subscriptionStatus: profile.subscription_status || null,
           isBanned: true
         },
         error: null

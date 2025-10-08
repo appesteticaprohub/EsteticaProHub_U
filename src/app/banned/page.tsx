@@ -1,11 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function BannedPage() {
-  const router = useRouter();
   const { signOut } = useAuth();
 
   // Prevenir navegación hacia atrás
@@ -24,8 +22,21 @@ export default function BannedPage() {
   }, []);
 
   const handleSignOut = async () => {
-    await signOut();
-    router.push('/login');
+    try {
+      // Destruir la sesión completamente
+      await signOut();
+      
+      // Limpiar cualquier dato de sesión en storage
+      sessionStorage.removeItem('prev_user_id');
+      sessionStorage.removeItem('banned_session_destroyed');
+      
+      // Forzar navegación completa a login
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      // Incluso si hay error, redirigir a login
+      window.location.href = '/login';
+    }
   };
 
   return (
