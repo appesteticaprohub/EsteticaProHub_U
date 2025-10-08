@@ -134,6 +134,8 @@ export default function Home() {
         </p>
       </div>
 
+      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <CategoryCard
           title="Lo más nuevo"
@@ -162,6 +164,55 @@ export default function Home() {
           onLimitChange={setMostCommentedLimit}
         />
       </div>
+
+       {/* Sección de Búsqueda - Hero */}
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-8 mt-8 shadow-sm">
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="mb-4">
+            <svg 
+              className="w-16 h-16 mx-auto text-blue-600" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+              />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">
+            Explora Nuestro Contenido
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Busca entre miles de artículos especializados en estética profesional. 
+            Encuentra tratamientos, técnicas, productos y experiencias compartidas por expertos.
+          </p>
+          <Link 
+            href="/busqueda"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium"
+          >
+            <svg 
+              className="w-5 h-5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+              />
+            </svg>
+            Buscar Artículos
+          </Link>
+        </div>
+      </div>
+
+      
       {/* Botón flotante para crear post */}
       <Link 
         href="/crear-post"

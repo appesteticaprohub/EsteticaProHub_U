@@ -98,7 +98,7 @@ export async function middleware(request: NextRequest) {
   const authRoutes = ['/login']
   const registrationRoute = '/registro'
   const fullyProtectedRoutes = ['/perfil']  // Solo perfil requiere login obligatorio
-  const subscriptionVerificationRoutes = ['/crear-post', '/post', '/suscripcion']  // Verifican suscripción si hay usuario autenticado
+  const subscriptionVerificationRoutes = ['/crear-post', '/post', '/suscripcion', '/busqueda']  // Verifican suscripción si hay usuario autenticado
   
   const isAuthRoute = authRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
@@ -110,7 +110,8 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith(route)
   )
   
-  const needsSubscriptionCheck = subscriptionVerificationRoutes.some(route => 
+  // Rutas de búsqueda también verifican suscripción
+  const needsSubscriptionCheck = subscriptionVerificationRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   )
 
