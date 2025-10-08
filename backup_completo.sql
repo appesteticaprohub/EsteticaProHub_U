@@ -1,3 +1,0 @@
-| create_statement                                                                                                                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CREATE TABLE profiles (id uuid NOT NULL DEFAULT gen_random_uuid(), created_at timestamp with time zone DEFAULT (now() AT TIME ZONE 'America/Bogota'::text), email text NOT NULL, full_name text); |
