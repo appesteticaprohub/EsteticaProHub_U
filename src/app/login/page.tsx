@@ -118,6 +118,15 @@ function LoginContent() {
             </div>
           </div>
 
+          <div className="flex items-center justify-end">
+            <Link 
+              href="/olvidaste-contrasena" 
+              className="text-sm font-medium text-blue-600 hover:text-blue-500"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
+
           <div>
             <button
               type="submit"

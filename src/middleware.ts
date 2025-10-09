@@ -59,6 +59,18 @@ export async function middleware(request: NextRequest) {
   data: { user },
 } = await supabase.auth.getUser()
 
+// Manejar recuperación de contraseña - Solo redirigir sin autenticar
+if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')) {
+  const code = request.nextUrl.searchParams.get('code')
+  console.log('🔑 Detectado código de recuperación - redirigiendo sin autenticar')
+  
+  // Redirigir a restablecer-contrasena preservando el código
+  const redirectUrl = new URL('/restablecer-contrasena', request.url)
+  redirectUrl.searchParams.set('code', code!)
+  
+  return NextResponse.redirect(redirectUrl)
+}
+
 // Permitir acceso a /banned y rutas API sin validación de baneo
   const isBannedPage = request.nextUrl.pathname === '/banned'
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
