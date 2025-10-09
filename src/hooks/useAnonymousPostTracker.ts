@@ -6,13 +6,14 @@ import { apiClient } from '@/lib/api-client'
 interface AnonymousData {
   viewedPostsCount: number
   hasReachedLimit: boolean
+  limit: number
 }
 
 // Fetcher function para SWR
 const fetcher = async (url: string): Promise<AnonymousData> => {
   const { data, error } = await apiClient.get<AnonymousData>(url)
   if (error) throw new Error(error)
-  return data || { viewedPostsCount: 0, hasReachedLimit: false }
+  return data || { viewedPostsCount: 0, hasReachedLimit: false, limit: 1 }
 }
 
 export function useAnonymousPostTracker() {
@@ -27,6 +28,7 @@ export function useAnonymousPostTracker() {
 
   const viewedPostsCount = data?.viewedPostsCount || 0
   const hasReachedLimit = data?.hasReachedLimit || false
+  const limit = data?.limit || 1
 
   const incrementViewedPosts = async () => {
     try {
@@ -53,6 +55,7 @@ export function useAnonymousPostTracker() {
     viewedPostsCount,
     incrementViewedPosts,
     resetViewedPosts,
-    hasReachedLimit
+    hasReachedLimit,
+    limit
   }
 }

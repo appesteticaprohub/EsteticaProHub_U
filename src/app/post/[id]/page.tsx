@@ -280,7 +280,7 @@ export default function PostPage({ params }: PostPageProps) {
   const expirationDate = useMemo(() => {
     return subscriptionData?.subscription_expires_at ? new Date(subscriptionData.subscription_expires_at) : null;
   }, [subscriptionData?.subscription_expires_at]);
-  const { viewedPostsCount, incrementViewedPosts } = useAnonymousPostTracker();
+  const { viewedPostsCount, incrementViewedPosts, limit } = useAnonymousPostTracker();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(resolvedParams.id);
@@ -517,7 +517,7 @@ const handleDeleteComment = async (commentId: string) => {
   };
 
   const shouldShowTruncatedContent = () => {
-  return !user && viewedPostsCount > 1;
+  return !user && viewedPostsCount > limit;
 };
 
   if (loading) {
