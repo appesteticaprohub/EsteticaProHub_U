@@ -15,12 +15,21 @@ export async function GET(
       .from('posts')
       .select('*')
       .eq('id', id)
-      .single()
+      .eq('is_deleted', false)
+      .maybeSingle()
 
     if (error) {
       return NextResponse.json(
         { data: null, error: error.message },
-        { status: error.code === 'PGRST116' ? 404 : 400 }
+        { status: 400 }
+      )
+    }
+
+    // Si no se encuentra el post (eliminado o no existe)
+    if (!data) {
+      return NextResponse.json(
+        { data: null, error: 'Post no encontrado' },
+        { status: 404 }
       )
     }
 

@@ -13,9 +13,10 @@ export async function GET(request: NextRequest) {
     const ascending = searchParams.get('ascending') === 'true'
 
     let query = supabase
-      .from('posts')
-      .select('*')
-      .order(orderBy, { ascending })
+    .from('posts')
+    .select('*')
+    .eq('is_deleted', false)
+    .order(orderBy, { ascending })
 
     if (limit) {
       query = query.limit(parseInt(limit))
