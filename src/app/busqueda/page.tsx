@@ -10,7 +10,7 @@ import Modal from '@/components/Modal';
 import PaymentRecoveryModal from '@/components/PaymentRecoveryModal';
 
 export default function BusquedaPage() {
-  const { user, session, userType, loading: authLoading } = useAuth();
+  const { session, userType, loading: authLoading } = useAuth();
   const { subscriptionStatus, subscriptionData, loading: statusLoading } = useSubscriptionStatus();
   const loading = authLoading || statusLoading;
   const router = useRouter();
