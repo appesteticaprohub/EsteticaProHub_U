@@ -312,6 +312,55 @@ export class NotificationService {
     }
   }
 
+  // Enviar notificación de suscripción suspendida
+  static async sendSubscriptionSuspendedNotification(
+    userId: string, 
+    userEmail: string, 
+    userName: string,
+    expirationDate: string
+  ) {
+    try {
+      const variables = {
+        nombre: userName,
+        fecha_expiracion: new Date(expirationDate).toLocaleDateString('es-CO', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        payment_url: `${process.env.NEXT_PUBLIC_APP_URL}/suscripcion`
+      }
+
+      // Crear notificación in-app crítica
+      await this.createInAppNotification({
+        user_id: userId,
+        type: 'in_app',
+        category: 'critical',
+        title: 'Suscripción Suspendida',
+        message: `Tu suscripción ha sido suspendida por PayPal debido a problemas de pago. Por favor actualiza tu método de pago inmediatamente para mantener tu acceso.`,
+        cta_text: 'Actualizar Método de Pago',
+        cta_url: '/suscripcion',
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 días
+      })
+
+      // Enviar email
+      const emailResult = await sendEmailWithTemplate(
+        'subscription_suspended',
+        userEmail,
+        userId,
+        variables
+      )
+
+      return emailResult
+
+    } catch (error) {
+      return {
+        success: false,
+        data: null,
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      }
+    }
+  }
+
   // Obtener usuarios para newsletter
   static async getNewsletterRecipients() {
     try {

@@ -187,9 +187,16 @@ if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')
           
           console.log('Usuario con pago fallido detectado - UI manejará recovery')
           
-        } else if (profile.subscription_status === 'Suspended') {
+        } else if (profile.subscription_status === 'Suspended' && 
+                   isSubscriptionExpired(profile.subscription_expires_at)) {
           
-          console.log('Usuario con suscripción suspendida detectado')
+          console.log('Suscripción Suspended expirada, actualizando a Expired...')
+          await updateExpiredSubscription(user.id)
+          
+        } else if (profile.subscription_status === 'Suspended' && 
+                   !isSubscriptionExpired(profile.subscription_expires_at)) {
+          
+          console.log('Usuario con suscripción suspendida pero aún con acceso válido hasta:', profile.subscription_expires_at)
           
         } else if (profile.subscription_status === 'Cancelled' && 
            isSubscriptionExpired(profile.subscription_expires_at)) {

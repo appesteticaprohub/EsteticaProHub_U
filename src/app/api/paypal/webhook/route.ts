@@ -260,25 +260,41 @@ export async function POST(request: NextRequest) {
       const subscriptionId = body.resource?.id;
       
       if (!subscriptionId) {
-        console.error('Missing subscription ID in suspended event');
+        console.error('❌ Missing subscription ID in suspended event');
         return NextResponse.json({ error: 'Missing subscription ID' }, { status: 400 });
       }
 
-      // Buscar el usuario asociado a esta suscripción
-      const { data: session } = await supabase
-        .from('payment_sessions')
-        .select('user_id')
+      // Buscar el usuario asociado a esta suscripción (directamente en profiles)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, subscription_expires_at')
         .eq('paypal_subscription_id', subscriptionId)
         .single();
 
-      if (session && session.user_id) {
+      if (profile) {
+        const userId = profile.id;
+
         // Actualizar estado a Suspended
         await supabase
           .from('profiles')
           .update({ subscription_status: 'Suspended' })
-          .eq('id', session.user_id);
+          .eq('id', userId);
 
-        console.log(`Subscription ${subscriptionId} suspended for user ${session.user_id}`);
+        console.log(`🚫 Subscription ${subscriptionId} suspended for user ${userId}`);
+
+        // ENVIAR NOTIFICACIONES
+        const userName = profile.full_name || profile.email.split('@')[0];
+        const expirationDate = profile.subscription_expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+        console.log('📧 Enviando notificación de suspensión...');
+        await NotificationService.sendSubscriptionSuspendedNotification(
+          userId,
+          profile.email,
+          userName,
+          expirationDate
+        );
+      } else {
+        console.error('❌ Profile not found for subscription:', subscriptionId);
       }
 
       return NextResponse.json({ message: 'Subscription suspended' });
