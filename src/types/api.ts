@@ -50,6 +50,13 @@ export interface Comment {
   replies?: Comment[]
 }
 
+// Tipos para respuesta paginada de comentarios
+export interface PaginatedCommentsResponse {
+  data: Comment[]
+  error: string | null
+  nextCursor: string | null
+}
+
 // Tipos para Profiles
 export interface Profile {
   id: string

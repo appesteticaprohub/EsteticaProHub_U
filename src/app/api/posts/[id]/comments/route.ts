@@ -9,42 +9,103 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params
+    const { searchParams } = new URL(request.url)
+    const cursor = searchParams.get('cursor') // Cursor = created_at del último comentario
+    const limit = 20 // Número de comentarios principales por página
     
     const supabase = await createServerSupabaseClient()
     
-    const { data: commentsData, error } = await supabase
-  .from('comments')
-  .select(`
-    id,
-    post_id,
-    user_id,
-    content,
-    created_at,
-    parent_id,
-    is_deleted,
-    deleted_at,
-    profiles!comments_user_id_fkey (
-      full_name,
-      email
-    )
-  `)
-  .eq('post_id', id)
-  .order('created_at', { ascending: true })
+    // Construir query base para comentarios principales (parent_id = NULL)
+    let query = supabase
+      .from('comments')
+      .select(`
+        id,
+        post_id,
+        user_id,
+        content,
+        created_at,
+        parent_id,
+        is_deleted,
+        deleted_at,
+        profiles!comments_user_id_fkey (
+          full_name,
+          email
+        )
+      `)
+      .eq('post_id', id)
+      .is('parent_id', null) // Solo comentarios principales
+      .order('created_at', { ascending: true })
+      .limit(limit + 1) // +1 para detectar si hay más páginas
 
-    if (error) {
-      console.error('Error fetching comments:', error)
+    // Si hay cursor, filtrar desde ese punto
+    if (cursor) {
+      query = query.gt('created_at', cursor)
+    }
+
+    const { data: mainCommentsData, error: mainError } = await query
+
+    if (mainError) {
+      console.error('Error fetching main comments:', mainError)
       return NextResponse.json(
-        { data: null, error: 'Error al obtener comentarios' },
+        { data: null, error: 'Error al obtener comentarios', nextCursor: null },
         { status: 500 }
       )
     }
+
+    // Determinar si hay más páginas
+    const hasMore = mainCommentsData && mainCommentsData.length > limit
+    const commentsToReturn = hasMore ? mainCommentsData.slice(0, limit) : mainCommentsData
+    const nextCursor = hasMore && commentsToReturn.length > 0
+      ? commentsToReturn[commentsToReturn.length - 1].created_at
+      : null
+
+    // Obtener IDs de los comentarios principales para buscar sus respuestas
+    const mainCommentIds = commentsToReturn?.map(c => c.id) || []
+
+    // Si no hay comentarios principales, retornar vacío
+    if (mainCommentIds.length === 0) {
+      return NextResponse.json({ 
+        data: [], 
+        error: null, 
+        nextCursor: null 
+      })
+    }
+
+    // Obtener TODAS las respuestas (recursivas) de estos comentarios principales
+    const { data: repliesData, error: repliesError } = await supabase
+      .from('comments')
+      .select(`
+        id,
+        post_id,
+        user_id,
+        content,
+        created_at,
+        parent_id,
+        is_deleted,
+        deleted_at,
+        profiles!comments_user_id_fkey (
+          full_name,
+          email
+        )
+      `)
+      .eq('post_id', id)
+      .not('parent_id', 'is', null) // Solo respuestas
+      .order('created_at', { ascending: true })
+
+    if (repliesError) {
+      console.error('Error fetching replies:', repliesError)
+      // No es crítico, continuar sin replies
+    }
+
+    // Combinar comentarios principales y respuestas
+    const allComments = [...(commentsToReturn || []), ...(repliesData || [])]
 
     // Organizar comentarios en estructura anidada
     const commentsMap = new Map<string, Comment>()
     const topLevelComments: Comment[] = []
 
     // Primero, crear todos los comentarios
-    commentsData?.forEach((comment: {
+    allComments.forEach((comment: {
       id: string;
       post_id: string;
       user_id: string;
@@ -88,17 +149,21 @@ export async function GET(
           parent.replies.push(comment)
         }
       } else {
-        // Es un comentario principal
+        // Es un comentario principal (de esta página)
         topLevelComments.push(comment)
       }
     })
 
-    return NextResponse.json({ data: topLevelComments, error: null })
+    return NextResponse.json({ 
+      data: topLevelComments, 
+      error: null,
+      nextCursor 
+    })
     
   } catch (error) {
     console.error('Error in comments API:', error)
     return NextResponse.json(
-      { data: null, error: 'Error interno del servidor' },
+      { data: null, error: 'Error interno del servidor', nextCursor: null },
       { status: 500 }
     )
   }

@@ -284,7 +284,7 @@ export default function PostPage({ params }: PostPageProps) {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(resolvedParams.id);
-  const { comments, loading: commentsLoading, error: commentsError, createComment, updateComment, deleteComment } = useCommentsWithActions(resolvedParams.id);
+  const { comments, loading: commentsLoading, error: commentsError, hasMore, loadMore, isLoadingMore, createComment, updateComment, deleteComment } = useCommentsWithActions(resolvedParams.id);
   const [showSnackBar, setShowSnackBar] = useState(false);
   const [snackBarMessage, setSnackBarMessage] = useState('');
   const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false);
@@ -794,6 +794,33 @@ const handleDeleteComment = async (commentId: string) => {
               subscriptionStatus={subscriptionStatus}
             />
           ))}
+          
+          {/* Botón Cargar Más */}
+          {hasMore && (
+            <div className="flex justify-center pt-6 border-t border-gray-200">
+              <button
+                onClick={loadMore}
+                disabled={isLoadingMore}
+                className={`px-6 py-3 rounded-lg font-medium transition-colors duration-200 ${
+                  isLoadingMore
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {isLoadingMore ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Cargando...
+                  </span>
+                ) : (
+                  'Cargar más comentarios'
+                )}
+              </button>
+            </div>
+          )}
           </div>
         )}
         </section>
