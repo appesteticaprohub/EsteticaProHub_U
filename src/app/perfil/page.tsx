@@ -7,11 +7,12 @@ import PaymentRecoveryModal from '@/components/PaymentRecoveryModal'
 import { useState, useEffect } from 'react'
 import type { NotificationPreferences } from '@/types/notifications'
 import CancelSubscriptionModal from '@/components/CancelSubscriptionModal'
+import AvatarUploader from '@/components/AvatarUploader'
 
 
 
 export default function MiPerfil() {
-  const { user, signOut, loading } = useAuth()
+  const { user, signOut, loading, avatarUrl, fullName, updateAvatar } = useAuth()
   const { subscriptionStatus, subscriptionData, loading: statusLoading } = useSubscriptionStatus()
   const router = useRouter()
   const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false)
@@ -207,6 +208,21 @@ const handleReactivateSubscription = async () => {
             {/* Contenido Pestaña Perfil */}
             {activeTab === 'perfil' && (
             
+            <>
+              <div className="mb-8 pb-8 border-b border-gray-200">
+                <AvatarUploader
+                  currentAvatarUrl={avatarUrl}
+                  fullName={fullName}
+                  userEmail={user.email}
+                  onUploadSuccess={(newAvatarUrl) => {
+                    updateAvatar(newAvatarUrl)
+                  }}
+                  onDeleteSuccess={() => {
+                    updateAvatar(null)
+                  }}
+                />
+              </div>
+            
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -323,6 +339,7 @@ const handleReactivateSubscription = async () => {
                 </div>
               )}
             </div>
+            </>
             )}
 
             {/* Contenido Pestaña Notificaciones */}

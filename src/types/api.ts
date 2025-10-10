@@ -65,6 +65,7 @@ export interface Profile {
   created_at: string
   user_type: string
   subscription_status: string
+  avatar_url: string | null
 }
 
 // Tipos para Auth
@@ -197,4 +198,16 @@ export interface AppSettings {
   max_width?: number
   max_height?: number
   [key: string]: number | string | string[] | boolean | undefined
+}
+
+// Tipos para gestión de avatares
+export interface AvatarUploadResponse {
+  avatar_url: string
+}
+
+export interface AvatarSettings {
+  max_avatar_size_mb: number
+  allowed_formats: string[]
+  max_width: number
+  max_height: number
 }

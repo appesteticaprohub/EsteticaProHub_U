@@ -25,6 +25,8 @@ interface AuthData {
   userType: string
   subscriptionStatus: string | null
   isBanned: boolean
+  avatarUrl: string | null
+  fullName: string | null
 }
 
 interface AuthContextType {
@@ -33,10 +35,13 @@ interface AuthContextType {
   userType: string | null
   subscriptionStatus: string | null
   isBanned: boolean
+  avatarUrl: string | null
+  fullName: string | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: { message: string; isBanned?: boolean } | null }>
   signUp: (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string, paymentReference?: string) => Promise<{ error: { message: string } | null }>
   signOut: () => Promise<void>
+  updateAvatar: (avatarUrl: string | null) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -45,7 +50,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const fetcher = async (url: string): Promise<AuthData> => {
   const { data, error } = await apiClient.get<AuthData>(url)
   if (error) throw new Error(error)
-  return data || { user: null, session: null, userType: 'anonymous', subscriptionStatus: null, isBanned: false }
+  return data || { user: null, session: null, userType: 'anonymous', subscriptionStatus: null, isBanned: false, avatarUrl: null, fullName: null }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -114,6 +119,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const subscriptionStatus = data?.subscriptionStatus || null
   const loading = isLoading
   const isBanned = data?.isBanned || false
+  const avatarUrl = data?.avatarUrl || null
+  const fullName = data?.fullName || null
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -178,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Limpiar cache de auth inmediatamente
       mutateAuth(
-        { user: null, session: null, userType: 'anonymous', subscriptionStatus: null, isBanned: false },
+        { user: null, session: null, userType: 'anonymous', subscriptionStatus: null, isBanned: false, avatarUrl: null, fullName: null },
         false
       )
 
@@ -195,16 +202,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const updateAvatar = (newAvatarUrl: string | null) => {
+    if (data) {
+      mutateAuth({ ...data, avatarUrl: newAvatarUrl }, false)
+    }
+  }
+
   const value = {
     user,
     session,
     userType,
     subscriptionStatus,
     isBanned,
+    avatarUrl,
+    fullName,
     loading,
     signIn,
     signUp,
     signOut,
+    updateAvatar,
   }
 
   return (
