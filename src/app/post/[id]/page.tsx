@@ -387,9 +387,14 @@ const handleUpdateComment = async (commentId: string, content: string) => {
   }
 
   try {
+    console.log('Actualizando comentario:', { commentId, postId: resolvedParams.id, content }); // Debug
+    
     const result = await updateComment(commentId, content, resolvedParams.id);
     
+    console.log('Resultado update:', result); // Debug
+    
     if (result.error) {
+      console.error('Error en result:', result.error); // Debug
       setSnackBarMessage(`Error: ${result.error}`);
       setShowSnackBar(true);
       throw new Error(result.error);
@@ -398,6 +403,7 @@ const handleUpdateComment = async (commentId: string, content: string) => {
       setShowSnackBar(true);
     }
   } catch (error) {
+    console.error('Error completo al actualizar:', error); // Debug
     setSnackBarMessage('Error al actualizar comentario');
     setShowSnackBar(true);
     throw error;

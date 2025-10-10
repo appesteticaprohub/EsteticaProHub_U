@@ -90,43 +90,45 @@ export function useCommentsWithActions(postId: string | null) {
   }
 
   const updateComment = async (commentId: string, content: string, postId: string) => {
-    try {
-      const { data, error } = await apiClient.put<Comment>(`/posts/${postId}/comments/${commentId}`, {
-        content
-      })
+  try {
+    const { data, error } = await apiClient.put<Comment>(`/posts/${postId}/comments/${commentId}`, {
+      content
+    })
 
-      if (error) {
-        throw new Error(error)
-      }
-
-      // Revalidar la lista de comentarios
-      mutateComments()
-
-      return { data, error: null }
-    } catch (error) {
-      return { data: null, error: error instanceof Error ? error.message : 'Error desconocido' }
+    if (error) {
+      throw new Error(error)
     }
+
+    // Revalidar todas las páginas de comentarios
+    await mutateComments()
+
+    return { data, error: null }
+  } catch (error) {
+    console.error('Error in updateComment hook:', error)
+    return { data: null, error: error instanceof Error ? error.message : 'Error desconocido' }
   }
+}
 
   const deleteComment = async (commentId: string, postId: string) => {
-    try {
-      const { data, error } = await apiClient.delete(`/posts/${postId}/comments/${commentId}`)
+  try {
+    const { data, error } = await apiClient.delete(`/posts/${postId}/comments/${commentId}`)
 
-      if (error) {
-        throw new Error(error)
-      }
-
-      // Revalidar la lista de comentarios
-      mutateComments()
-      
-      // Revalidar la información del post para actualizar el contador
-      mutate(`/posts/${postId}`)
-
-      return { data, error: null }
-    } catch (error) {
-      return { data: null, error: error instanceof Error ? error.message : 'Error desconocido' }
+    if (error) {
+      throw new Error(error)
     }
+
+    // Revalidar todas las páginas de comentarios
+    await mutateComments()
+    
+    // Revalidar la información del post para actualizar el contador
+    mutate(`/posts/${postId}`)
+
+    return { data, error: null }
+  } catch (error) {
+    console.error('Error in deleteComment hook:', error)
+    return { data: null, error: error instanceof Error ? error.message : 'Error desconocido' }
   }
+}
 
   return {
     comments,

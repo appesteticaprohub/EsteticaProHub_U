@@ -80,7 +80,9 @@ export async function PUT(
         content,
         created_at,
         parent_id,
-        profiles!inner (
+        is_deleted,
+        deleted_at,
+        profiles!comments_user_id_fkey (
           full_name,
           email
         )
