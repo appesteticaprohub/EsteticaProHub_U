@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
+import Avatar from './Avatar';
 import { useState, useRef, useEffect } from 'react';
 
 // Formatear fecha usando componentes UTC directamente
@@ -21,7 +22,7 @@ const formatDateColombia = (utcDate: string) => {
 };
 
 export default function Header() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, fullName, avatarUrl } = useAuth();
   const { notifications, unreadCount, markAsRead, refresh, isLoading: notificationsLoading } = useNotifications({ 
     limit: 5,
     enabled: !!user && !loading  // Solo llamar si hay usuario y no está cargando
@@ -29,6 +30,17 @@ export default function Header() {
 const [showNotifications, setShowNotifications] = useState(false);
 const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 const dropdownRef = useRef<HTMLDivElement>(null);
+
+const getInitials = (name: string | null, email: string) => {
+  if (name && name.trim()) {
+    const nameParts = name.trim().split(' ')
+    if (nameParts.length >= 2) {
+      return (nameParts[0][0] + nameParts[1][0]).toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+  }
+  return email.substring(0, 2).toUpperCase()
+}
 
 // Cerrar dropdown al hacer click afuera
 useEffect(() => {
@@ -230,21 +242,18 @@ const getCategoryColor = (category: string) => {
               )}
             </div>
 
-            <Link href="/perfil" className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Mi Perfil">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6 text-gray-700"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
+            <Link 
+              href="/perfil" 
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors" 
+              title="Mi Perfil"
+            >
+              <Avatar
+                src={avatarUrl}
+                alt={fullName || user.email || 'Usuario'}
+                size="md"
+                fallbackText={getInitials(fullName, user.email || '')}
+                className="ring-2 ring-gray-200 hover:ring-gray-300 transition-all"
+              />
             </Link>
             <button 
               onClick={() => signOut()}
