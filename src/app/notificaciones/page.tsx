@@ -85,15 +85,15 @@ export default function NotificationsPage() {
     <main className="p-6 max-w-5xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+          <div className="mb-3 md:mb-0">
             <h1 className="text-3xl font-bold mb-2">Centro de Notificaciones</h1>
             <p className="text-gray-600">
               Gestiona todas tus notificaciones en un solo lugar
             </p>
           </div>
           {unreadCount > 0 && (
-            <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg">
+            <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg self-start md:self-auto">
               <span className="font-semibold">{unreadCount}</span> no leídas
             </div>
           )}
