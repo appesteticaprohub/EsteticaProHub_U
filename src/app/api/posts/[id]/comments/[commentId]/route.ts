@@ -84,7 +84,8 @@ export async function PUT(
         deleted_at,
         profiles!comments_user_id_fkey (
           full_name,
-          email
+          email,
+          avatar_url
         )
       `)
       .single()
@@ -98,19 +99,19 @@ export async function PUT(
     }
 
     const comment: Comment = {
-  id: commentData.id,
-  post_id: commentData.post_id,
-  user_id: commentData.user_id,
-  content: commentData.content,
-  created_at: commentData.created_at,
-  parent_id: commentData.parent_id,
-  is_deleted: false,
-  deleted_at: null,
-  profiles: Array.isArray(commentData.profiles) 
-    ? commentData.profiles[0] 
-    : commentData.profiles,
-  replies: []
-}
+      id: commentData.id,
+      post_id: commentData.post_id,
+      user_id: commentData.user_id,
+      content: commentData.content,
+      created_at: commentData.created_at,
+      parent_id: commentData.parent_id,
+      is_deleted: false,
+      deleted_at: null,
+      profiles: Array.isArray(commentData.profiles) 
+        ? commentData.profiles[0] 
+        : commentData.profiles,
+      replies: []
+    }
 
     return NextResponse.json({ data: comment, error: null })
     
