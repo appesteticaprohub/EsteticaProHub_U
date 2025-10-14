@@ -13,17 +13,19 @@ export async function GET(request: NextRequest) {
     const ascending = searchParams.get('ascending') === 'true'
 
     let query = supabase
-    .from('posts')
-    .select(`
-      *,
-      author:profiles!posts_author_id_fkey (
-        full_name,
-        email,
-        avatar_url
-      )
-    `)
-    .eq('is_deleted', false)
-    .order(orderBy, { ascending })
+  .from('posts')
+  .select(`
+    *,
+    author:profiles!posts_author_id_fkey (
+      full_name,
+      email,
+      avatar_url,
+      specialty,
+      country
+    )
+  `)
+  .eq('is_deleted', false)
+  .order(orderBy, { ascending })
 
     if (limit) {
       query = query.limit(parseInt(limit))

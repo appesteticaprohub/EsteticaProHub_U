@@ -12,6 +12,8 @@ interface PostItemProps {
     created_at: string;
     author_name?: string;
     author_avatar?: string | null;
+    author_specialty?: string | null;
+    author_country?: string | null;
     views_count?: number;
     comments_count?: number;
   };
@@ -52,6 +54,24 @@ export default function PostItem({ post, showMetric }: PostItemProps) {
 
         {/* Contenido */}
         <div className="flex-1 min-w-0">
+          {/* Autor y especialidad */}
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-xs font-semibold text-gray-700">{authorName}</span>
+            {post.author_specialty && (
+              <>
+                <span className="text-gray-300">•</span>
+                <span className="text-xs text-gray-500">{post.author_specialty}</span>
+              </>
+            )}
+            {post.author_country && (
+              <>
+                <span className="text-gray-300">•</span>
+                <span className="text-xs text-gray-500">{post.author_country}</span>
+              </>
+            )}
+          </div>
+          
+          {/* Título */}
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-base font-bold text-gray-900 group-hover:text-blue-600 transition-colors leading-snug">
               {truncateText(post.title, 60)}

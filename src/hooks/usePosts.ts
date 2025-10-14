@@ -8,6 +8,8 @@ interface Post {
   author_id: string;
   author_name?: string;
   author_avatar?: string | null;
+  author_specialty?: string | null;
+  author_country?: string | null;
   created_at: string;
   views_count: number;
   likes_count: number;
@@ -27,20 +29,24 @@ interface PostFromAPI {
     full_name: string;
     email: string;
     avatar_url: string | null;
+    specialty: string | null;
+    country: string | null;
   };
 }
 
-// Fetcher function para SWR con mapeo de datos
 const fetcher = async (url: string): Promise<Post[]> => {
   const { data, error } = await apiClient.get<PostFromAPI[]>(url)
   if (error) throw new Error(error)
   
-  // Mapear los datos del autor al nivel superior
   const mappedData = (data || []).map(post => ({
     ...post,
     author_name: post.author?.full_name || 'Usuario',
-    author_avatar: post.author?.avatar_url || null
+    author_avatar: post.author?.avatar_url || null,
+    author_specialty: post.author?.specialty || null,
+    author_country: post.author?.country || null
   }))
+  
+  console.log('Posts mapeados:', mappedData) // DEBUG
   
   return mappedData
 }
@@ -61,7 +67,6 @@ export function usePosts() {
   }
 }
 
-// Hook para posts más nuevos
 export function useNewestPosts(limit: number = 5) {
   const { data: posts = [], error, isLoading } = useSWR<Post[]>(
     `/posts?limit=${limit}&orderBy=created_at&ascending=false`,
@@ -78,7 +83,6 @@ export function useNewestPosts(limit: number = 5) {
   }
 }
 
-// Hook para posts más vistos
 export function useMostViewedPosts(limit: number = 5) {
   const { data: posts = [], error, isLoading } = useSWR<Post[]>(
     `/posts?limit=${limit}&orderBy=views_count&ascending=false`,
@@ -95,7 +99,6 @@ export function useMostViewedPosts(limit: number = 5) {
   }
 }
 
-// Hook para posts más comentados
 export function useMostCommentedPosts(limit: number = 5) {
   const { data: posts = [], error, isLoading } = useSWR<Post[]>(
     `/posts?limit=${limit}&orderBy=comments_count&ascending=false`,
