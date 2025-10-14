@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useNewestPosts, useMostViewedPosts, useMostCommentedPosts } from '@/hooks/usePosts';
 import Link from 'next/link';
+import WelcomeHero from '@/components/WelcomeHero';
 
 // Componente para el dropdown de selección de cantidad
 function LimitSelector({ currentLimit, onLimitChange }: { currentLimit: number, onLimitChange: (limit: number) => void }) {
@@ -127,14 +128,7 @@ export default function Home() {
 
   return (
     <main className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">Bienvenido al Foro de Estética Profesional</h1>
-        <p className="text-gray-600">
-          Un espacio dedicado para profesionales de la estética donde pueden compartir conocimientos, experiencias y mejores prácticas en tratamientos y cuidados especializados.
-        </p>
-      </div>
-
-      
+      <WelcomeHero />      
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <CategoryCard
