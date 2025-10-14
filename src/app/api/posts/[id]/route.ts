@@ -13,7 +13,14 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('posts')
-      .select('*')
+      .select(`
+        *,
+        author:profiles!posts_author_id_fkey (
+          full_name,
+          email,
+          avatar_url
+        )
+      `)
       .eq('id', id)
       .eq('is_deleted', false)
       .maybeSingle()

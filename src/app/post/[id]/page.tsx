@@ -13,6 +13,19 @@ import { useLikes } from '@/hooks/useLikes';
 import { useCommentsWithActions } from '@/hooks/useComments';
 import { Comment } from '@/types/api';
 import ImageGallery from '@/components/ImageGallery';
+import Avatar from '@/components/Avatar';
+
+// Función para calcular iniciales
+function getInitials(fullName: string | null, email: string): string {
+  if (fullName && fullName.trim()) {
+    const words = fullName.trim().split(' ').filter(w => w.length > 0);
+    if (words.length >= 2) {
+      return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+    }
+    return fullName.substring(0, 2).toUpperCase();
+  }
+  return email.substring(0, 2).toUpperCase();
+}
 
 
 interface PostPageProps {
@@ -118,9 +131,12 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, currentUserId, user
   return (
     <div className={`${level > 0 ? 'ml-8 mt-4' : ''}`}>
       <div className="flex items-start gap-3">
-        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-          {userName.charAt(0).toUpperCase()}
-        </div>
+        <Avatar
+          src={comment.profiles?.avatar_url || null}
+          alt={userName}
+          size="sm"
+          fallbackText={getInitials(comment.profiles?.full_name || null, comment.profiles?.email || 'user@example.com')}
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <h4 className="text-sm font-medium text-gray-900">
@@ -625,15 +641,42 @@ const handleDeleteComment = async (commentId: string) => {
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
               {post.title}
             </h1>
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span>
-                {new Date(post.created_at).toLocaleDateString('es-ES', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </span>
-            </div>
+            
+            {/* Información del autor con avatar */}
+            {post.author && (
+              <div className="flex items-center gap-4">
+                <Avatar
+                  src={post.author.avatar_url || null}
+                  alt={post.author.full_name || post.author.email || 'Autor'}
+                  size="md"
+                  fallbackText={getInitials(post.author.full_name, post.author.email)}
+                />
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-900">
+                    {post.author.full_name || post.author.email || 'Autor anónimo'}
+                  </span>
+                  <span className="text-sm text-gray-600">
+                    {new Date(post.created_at).toLocaleDateString('es-ES', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {!post.author && (
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <span>
+                  {new Date(post.created_at).toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </span>
+              </div>
+            )}
           </header>
           
           <div className="prose prose-lg max-w-none">

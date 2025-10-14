@@ -11,6 +11,11 @@ interface PostWithoutCategory {
   likes_count: number;
   comments_count: number;
   images: string[];
+  author?: {
+    full_name: string | null;
+    email: string;
+    avatar_url: string | null;
+  };
 }
 
 // Fetcher function para SWR

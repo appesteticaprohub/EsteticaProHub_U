@@ -28,7 +28,14 @@ export async function PATCH(
       .from('posts')
       .update({ views_count: currentPost.views_count + 1 })
       .eq('id', id)
-      .select()
+      .select(`
+        *,
+        author:profiles!posts_author_id_fkey (
+          full_name,
+          email,
+          avatar_url
+        )
+      `)
       .single()
 
     if (error) {

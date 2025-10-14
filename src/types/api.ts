@@ -15,7 +15,12 @@ export interface Post {
   likes_count: number
   comments_count: number
   category: string | null
-  images: string[] // NUEVO: Array de URLs de imágenes
+  images: string[]
+  author?: {
+    full_name: string | null
+    email: string
+    avatar_url: string | null
+  }
 }
 
 export interface CreatePostRequest {
@@ -46,6 +51,7 @@ export interface Comment {
   profiles?: {
     full_name: string | null
     email: string
+    avatar_url: string | null
   }
   replies?: Comment[]
 }

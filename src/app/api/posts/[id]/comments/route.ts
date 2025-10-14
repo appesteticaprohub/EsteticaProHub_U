@@ -29,7 +29,8 @@ export async function GET(
         deleted_at,
         profiles!comments_user_id_fkey (
           full_name,
-          email
+          email,
+          avatar_url
         )
       `)
       .eq('post_id', id)
@@ -85,7 +86,8 @@ export async function GET(
         deleted_at,
         profiles!comments_user_id_fkey (
           full_name,
-          email
+          email,
+          avatar_url
         )
       `)
       .eq('post_id', id)
@@ -117,9 +119,11 @@ export async function GET(
       profiles: {
         full_name: string | null;
         email: string;
+        avatar_url: string | null;
       } | {
         full_name: string | null;
         email: string;
+        avatar_url: string | null;
       }[];
     }) => {
       const commentObj: Comment = {
@@ -237,17 +241,18 @@ export async function POST(
         parent_id: parent_id || null
       })
       .select(`
-      id,
-      post_id,
-      user_id,
-      content,
-      created_at,
-      parent_id,
-      profiles!comments_user_id_fkey (
-        full_name,
-        email
-      )
-    `)
+        id,
+        post_id,
+        user_id,
+        content,
+        created_at,
+        parent_id,
+        profiles!comments_user_id_fkey (
+          full_name,
+          email,
+          avatar_url
+        )
+      `)
       .single()
 
     if (insertError) {

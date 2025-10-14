@@ -14,7 +14,14 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
     .from('posts')
-    .select('*')
+    .select(`
+      *,
+      author:profiles!posts_author_id_fkey (
+        full_name,
+        email,
+        avatar_url
+      )
+    `)
     .eq('is_deleted', false)
     .order(orderBy, { ascending })
 
