@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/server-supabase'
 import { deleteAvatar, extractAvatarPathFromUrl } from '@/lib/avatar-storage'
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE() {
   try {
     // Verificar autenticación
     const supabase = await createServerSupabaseClient()
