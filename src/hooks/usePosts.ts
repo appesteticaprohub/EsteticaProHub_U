@@ -7,9 +7,9 @@ interface Post {
   content: string;
   author_id: string;
   author_name?: string;
-  author_avatar?: string | null;
-  author_specialty?: string | null;
-  author_country?: string | null;
+  author_avatar?: string; // CAMBIADO: Removido el | null
+  author_specialty?: string;
+  author_country?: string;
   created_at: string;
   views_count: number;
   likes_count: number;
@@ -41,9 +41,9 @@ const fetcher = async (url: string): Promise<Post[]> => {
   const mappedData = (data || []).map(post => ({
     ...post,
     author_name: post.author?.full_name || 'Usuario',
-    author_avatar: post.author?.avatar_url || null,
-    author_specialty: post.author?.specialty || null,
-    author_country: post.author?.country || null
+    author_avatar: post.author?.avatar_url || undefined, // CAMBIADO: null -> undefined
+    author_specialty: post.author?.specialty || undefined, // CAMBIADO: null -> undefined
+    author_country: post.author?.country || undefined // CAMBIADO: null -> undefined
   }))
   
   console.log('Posts mapeados:', mappedData) // DEBUG
@@ -60,6 +60,7 @@ export function usePosts() {
       revalidateOnReconnect: true,
     }
   )
+
   return { 
     posts, 
     loading: isLoading, 
@@ -76,6 +77,7 @@ export function useNewestPosts(limit: number = 5) {
       revalidateOnReconnect: true,
     }
   )
+
   return { 
     posts, 
     loading: isLoading, 
@@ -92,6 +94,7 @@ export function useMostViewedPosts(limit: number = 5) {
       revalidateOnReconnect: true,
     }
   )
+
   return { 
     posts, 
     loading: isLoading, 
@@ -108,6 +111,7 @@ export function useMostCommentedPosts(limit: number = 5) {
       revalidateOnReconnect: true,
     }
   )
+
   return { 
     posts, 
     loading: isLoading, 
