@@ -6,17 +6,43 @@ interface Post {
   title: string;
   content: string;
   author_id: string;
+  author_name?: string;
+  author_avatar?: string | null;
   created_at: string;
   views_count: number;
   likes_count: number;
   comments_count: number;
 }
 
-// Fetcher function para SWR
+interface PostFromAPI {
+  id: string;
+  title: string;
+  content: string;
+  author_id: string;
+  created_at: string;
+  views_count: number;
+  likes_count: number;
+  comments_count: number;
+  author?: {
+    full_name: string;
+    email: string;
+    avatar_url: string | null;
+  };
+}
+
+// Fetcher function para SWR con mapeo de datos
 const fetcher = async (url: string): Promise<Post[]> => {
-  const { data, error } = await apiClient.get<Post[]>(url)
+  const { data, error } = await apiClient.get<PostFromAPI[]>(url)
   if (error) throw new Error(error)
-  return data || []
+  
+  // Mapear los datos del autor al nivel superior
+  const mappedData = (data || []).map(post => ({
+    ...post,
+    author_name: post.author?.full_name || 'Usuario',
+    author_avatar: post.author?.avatar_url || null
+  }))
+  
+  return mappedData
 }
 
 export function usePosts() {
@@ -28,7 +54,6 @@ export function usePosts() {
       revalidateOnReconnect: true,
     }
   )
-
   return { 
     posts, 
     loading: isLoading, 
@@ -46,7 +71,6 @@ export function useNewestPosts(limit: number = 5) {
       revalidateOnReconnect: true,
     }
   )
-
   return { 
     posts, 
     loading: isLoading, 
@@ -64,7 +88,6 @@ export function useMostViewedPosts(limit: number = 5) {
       revalidateOnReconnect: true,
     }
   )
-
   return { 
     posts, 
     loading: isLoading, 
@@ -82,7 +105,6 @@ export function useMostCommentedPosts(limit: number = 5) {
       revalidateOnReconnect: true,
     }
   )
-
   return { 
     posts, 
     loading: isLoading, 

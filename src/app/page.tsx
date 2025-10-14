@@ -4,116 +4,7 @@ import { useState } from 'react';
 import { useNewestPosts, useMostViewedPosts, useMostCommentedPosts } from '@/hooks/usePosts';
 import Link from 'next/link';
 import WelcomeHero from '@/components/WelcomeHero';
-
-// Componente para el dropdown de selección de cantidad
-function LimitSelector({ currentLimit, onLimitChange }: { currentLimit: number, onLimitChange: (limit: number) => void }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const limits = [5, 10, 15];
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-        title="Configurar cantidad de posts"
-      >
-        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      </button>
-      
-      {isOpen && (
-        <div className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-          {limits.map((limit) => (
-            <button
-              key={limit}
-              onClick={() => {
-                onLimitChange(limit);
-                setIsOpen(false);
-              }}
-              className={`block w-full px-4 py-2 text-left hover:bg-gray-100 ${
-                currentLimit === limit ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-              }`}
-            >
-              {limit} posts
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Componente para cada categoría (card completa)
-function CategoryCard({ 
-  title, 
-  posts, 
-  loading, 
-  error, 
-  limit, 
-  onLimitChange 
-}: {
-  title: string;
-  posts: {
-    id: string;
-    title: string;
-    created_at: string;
-  }[];
-  loading: boolean;
-  error: string | null;
-  limit: number;
-  onLimitChange: (limit: number) => void;
-}) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition-shadow">
-      {/* Header de la categoría */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
-        <LimitSelector currentLimit={limit} onLimitChange={onLimitChange} />
-      </div>
-      
-      {/* Contenido de posts */}
-      <div className="space-y-3">
-        {loading && (
-          <div className="text-center py-4">
-            <p className="text-gray-500 text-sm">Cargando posts...</p>
-          </div>
-        )}
-        
-        {error && (
-          <div className="text-center py-4">
-            <p className="text-red-500 text-sm">Error: {error}</p>
-          </div>
-        )}
-        
-        {!loading && !error && posts.length === 0 && (
-          <div className="text-center py-4">
-            <p className="text-gray-500 text-sm">No hay posts disponibles</p>
-          </div>
-        )}
-        
-        {!loading && !error && posts.length > 0 && (
-          <>
-            {posts.map((post) => (
-              <div key={post.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                <Link 
-                  href={`/post/${post.id}`} 
-                  className="flex-1 hover:text-blue-600 transition-colors"
-                >
-                  <span className="text-gray-900 text-sm font-medium">{post.title}</span>
-                </Link>
-                <span className="text-xs text-gray-500 ml-4 flex-shrink-0">
-                  {new Date(post.created_at).toLocaleDateString('es-CO')}
-                </span>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
+import CategoryCard from '@/components/CategoryCard/CategoryCard';
 
 export default function Home() {
   // Estados para los límites de cada sección
@@ -130,9 +21,10 @@ export default function Home() {
     <main className="p-6 max-w-7xl mx-auto">
       <WelcomeHero />      
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <CategoryCard
           title="Lo más nuevo"
+          type="newest"
           posts={newestPosts}
           loading={newestLoading}
           error={newestError}
@@ -142,6 +34,7 @@ export default function Home() {
 
         <CategoryCard
           title="Lo más visto"
+          type="most-viewed"
           posts={mostViewedPosts}
           loading={mostViewedLoading}
           error={mostViewedError}
@@ -151,6 +44,7 @@ export default function Home() {
 
         <CategoryCard
           title="Lo más comentado"
+          type="most-commented"
           posts={mostCommentedPosts}
           loading={mostCommentedLoading}
           error={mostCommentedError}
@@ -159,7 +53,7 @@ export default function Home() {
         />
       </div>
 
-       {/* Sección de Búsqueda - Hero */}
+      {/* Sección de Búsqueda - Hero */}
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-8 mt-8 shadow-sm">
         <div className="max-w-3xl mx-auto text-center">
           <div className="mb-4">
@@ -206,7 +100,6 @@ export default function Home() {
         </div>
       </div>
 
-      
       {/* Botón flotante para crear post */}
       <Link 
         href="/crear-post"
