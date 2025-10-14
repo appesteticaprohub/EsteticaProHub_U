@@ -205,6 +205,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateAvatar = (newAvatarUrl: string | null) => {
     if (data) {
       mutateAuth({ ...data, avatarUrl: newAvatarUrl }, false)
+      
+      // Revalidar todos los comentarios para que muestren el nuevo avatar
+      // Esto invalida cualquier endpoint que comience con /posts/ y contenga /comments
+      mutate(
+        (key) => typeof key === 'string' && key.includes('/posts/') && key.includes('/comments'),
+        undefined,
+        { revalidate: true }
+      )
     }
   }
 
