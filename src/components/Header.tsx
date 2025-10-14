@@ -25,84 +25,88 @@ export default function Header() {
   const { user, loading, signOut, fullName, avatarUrl } = useAuth();
   const { notifications, unreadCount, markAsRead, refresh, isLoading: notificationsLoading } = useNotifications({ 
     limit: 5,
-    enabled: !!user && !loading  // Solo llamar si hay usuario y no está cargando
+    enabled: !!user && !loading
   });
-const [showNotifications, setShowNotifications] = useState(false);
-const [hoveredButton, setHoveredButton] = useState<string | null>(null);
-const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const [showNotifications, setShowNotifications] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-const getInitials = (name: string | null, email: string) => {
-  if (name && name.trim()) {
-    const nameParts = name.trim().split(' ')
-    if (nameParts.length >= 2) {
-      return (nameParts[0][0] + nameParts[1][0]).toUpperCase()
+  const getInitials = (name: string | null, email: string) => {
+    if (name && name.trim()) {
+      const nameParts = name.trim().split(' ')
+      if (nameParts.length >= 2) {
+        return (nameParts[0][0] + nameParts[1][0]).toUpperCase()
+      }
+      return name.substring(0, 2).toUpperCase()
     }
-    return name.substring(0, 2).toUpperCase()
+    return email.substring(0, 2).toUpperCase()
   }
-  return email.substring(0, 2).toUpperCase()
-}
 
-// Cerrar dropdown al hacer click afuera
-useEffect(() => {
-  function handleClickOutside(event: MouseEvent) {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-      setShowNotifications(false);
+  // Cerrar dropdown al hacer click afuera
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
     }
-  }
 
-  if (showNotifications) {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }
-}, [showNotifications]);
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showNotifications]);
 
-const handleNotificationClick = async (notificationId: string, ctaUrl: string | null) => {
-  await markAsRead(notificationId);
-  setShowNotifications(false);
-  if (ctaUrl) {
-    window.location.href = ctaUrl;
-  }
-};
+  const handleNotificationClick = async (notificationId: string, ctaUrl: string | null) => {
+    await markAsRead(notificationId);
+    setShowNotifications(false);
+    if (ctaUrl) {
+      window.location.href = ctaUrl;
+    }
+  };
 
-const getCategoryColor = (category: string) => {
-  switch (category) {
-    case 'critical': return 'bg-red-100 border-red-500';
-    case 'important': return 'bg-yellow-100 border-yellow-500';
-    case 'promotional': return 'bg-purple-100 border-purple-500';
-    default: return 'bg-blue-100 border-blue-500';
-  }
-};
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'critical': return 'bg-red-100 border-red-500';
+      case 'important': return 'bg-yellow-100 border-yellow-500';
+      case 'promotional': return 'bg-purple-100 border-purple-500';
+      default: return 'bg-blue-100 border-blue-500';
+    }
+  };
 
   return (
-    <div className="w-full bg-white shadow-sm flex justify-between items-center h-16 py-4 px-4 md:px-6">
+    <div className="w-full header-gradient flex justify-between items-center h-16 py-4 px-4 md:px-6">
       <Link href="/" className="flex items-center">
-        {/* Vista móvil: Logo apilado (ícono arriba, texto abajo) */}
+      {/* Vista móvil: Solo logo con sombra */}
+      <div className="md:hidden">
         <Image 
           src="/logo.svg" 
           alt="EsteticaPro Hub" 
           width={32}
           height={32}
-          className="md:hidden"
+          className="logo-shadow"
           priority
         />
-        
-        {/* Vista desktop: Logo + texto horizontal */}
-        <div className="hidden md:flex items-center gap-3">
-          <Image 
-            src="/logo.svg" 
-            alt="EsteticaPro Hub Logo" 
-            width={40}
-            height={40}
-            priority
-          />
-          <span className="font-medium text-lg text-white px-3 py-1.5 rounded" style={{ backgroundColor: '#8868C2' }}>
-            EsteticaPro Hub
-          </span>
-        </div>
-      </Link>
+      </div>
+      
+      {/* Vista desktop: Logo + texto con sombra */}
+      <div className="hidden md:flex items-center gap-3">
+        <Image 
+          src="/logo.svg" 
+          alt="EsteticaPro Hub Logo" 
+          width={40}
+          height={40}
+          className="logo-shadow"
+          priority
+        />
+        <span className="logo-text text-lg">
+          EsteticaPro Hub
+        </span>
+      </div>
+    </Link>
+
       <div className="flex gap-3 md:gap-4 items-center">
         {loading ? (
-          <div className="bg-gray-300 text-gray-600 px-4 py-2 rounded-lg">
+          <div className="header-button px-4 py-2 rounded-lg text-white">
             Cargando...
           </div>
         ) : user ? (
@@ -111,12 +115,12 @@ const getCategoryColor = (category: string) => {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="notification-bell relative p-2 rounded-lg"
                 aria-label="Notificaciones"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 text-gray-700"
+                  className="h-6 w-6 text-white"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -129,7 +133,7 @@ const getCategoryColor = (category: string) => {
                   />
                 </svg>
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className="notification-badge absolute -top-1 -right-1 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -137,7 +141,7 @@ const getCategoryColor = (category: string) => {
 
               {/* Dropdown de notificaciones */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[500px] overflow-y-auto">
+                <div className="notification-dropdown absolute right-0 mt-2 w-96 bg-white rounded-lg z-50 max-h-[500px] overflow-y-auto">
                   {/* Header con botón refrescar */}
                   <div className="p-4 border-b border-gray-200 flex justify-between items-center">
                     <h3 className="font-semibold text-gray-800">Notificaciones</h3>
@@ -166,7 +170,7 @@ const getCategoryColor = (category: string) => {
                     </button>
                   </div>
 
-                  {/* Link Ver todas - ARRIBA */}
+                  {/* Link Ver todas */}
                   {notifications.length > 0 && (
                     <div className="p-3 border-b border-gray-200 bg-gray-50">
                       <Link
@@ -242,27 +246,31 @@ const getCategoryColor = (category: string) => {
               )}
             </div>
 
+            {/* Avatar con borde degradado */}
             <Link 
               href="/perfil" 
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors" 
+              className="avatar-gradient-border" 
               title="Mi Perfil"
             >
-              <Avatar
-                src={avatarUrl}
-                alt={fullName || user.email || 'Usuario'}
-                size="md"
-                fallbackText={getInitials(fullName, user.email || '')}
-                className="ring-2 ring-gray-200 hover:ring-gray-300 transition-all"
-              />
+              <div className="bg-white rounded-full">
+                <Avatar
+                  src={avatarUrl}
+                  alt={fullName || user.email || 'Usuario'}
+                  size="md"
+                  fallbackText={getInitials(fullName, user.email || '')}
+                />
+              </div>
             </Link>
+
+            {/* Botón cerrar sesión */}
             <button 
               onClick={() => signOut()}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="logout-button p-2 rounded-lg"
               title="Cerrar Sesión"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6 text-gray-700"
+                className="h-6 w-6 text-white"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -277,30 +285,19 @@ const getCategoryColor = (category: string) => {
             </button>
           </>
         ) : (
-          <Link 
-            href="/login"
-            className="px-2 py-1.5 md:px-4 md:py-2 text-xs md:text-base font-bold transition-colors rounded-lg border-2"
-            style={{ 
-              color: hoveredButton === 'login' ? '#BD3B8F' : '#7073CA',
-              borderColor: hoveredButton === 'login' ? '#BD3B8F' : '#7073CA'
-            }}
-            onMouseEnter={() => setHoveredButton('login')}
-            onMouseLeave={() => setHoveredButton(null)}
-          >
-            Iniciar Sesión
-          </Link>
-        )}
-        {!user && (
-          <Link href="/suscripcion">
-            <button 
-              className="px-2 py-2 md:px-5 md:py-2.5 rounded-lg transition-colors text-white font-medium text-xs md:text-base"
-              style={{ backgroundColor: hoveredButton === 'subscribe' ? '#BD3B8F' : '#8868C2' }}
-              onMouseEnter={() => setHoveredButton('subscribe')}
-              onMouseLeave={() => setHoveredButton(null)}
+          <>
+            <Link 
+              href="/login"
+              className="auth-button-outline px-2 py-1.5 md:px-4 md:py-2 text-xs md:text-base rounded-lg"
             >
-              Suscribirse
-            </button>
-          </Link>
+              Iniciar Sesión
+            </Link>
+            <Link href="/suscripcion">
+              <button className="auth-button-solid px-2 py-2 md:px-5 md:py-2.5 rounded-lg text-xs md:text-base">
+                Suscribirse
+              </button>
+            </Link>
+          </>
         )}
       </div>
     </div>

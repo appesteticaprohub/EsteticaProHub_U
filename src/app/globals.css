@@ -27,3 +27,132 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ============================================
+   HEADER ESTETICAPRO HUB - ESTILOS PERSONALIZADOS
+   ============================================ */
+
+@layer components {
+  /* Contenedor principal del header con degradado */
+  .header-gradient {
+    background: linear-gradient(135deg, #8868C2 0%, #9D5BB5 50%, #BD3B8F 100%);
+    box-shadow: 0 4px 6px -1px rgba(136, 104, 194, 0.1), 
+                0 2px 4px -1px rgba(136, 104, 194, 0.06);
+  }
+
+  /* Logo con sombra sutil - SIN recuadro - COLOR BLANCO */
+  .logo-shadow {
+  filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+  /* Texto del logo con sombra elegante */
+  .logo-text {
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2),
+                 0 1px 2px rgba(136, 104, 194, 0.4);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  /* Botones del header con hover suave */
+  .header-button {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    transition: all 0.2s ease;
+  }
+
+  .header-button:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+  }
+
+  /* Dropdown de notificaciones mejorado */
+  .notification-dropdown {
+    box-shadow: 0 20px 25px -5px rgba(136, 104, 194, 0.15),
+                0 10px 10px -5px rgba(136, 104, 194, 0.08);
+    border: 1px solid rgba(136, 104, 194, 0.1);
+  }
+
+  /* Avatar con borde degradado */
+  .avatar-gradient-border {
+    background: linear-gradient(135deg, #8868C2, #BD3B8F);
+    padding: 2px;
+    border-radius: 9999px;
+    box-shadow: 0 2px 8px rgba(136, 104, 194, 0.3);
+    transition: all 0.2s ease;
+  }
+
+  .avatar-gradient-border:hover {
+    box-shadow: 0 4px 12px rgba(136, 104, 194, 0.5);
+    transform: scale(1.05);
+  }
+
+  /* Botón de cerrar sesión estilo glass */
+  .logout-button {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease;
+  }
+
+  .logout-button:hover {
+    background: rgba(255, 87, 87, 0.2);
+    border-color: rgba(255, 87, 87, 0.4);
+  }
+
+  /* Campana de notificaciones */
+  .notification-bell {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease;
+  }
+
+  .notification-bell:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
+  /* Badge de contador de notificaciones */
+  .notification-badge {
+    background: linear-gradient(135deg, #ff4757, #ff6348);
+    box-shadow: 0 2px 6px rgba(255, 71, 87, 0.4);
+  }
+
+  /* Botones de login/suscripción mejorados */
+  .auth-button-outline {
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    color: white;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .auth-button-outline:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: white;
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+  }
+
+  .auth-button-solid {
+    background: rgba(255, 255, 255, 0.95);
+    color: #8868C2;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .auth-button-solid:hover {
+    background: white;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    transform: translateY(-1px);
+  }
+}
