@@ -246,19 +246,28 @@ export default function Header() {
               )}
             </div>
 
-            {/* Avatar con borde degradado */}
+            {/* Avatar con marco blanco y diamante */}
             <Link 
               href="/perfil" 
-              className="avatar-gradient-border" 
+              className="avatar-white-border" 
               title="Mi Perfil"
             >
-              <div className="bg-white rounded-full">
-                <Avatar
-                  src={avatarUrl}
-                  alt={fullName || user.email || 'Usuario'}
-                  size="md"
-                  fallbackText={getInitials(fullName, user.email || '')}
-                />
+              <Avatar
+                src={avatarUrl}
+                alt={fullName || user.email || 'Usuario'}
+                size="md"
+                fallbackText={getInitials(fullName, user.email || '')}
+              />
+              
+              {/* Ícono de diamante */}
+              <div className="diamond-badge">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M12 2L3 8L5 14L12 22L19 14L21 8L12 2Z" fill="white" opacity="0.9"/>
+                  <path d="M12 2L9 8H15L12 2Z" fill="white"/>
+                  <path d="M3 8L5 14L9 8H3Z" fill="white" opacity="0.7"/>
+                  <path d="M15 8L19 14L21 8H15Z" fill="white" opacity="0.7"/>
+                  <path d="M5 14L12 22L19 14L12 11L5 14Z" fill="white" opacity="0.5"/>
+                </svg>
               </div>
             </Link>
 

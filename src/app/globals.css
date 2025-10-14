@@ -78,19 +78,59 @@ body {
     border: 1px solid rgba(136, 104, 194, 0.1);
   }
 
-  /* Avatar con borde degradado */
-  .avatar-gradient-border {
-    background: linear-gradient(135deg, #8868C2, #BD3B8F);
-    padding: 2px;
+  /* Avatar con marco blanco y contenedor para el diamante */
+  .avatar-white-border {
+    background: white;
+    padding: 3px;
     border-radius: 9999px;
-    box-shadow: 0 2px 8px rgba(136, 104, 194, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                0 0 0 2px rgba(255, 255, 255, 0.3);
     transition: all 0.2s ease;
+    position: relative;
+    display: inline-block;
   }
 
-  .avatar-gradient-border:hover {
-    box-shadow: 0 4px 12px rgba(136, 104, 194, 0.5);
+  .avatar-white-border:hover {
+    box-shadow: 0 4px 12px rgba(136, 104, 194, 0.4),
+                0 0 0 3px rgba(255, 255, 255, 0.5);
     transform: scale(1.05);
   }
+
+  /* Ícono de diamante en esquina superior derecha - Fondo rosa #BD3B8F */
+.diamond-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #b3015a;
+  border: 2px solid white;
+  border-radius: 9999px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(255, 0, 128, 0.623);
+  z-index: 10;
+}
+
+.diamond-badge svg {
+  width: 12px;
+  height: 12px;
+  fill: white;
+}
+
+/* Responsive: Diamante más pequeño en mobile */
+@media (max-width: 768px) {
+  .diamond-badge {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .diamond-badge svg {
+    width: 10px;
+    height: 10px;
+  }
+}
 
   /* Botón de cerrar sesión estilo glass */
   .logout-button {
