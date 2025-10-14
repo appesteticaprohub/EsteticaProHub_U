@@ -7,7 +7,6 @@ import LimitSelector from './LimitSelector';
 interface CategoryHeaderProps {
   title: string;
   type: CategoryType;
-  totalPosts: number;
   currentLimit: number;
   onLimitChange: (limit: number) => void;
 }
@@ -39,7 +38,6 @@ const getIcon = (type: CategoryType) => {
 export default function CategoryHeader({
   title,
   type,
-  totalPosts,
   currentLimit,
   onLimitChange
 }: CategoryHeaderProps) {

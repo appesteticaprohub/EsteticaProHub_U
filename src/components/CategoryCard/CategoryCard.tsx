@@ -47,7 +47,6 @@ export default function CategoryCard({
       <CategoryHeader
         title={title}
         type={type}
-        totalPosts={posts.length}
         currentLimit={limit}
         onLimitChange={onLimitChange}
       />
