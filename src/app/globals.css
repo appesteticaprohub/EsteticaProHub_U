@@ -71,11 +71,31 @@ body {
     transform: translateY(-1px);
   }
 
-  /* Dropdown de notificaciones mejorado */
+  /* Dropdown de notificaciones mejorado - RESPONSIVE */
   .notification-dropdown {
     box-shadow: 0 20px 25px -5px rgba(136, 104, 194, 0.15),
                 0 10px 10px -5px rgba(136, 104, 194, 0.08);
     border: 1px solid rgba(136, 104, 194, 0.1);
+    width: 384px; /* Desktop por defecto */
+    max-width: calc(100vw - 2rem); /* Nunca más ancho que la pantalla */
+  }
+
+  /* Ajuste para tablets */
+  @media (max-width: 768px) {
+    .notification-dropdown {
+      width: calc(100vw - 2rem);
+      right: 1rem;
+      left: auto;
+    }
+  }
+
+  /* Ajuste para móviles */
+  @media (max-width: 480px) {
+    .notification-dropdown {
+      width: calc(100vw - 1rem);
+      right: 0.5rem;
+      left: auto;
+    }
   }
 
   /* Avatar con marco blanco y contenedor para el diamante */

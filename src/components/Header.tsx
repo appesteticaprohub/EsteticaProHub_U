@@ -56,6 +56,19 @@ export default function Header() {
     }
   }, [showNotifications]);
 
+  // Bloquear scroll del body cuando el dropdown está abierto
+  useEffect(() => {
+    if (showNotifications) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showNotifications]);
+
   const handleNotificationClick = async (notificationId: string, ctaUrl: string | null) => {
     await markAsRead(notificationId);
     setShowNotifications(false);
@@ -141,7 +154,7 @@ export default function Header() {
 
               {/* Dropdown de notificaciones */}
               {showNotifications && (
-                <div className="notification-dropdown absolute right-0 mt-2 w-96 bg-white rounded-lg z-50 max-h-[500px] overflow-y-auto">
+                <div className="notification-dropdown fixed md:absolute right-2 md:right-0 top-[5rem] md:top-auto md:mt-3 w-[calc(100vw-1rem)] md:w-96 bg-white rounded-lg z-50 max-h-[500px] overflow-y-auto">
                   {/* Header con botón refrescar */}
                   <div className="p-4 border-b border-gray-200 flex justify-between items-center">
                     <h3 className="font-semibold text-gray-800">Notificaciones</h3>
