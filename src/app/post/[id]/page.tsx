@@ -14,6 +14,7 @@ import { useCommentsWithActions } from '@/hooks/useComments';
 import { Comment } from '@/types/api';
 import ImageGallery from '@/components/ImageGallery';
 import Avatar from '@/components/Avatar';
+import PostHero from '@/components/PostDetail/PostHero';
 
 // Función para calcular iniciales
 function getInitials(fullName: string | null, email: string): string {
@@ -300,6 +301,8 @@ export default function PostPage({ params }: PostPageProps) {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(resolvedParams.id);
+  
+  // Memorizar datos del autor para evitar pérdida en re-renders
   const { comments, loading: commentsLoading, error: commentsError, hasMore, loadMore, isLoadingMore, createComment, updateComment, deleteComment } = useCommentsWithActions(resolvedParams.id);
   const [showSnackBar, setShowSnackBar] = useState(false);
   const [snackBarMessage, setSnackBarMessage] = useState('');
@@ -592,92 +595,14 @@ const handleDeleteComment = async (commentId: string) => {
   return (
     <main className="p-6">
       <div className="max-w-4xl mx-auto">
-        <article className="bg-white rounded-lg shadow-sm border p-8">
-          <header className="mb-8">
-            {/* Indicador de estado de suscripción para usuarios autenticados */}
-            {user && subscriptionStatus && (
-              <div className="mb-4">
-                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  subscriptionStatus === 'Active' ? 'bg-green-100 text-green-800' :
-                  subscriptionStatus === 'Grace_Period' ? 'bg-yellow-100 text-yellow-800' :
-                  subscriptionStatus === 'Payment_Failed' ? 'bg-orange-100 text-orange-800' :
-                  subscriptionStatus === 'Suspended' ? 'bg-red-100 text-red-800' :
-                  subscriptionStatus === 'Expired' ? 'bg-gray-100 text-gray-800' :
-                  subscriptionStatus === 'Cancelled' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-50 text-gray-600'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full mr-2 ${
-                    subscriptionStatus === 'Active' ? 'bg-green-400' :
-                    subscriptionStatus === 'Grace_Period' ? 'bg-yellow-400' :
-                    subscriptionStatus === 'Payment_Failed' ? 'bg-orange-400' :
-                    subscriptionStatus === 'Suspended' ? 'bg-red-400' :
-                    subscriptionStatus === 'Expired' ? 'bg-gray-400' :
-                    subscriptionStatus === 'Cancelled' ? 'bg-red-400' :
-                    'bg-gray-300'
-                  }`}></div>
-                  Suscripción: {
-                    subscriptionStatus === 'Active' ? 'Activa' :
-                    subscriptionStatus === 'Grace_Period' ? 'Período de Gracia' :
-                    subscriptionStatus === 'Payment_Failed' ? 'Problema de Pago' :
-                    subscriptionStatus === 'Suspended' ? 'Suspendida' :
-                    subscriptionStatus === 'Expired' ? 'Expirada' :
-                    subscriptionStatus === 'Cancelled' ? 'Cancelada' :
-                    subscriptionStatus
-                  }
-                  {(subscriptionStatus === 'Payment_Failed' || 
-                    subscriptionStatus === 'Grace_Period' || 
-                    subscriptionStatus === 'Suspended') && (
-                    <button
-                      onClick={() => setShowPaymentRecoveryModal(true)}
-                      className="ml-2 text-xs underline hover:no-underline"
-                    >
-                      Resolver
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              {post.title}
-            </h1>
-            
-            {/* Información del autor con avatar */}
-            {post.author && (
-              <div className="flex items-center gap-4">
-                <Avatar
-                  src={post.author.avatar_url || null}
-                  alt={post.author.full_name || post.author.email || 'Autor'}
-                  size="md"
-                  fallbackText={getInitials(post.author.full_name, post.author.email)}
-                />
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-gray-900">
-                    {post.author.full_name || post.author.email || 'Autor anónimo'}
-                  </span>
-                  <span className="text-sm text-gray-600">
-                    {new Date(post.created_at).toLocaleDateString('es-ES', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </span>
-                </div>
-              </div>
-            )}
-            
-            {!post.author && (
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <span>
-                  {new Date(post.created_at).toLocaleDateString('es-ES', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </span>
-              </div>
-            )}
-          </header>
+        <article className="bg-white rounded-lg shadow-sm p-8">
+          <PostHero
+            title={post.title}
+            author={post.author}
+            createdAt={post.created_at}
+            subscriptionStatus={user ? subscriptionStatus : null}
+            onResolvePayment={() => setShowPaymentRecoveryModal(true)}
+          />
           
           <div className="prose prose-lg max-w-none">
             {shouldShowTruncatedContent() ? (

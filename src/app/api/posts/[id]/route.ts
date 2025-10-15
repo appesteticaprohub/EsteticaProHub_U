@@ -18,7 +18,9 @@ export async function GET(
         author:profiles!posts_author_id_fkey (
           full_name,
           email,
-          avatar_url
+          avatar_url,
+          specialty,
+          country
         )
       `)
       .eq('id', id)

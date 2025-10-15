@@ -15,6 +15,8 @@ interface PostWithoutCategory {
     full_name: string | null;
     email: string;
     avatar_url: string | null;
+    specialty: string | null;
+    country: string | null;
   };
 }
 
