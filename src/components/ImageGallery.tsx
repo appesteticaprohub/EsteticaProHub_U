@@ -52,16 +52,25 @@ export default function ImageGallery({ images, alt = 'Post image' }: ImageGaller
         {images.map((image, index) => (
           <div
             key={index}
-            className="relative aspect-video cursor-pointer overflow-hidden rounded-lg bg-gray-100 hover:opacity-90 transition-opacity"
+            className="relative aspect-video cursor-pointer overflow-hidden rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 shadow-lg shadow-purple-900/60 hover:shadow-xl hover:shadow-purple-300/60 transform transition-all duration-300 hover:scale-[1.02] group"
             onClick={() => openModal(index)}
           >
             <Image
               src={image}
               alt={`${alt} ${index + 1}`}
               fill
-              className="object-cover"
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              loading="lazy"
             />
+            {/* Overlay sutil en hover */}
+            <div className="absolute inset-0 bg-gradient-to-t from-purple-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            {/* Icono de expandir */}
+            <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              </svg>
+            </div>
           </div>
         ))}
       </div>
