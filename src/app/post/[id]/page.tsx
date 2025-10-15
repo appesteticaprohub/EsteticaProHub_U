@@ -656,12 +656,18 @@ const handleDeleteComment = async (commentId: string) => {
               <span className="text-sm font-normal text-gray-900">{post.views_count}</span>
             </div>
             
-            {/* Likes - Negro */}
+            {/* Likes - Dinámico según estado */}
             <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-              <span className="text-sm font-normal text-gray-900">{likesCount}</span>
+              {isLiked ? (
+                <svg className="w-4 h-4 text-red-600" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              )}
+              <span className={`text-sm font-normal ${isLiked ? 'text-red-600' : 'text-gray-900'}`}>{likesCount}</span>
             </div>
             
             {/* Comentarios - Negro */}
@@ -680,11 +686,19 @@ const handleDeleteComment = async (commentId: string) => {
               disabled={likesLoading}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 border ${
                 isLiked 
-                  ? 'bg-red-100 hover:bg-red-200 text-red-700 border-red-300 hover:border-red-400' 
-                  : 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200 hover:border-red-300'
+                  ? 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200 hover:border-red-300' 
+                  : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200 hover:border-gray-300'
               } ${likesLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <span className="text-lg">❤️</span>
+              {isLiked ? (
+                <svg className="w-5 h-5 text-red-600" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              )}
               <span className="text-sm font-medium">
                 {likesLoading ? 'Cargando...' : 'Me gusta'}
               </span>
@@ -750,7 +764,7 @@ const handleDeleteComment = async (commentId: string) => {
             <div className="text-center py-8">
               <div className="text-gray-400 mb-2">
                 <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.97 8.97 0 01-4.906-1.435l-3.657 1.218a.5.5 0 01-.65-.65l1.218-3.657A8.97 8.97 0 013 12a8 8 0 018-8c4.418 0 8 3.582 8 8z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.97 8.97 0 01-4.906-1.435l-3.657 1.218a.5.5 0 01-.65-.65l1.218-3.657A8.97 8.97 0 013 12a8 8 0 018-8c4.418 0 8 3.582 8 8z" />
                 </svg>
               </div>
               <p className="text-gray-500">No hay comentarios aún</p>
