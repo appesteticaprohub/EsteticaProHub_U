@@ -174,7 +174,6 @@ export class NotificationService {
     }
   }
 
-  // Enviar notificación de fallo de pago
   static async sendPaymentFailedNotification(
     userId: string, 
     userEmail: string, 
@@ -185,7 +184,7 @@ export class NotificationService {
       const variables = {
         nombre: userName,
         precio: amount,
-        payment_url: `${process.env.NEXT_PUBLIC_APP_URL}/pago`
+        payment_url: `${process.env.NEXT_PUBLIC_APP_URL}/suscripcion`
       }
 
       // Crear notificación in-app crítica
@@ -196,7 +195,7 @@ export class NotificationService {
         title: 'Problema con tu Pago',
         message: `No pudimos procesar tu pago de $${amount}. Por favor verifica tu método de pago para mantener tu cuenta activa.`,
         cta_text: 'Actualizar Pago',
-        cta_url: '/pago',
+        cta_url: '/suscripcion',
         expires_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() // 3 días
       })
       
