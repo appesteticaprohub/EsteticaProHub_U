@@ -37,8 +37,14 @@ export function useComments(postId: string | null) {
     }
   )
 
-  // Combinar todos los comentarios de todas las páginas
-  const comments = data ? data.flatMap(page => page.data) : []
+  // Combinar todos los comentarios de todas las páginas y deduplicar
+  const comments = data 
+    ? Array.from(
+        new Map(
+          data.flatMap(page => page.data).map(comment => [comment.id, comment])
+        ).values()
+      )
+    : []
   
   // Verificar si hay más páginas
   const hasMore = data && data.length > 0 ? data[data.length - 1].nextCursor !== null : false
@@ -78,10 +84,10 @@ export function useCommentsWithActions(postId: string | null) {
       }
 
       // Revalidar todas las páginas de comentarios
-      mutateComments()
+      await mutateComments()
       
       // Revalidar la información del post para actualizar el contador
-      mutate(`/posts/${postId}`)
+      await mutate(`/posts/${postId}`)
 
       return { data, error: null }
     } catch (error) {

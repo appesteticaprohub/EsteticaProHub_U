@@ -15,19 +15,7 @@ import { Comment } from '@/types/api';
 import ImageGallery from '@/components/ImageGallery';
 import Avatar from '@/components/Avatar';
 import PostHero from '@/components/PostDetail/PostHero';
-
-// Función para calcular iniciales
-function getInitials(fullName: string | null, email: string): string {
-  if (fullName && fullName.trim()) {
-    const words = fullName.trim().split(' ').filter(w => w.length > 0);
-    if (words.length >= 2) {
-      return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-    }
-    return fullName.substring(0, 2).toUpperCase();
-  }
-  return email.substring(0, 2).toUpperCase();
-}
-
+import CommentSection from '@/components/PostDetail/CommentSection';
 
 interface PostPageProps {
   params: Promise<{
@@ -35,259 +23,6 @@ interface PostPageProps {
   }>;
 }
 
-interface CommentItemProps {
-  comment: Comment;
-  onReply: (commentId: string, content: string) => Promise<void>;
-  onUpdate: (commentId: string, content: string) => Promise<void>;
-  onDelete: (commentId: string) => Promise<void>;
-  currentUserId: string | null;
-  user: {
-    id: string;
-    email: string;
-  } | null;
-  subscriptionStatus: string | null;
-  level?: number;
-}
-
-function CommentItem({ comment, onReply, onUpdate, onDelete, currentUserId, user, subscriptionStatus, level = 0 }: CommentItemProps) {
-  const [showReplyForm, setShowReplyForm] = useState(false);
-  const [replyText, setReplyText] = useState('');
-  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(comment.content);
-  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  
-  const userName = comment.profiles?.full_name || comment.profiles?.email || 'Usuario anónimo';
-  const canReply = user && subscriptionStatus === 'Active' && !comment.is_deleted;
-  const canEdit = currentUserId === comment.user_id && subscriptionStatus === 'Active' && !comment.is_deleted;
-  const canDelete = currentUserId === comment.user_id && subscriptionStatus === 'Active' && !comment.is_deleted;
-
-  const handleReplyClick = () => {
-    setShowReplyForm(true);
-    setReplyText(`@${userName} `);
-  };
-
-  const handleReplySubmit = async () => {
-    if (!replyText.trim()) {
-      return;
-    }
-    setIsSubmittingReply(true);
-    try {
-      await onReply(comment.id, replyText.trim());
-      setReplyText('');
-      setShowReplyForm(false);
-    } catch (error) {
-      console.error('Error submitting reply:', error);
-    } finally {
-      setIsSubmittingReply(false);
-    }
-  };
-
-  const cancelReply = () => {
-    setShowReplyForm(false);
-    setReplyText('');
-  };
-
-  const handleEditClick = () => {
-    setIsEditing(true);
-    setEditText(comment.content);
-  };
-
-  const handleEditSubmit = async () => {
-    if (!editText.trim()) {
-      return;
-    }
-    setIsSubmittingEdit(true);
-    try {
-      await onUpdate(comment.id, editText.trim());
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error submitting edit:', error);
-    } finally {
-      setIsSubmittingEdit(false);
-    }
-  };
-
-  const cancelEdit = () => {
-    setIsEditing(false);
-    setEditText(comment.content);
-  };
-
-  const handleDeleteClick = async () => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este comentario?')) {
-      return;
-    }
-    
-    setIsDeleting(true);
-    try {
-      await onDelete(comment.id);
-    } catch (error) {
-      console.error('Error deleting comment:', error);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  return (
-    <div className={`${level > 0 ? 'ml-8 mt-4' : ''}`}>
-      <div className="flex items-start gap-3">
-        <Avatar
-          src={comment.profiles?.avatar_url || null}
-          alt={userName}
-          size="sm"
-          fallbackText={getInitials(comment.profiles?.full_name || null, comment.profiles?.email || 'user@example.com')}
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className="text-sm font-medium text-gray-900">
-              {userName}
-            </h4>
-            <span className="text-xs text-gray-500">
-              {new Date(comment.created_at).toLocaleDateString('es-ES', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: 'America/Bogota'
-              })}
-            </span>
-          </div>
-          
-          {/* Contenido del comentario o formulario de edición */}
-          {isEditing ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
-              <textarea
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                className="w-full p-2 border border-yellow-300 rounded resize-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors duration-200"
-                rows={3}
-                disabled={isSubmittingEdit}
-                autoFocus
-              />
-              <div className="flex justify-end gap-2 mt-2">
-                <button
-                  onClick={cancelEdit}
-                  disabled={isSubmittingEdit}
-                  className="px-3 py-1 text-xs text-gray-600 hover:text-gray-800 transition-colors duration-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleEditSubmit}
-                  disabled={isSubmittingEdit || !editText.trim()}
-                  className={`px-3 py-1 text-xs rounded transition-colors duration-200 ${
-                    isSubmittingEdit || !editText.trim()
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                  }`}
-                >
-                  {isSubmittingEdit ? 'Guardando...' : 'Guardar'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="text-gray-700 text-sm whitespace-pre-wrap break-words mb-2">
-              {comment.content}
-            </p>
-          )}
-          
-          {/* Botones de acción */}
-          {!isEditing && (
-            <div className="flex items-center gap-3">
-              {canReply && (
-                <button
-                  onClick={handleReplyClick}
-                  className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                >
-                  Responder
-                </button>
-              )}
-              {canEdit && (
-                <button
-                  onClick={handleEditClick}
-                  className="text-yellow-600 hover:text-yellow-800 text-xs font-medium"
-                >
-                  Editar
-                </button>
-              )}
-              {canDelete && (
-                <button
-                  onClick={handleDeleteClick}
-                  disabled={isDeleting}
-                  className={`text-red-600 hover:text-red-800 text-xs font-medium ${
-                    isDeleting ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {isDeleting ? 'Eliminando...' : 'Eliminar'}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Formulario de respuesta inline */}
-      {showReplyForm && (
-        <div className="mt-3 ml-11 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h4 className="text-sm font-medium text-blue-900">
-              Respondiendo a {userName}
-            </h4>
-            <button
-              onClick={cancelReply}
-              className="text-blue-600 hover:text-blue-800 text-sm"
-            >
-              Cancelar
-            </button>
-          </div>
-          <textarea
-            value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
-            placeholder={`Responder a ${userName}...`}
-            className="w-full p-3 border border-blue-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-            rows={3}
-            disabled={isSubmittingReply}
-            autoFocus
-          />
-          <div className="flex justify-end mt-3">
-            <button
-              onClick={handleReplySubmit}
-              disabled={isSubmittingReply || !replyText.trim()}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
-                isSubmittingReply || !replyText.trim()
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-            >
-              {isSubmittingReply ? 'Enviando...' : 'Responder'}
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {/* Mostrar respuestas anidadas */}
-      {comment.replies && comment.replies.length > 0 && (
-        <div className="mt-4">
-          {comment.replies.map((reply) => (
-            <CommentItem
-              key={reply.id}
-              comment={reply}
-              onReply={onReply}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
-              currentUserId={currentUserId}
-              user={user}
-              subscriptionStatus={subscriptionStatus}
-              level={level + 1}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function PostPage({ params }: PostPageProps) {
   const resolvedParams = use(params);
@@ -319,8 +54,6 @@ export default function PostPage({ params }: PostPageProps) {
   const router = useRouter();
   const hasIncrementedViews = useRef(false);
   const hasTrackedAnonymousView = useRef(false);
-  const [commentText, setCommentText] = useState('');
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   const handleLikeClick = async () => {
     const result = await toggleLike();
@@ -333,126 +66,6 @@ export default function PostPage({ params }: PostPageProps) {
   const hideSnackBar = () => {
     setShowSnackBar(false);
   };
-
-  const handleCommentSubmit = async () => {
-  // Validar contenido
-  if (!commentText.trim()) {
-    setSnackBarMessage('Por favor escribe un comentario');
-    setShowSnackBar(true);
-    return;
-  }
-
-  // Situación 1: Usuario anónimo o sin suscripción activa
-  if (!user || subscriptionStatus !== 'Active') {
-    setSnackBarMessage('Necesitas una suscripción');
-    setShowSnackBar(true);
-    return;
-  }
-
-  // Situación 2: Usuario premium activo - crear comentario
-  setIsSubmittingComment(true);
-  
-  try {
-    const result = await createComment(commentText.trim());
-    
-    if (result.error) {
-      setSnackBarMessage(`Error: ${result.error}`);
-      setShowSnackBar(true);
-    } else {
-      // Limpiar el formulario
-      setCommentText('');
-      // Opcional: mostrar mensaje de éxito
-      setSnackBarMessage('Comentario agregado exitosamente');
-      setShowSnackBar(true);
-    }
-  } catch {
-    setSnackBarMessage('Error al enviar comentario');
-    setShowSnackBar(true);
-  } finally {
-    setIsSubmittingComment(false);
-  }
-};
-
-const handleCreateReply = async (commentId: string, content: string) => {
-  if (!user || subscriptionStatus !== 'Active') {
-    setSnackBarMessage('Necesitas una suscripción');
-    setShowSnackBar(true);
-    throw new Error('Sin suscripción');
-  }
-
-  try {
-    const result = await createComment(content, commentId);
-    
-    if (result.error) {
-      setSnackBarMessage(`Error: ${result.error}`);
-      setShowSnackBar(true);
-      throw new Error(result.error);
-    } else {
-      setSnackBarMessage('Respuesta agregada exitosamente');
-      setShowSnackBar(true);
-    }
-  } catch (error) {
-    setSnackBarMessage('Error al enviar respuesta');
-    setShowSnackBar(true);
-    throw error;
-  }
-};
-
-const handleUpdateComment = async (commentId: string, content: string) => {
-  if (!user || subscriptionStatus !== 'Active') {
-    setSnackBarMessage('Necesitas una suscripción');
-    setShowSnackBar(true);
-    throw new Error('Sin suscripción');
-  }
-
-  try {
-    console.log('Actualizando comentario:', { commentId, postId: resolvedParams.id, content }); // Debug
-    
-    const result = await updateComment(commentId, content, resolvedParams.id);
-    
-    console.log('Resultado update:', result); // Debug
-    
-    if (result.error) {
-      console.error('Error en result:', result.error); // Debug
-      setSnackBarMessage(`Error: ${result.error}`);
-      setShowSnackBar(true);
-      throw new Error(result.error);
-    } else {
-      setSnackBarMessage('Comentario actualizado exitosamente');
-      setShowSnackBar(true);
-    }
-  } catch (error) {
-    console.error('Error completo al actualizar:', error); // Debug
-    setSnackBarMessage('Error al actualizar comentario');
-    setShowSnackBar(true);
-    throw error;
-  }
-};
-
-const handleDeleteComment = async (commentId: string) => {
-  if (!user || subscriptionStatus !== 'Active') {
-    setSnackBarMessage('Necesitas una suscripción');
-    setShowSnackBar(true);
-    throw new Error('Sin suscripción');
-  }
-
-  try {
-    const result = await deleteComment(commentId, resolvedParams.id);
-    
-    if (result.error) {
-      setSnackBarMessage(`Error: ${result.error}`);
-      setShowSnackBar(true);
-      throw new Error(result.error);
-    } else {
-      setSnackBarMessage('Comentario eliminado exitosamente');
-      setShowSnackBar(true);
-    }
-  } catch (error) {
-    setSnackBarMessage('Error al eliminar comentario');
-    setShowSnackBar(true);
-    throw error;
-  }
-};
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -708,114 +321,89 @@ const handleDeleteComment = async (commentId: string) => {
         </article>
 
         {/* Sección de comentarios */}
-        <section className="bg-white rounded-lg shadow-sm border mt-6 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            Comentarios ({post.comments_count})
-          </h2>
-
-          {/* Formulario para agregar comentarios */}
-          <div className="mb-8 border-b border-gray-200 pb-6">
-            <textarea
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Escribe tu comentario..."
-              className="w-full p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-              rows={3}
-              disabled={isSubmittingComment}
-            />
-            <div className="flex justify-end mt-3">
-              <button
-                onClick={handleCommentSubmit}
-                disabled={isSubmittingComment || !commentText.trim()}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors duration-200 ${
-                  isSubmittingComment || !commentText.trim()
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                {isSubmittingComment ? 'Enviando...' : 'Comentar'}
-              </button>
-            </div>
-          </div>
-          
-          {commentsLoading && (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                    <div className="flex-1">
-                      <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          {commentsError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-600 text-sm">Error al cargar comentarios: {commentsError}</p>
-            </div>
-          )}
-          
-          {!commentsLoading && !commentsError && comments.length === 0 && (
-            <div className="text-center py-8">
-              <div className="text-gray-400 mb-2">
-                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.97 8.97 0 01-4.906-1.435l-3.657 1.218a.5.5 0 01-.65-.65l1.218-3.657A8.97 8.97 0 013 12a8 8 0 018-8c4.418 0 8 3.582 8 8z" />
-                </svg>
-              </div>
-              <p className="text-gray-500">No hay comentarios aún</p>
-              <p className="text-gray-400 text-sm">Sé el primero en comentar</p>
-            </div>
-          )}
-          
-          {!commentsLoading && !commentsError && comments.length > 0 && (
-          <div className="space-y-6">
-            {comments.map((comment) => (
-            <CommentItem
-              key={comment.id}
-              comment={comment}
-              onReply={handleCreateReply}
-              onUpdate={handleUpdateComment}
-              onDelete={handleDeleteComment}
-              currentUserId={user?.id || null}
-              user={user}
-              subscriptionStatus={subscriptionStatus}
-            />
-          ))}
-          
-          {/* Botón Cargar Más */}
-          {hasMore && (
-            <div className="flex justify-center pt-6 border-t border-gray-200">
-              <button
-                onClick={loadMore}
-                disabled={isLoadingMore}
-                className={`px-6 py-3 rounded-lg font-medium transition-colors duration-200 ${
-                  isLoadingMore
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                {isLoadingMore ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Cargando...
-                  </span>
-                ) : (
-                  'Cargar más comentarios'
-                )}
-              </button>
-            </div>
-          )}
-          </div>
-        )}
-        </section>
+        <CommentSection
+          comments={comments}
+          commentsCount={post.comments_count}
+          loading={commentsLoading}
+          error={commentsError}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore || false}
+          onLoadMore={loadMore}
+          onCreateComment={createComment}
+          onReply={async (commentId: string, content: string) => {
+            if (!user || subscriptionStatus !== 'Active') {
+              setSnackBarMessage('Necesitas una suscripción');
+              setShowSnackBar(true);
+              throw new Error('Sin suscripción');
+            }
+            try {
+              const result = await createComment(content, commentId);
+              if (result.error) {
+                setSnackBarMessage(`Error: ${result.error}`);
+                setShowSnackBar(true);
+                throw new Error(result.error);
+              } else {
+                setSnackBarMessage('Respuesta agregada exitosamente');
+                setShowSnackBar(true);
+              }
+            } catch (error) {
+              setSnackBarMessage('Error al enviar respuesta');
+              setShowSnackBar(true);
+              throw error;
+            }
+          }}
+          onUpdate={async (commentId: string, content: string) => {
+            if (!user || subscriptionStatus !== 'Active') {
+              setSnackBarMessage('Necesitas una suscripción');
+              setShowSnackBar(true);
+              throw new Error('Sin suscripción');
+            }
+            try {
+              const result = await updateComment(commentId, content, resolvedParams.id);
+              if (result.error) {
+                setSnackBarMessage(`Error: ${result.error}`);
+                setShowSnackBar(true);
+                throw new Error(result.error);
+              } else {
+                setSnackBarMessage('Comentario actualizado exitosamente');
+                setShowSnackBar(true);
+              }
+            } catch (error) {
+              setSnackBarMessage('Error al actualizar comentario');
+              setShowSnackBar(true);
+              throw error;
+            }
+          }}
+          onDelete={async (commentId: string) => {
+            if (!user || subscriptionStatus !== 'Active') {
+              setSnackBarMessage('Necesitas una suscripción');
+              setShowSnackBar(true);
+              throw new Error('Sin suscripción');
+            }
+            try {
+              const result = await deleteComment(commentId, resolvedParams.id);
+              if (result.error) {
+                setSnackBarMessage(`Error: ${result.error}`);
+                setShowSnackBar(true);
+                throw new Error(result.error);
+              } else {
+                setSnackBarMessage('Comentario eliminado exitosamente');
+                setShowSnackBar(true);
+              }
+            } catch (error) {
+              setSnackBarMessage('Error al eliminar comentario');
+              setShowSnackBar(true);
+              throw error;
+            }
+          }}
+          currentUserId={user?.id || null}
+          user={user}
+          subscriptionStatus={subscriptionStatus}
+          onShowSnackBar={(message: string) => {
+            setSnackBarMessage(message);
+            setShowSnackBar(true);
+          }}
+        />
       </div>
       {/* Modal de Recovery de Pagos */}
       <PaymentRecoveryModal 

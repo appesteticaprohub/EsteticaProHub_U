@@ -143,23 +143,26 @@ export async function GET(
       commentsMap.set(comment.id, commentObj)
     })
 
-    // Después, organizar en estructura jerárquica
+    // En lugar de estructura anidada, devolver lista plana
+    // Esto facilita el filtrado en el frontend
+    const flatComments: Comment[] = []
+    
     commentsMap.forEach((comment) => {
-      if (comment.parent_id) {
-        // Es una respuesta, agregarlo a su padre
-        const parent = commentsMap.get(comment.parent_id)
-        if (parent) {
-          parent.replies = parent.replies || []
-          parent.replies.push(comment)
-        }
-      } else {
-        // Es un comentario principal (de esta página)
-        topLevelComments.push(comment)
+      flatComments.push(comment)
+    })
+
+    // Ordenar: primero comentarios principales, luego respuestas
+    flatComments.sort((a, b) => {
+      // Si ambos son principales o ambos son respuestas, ordenar por fecha
+      if ((!a.parent_id && !b.parent_id) || (a.parent_id && b.parent_id)) {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       }
+      // Los principales van primero
+      return a.parent_id ? 1 : -1
     })
 
     return NextResponse.json({ 
-      data: topLevelComments, 
+      data: flatComments, 
       error: null,
       nextCursor 
     })
