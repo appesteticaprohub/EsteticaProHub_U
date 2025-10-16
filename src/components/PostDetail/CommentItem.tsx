@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Comment } from '@/types/api';
 import Avatar from '@/components/Avatar';
 import ReplyForm from './ReplyForm';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 
 // Función para calcular iniciales
 function getInitials(fullName: string | null, email: string): string {
@@ -52,6 +53,7 @@ export default function CommentItem({
   const [editText, setEditText] = useState(comment.content);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   const userName = comment.profiles?.full_name || comment.profiles?.email || 'Usuario anónimo';
   const canReply = user && subscriptionStatus === 'Active' && !comment.is_deleted; // Todos los comentarios pueden recibir respuestas
@@ -115,19 +117,23 @@ export default function CommentItem({
     setEditText(comment.content);
   };
 
-  const handleDeleteClick = async () => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este comentario?')) {
-      return;
-    }
-    
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
     setIsDeleting(true);
     try {
       await onDelete(comment.id);
+      setShowDeleteModal(false);
     } catch (error) {
       console.error('Error deleting comment:', error);
-    } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
   };
 
   return (
@@ -241,6 +247,14 @@ export default function CommentItem({
           />
         </div>
       )}
+      
+      {/* Modal de confirmación de eliminación */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

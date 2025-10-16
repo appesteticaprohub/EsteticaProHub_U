@@ -34,6 +34,10 @@ export default function ReplyForm({ userName, onSubmit, onCancel, isSubmitting, 
           Cancelar
         </button>
       </div>
+      <p className="text-xs text-gray-500 mb-3 flex items-start gap-1">
+        <span className="mt-0.5">ℹ️</span>
+        <span>Usa @Nombre Apellido para mencionar y notificar a otros usuarios en esta conversación</span>
+      </p>
       <textarea
         value={replyText}
         onChange={(e) => setReplyText(e.target.value)}
