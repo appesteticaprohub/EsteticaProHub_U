@@ -1,7 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/server-supabase'
 import { Comment } from '@/types/api'
-import { createSocialNotification } from '@/lib/social-notification-service'
+import { createSocialNotification, createMentionNotifications } from '@/lib/social-notification-service'
+
+// Función para extraer menciones del contenido
+function extractMentions(content: string): string[] {
+  // Regex mejorada: captura @Nombre o @Nombre Apellido (máximo 2 palabras)
+  // Se detiene en espacios múltiples, puntuación o fin de línea
+  const mentionRegex = /@([A-Za-zÀ-ÿ\u00f1\u00d1]+(?:\s+[A-Za-zÀ-ÿ\u00f1\u00d1]+)?)/g
+  const mentions: string[] = []
+  let match
+
+  while ((match = mentionRegex.exec(content)) !== null) {
+    mentions.push(match[1].trim())
+  }
+
+  return mentions
+}
+
+// Función para obtener IDs de usuarios por nombres
+async function getUserIdsByNames(names: string[], supabase: any): Promise<string[]> {
+  if (names.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .or(names.map(name => `full_name.ilike.%${name}%`).join(','))
+
+  if (error || !data) {
+    console.error('Error fetching user IDs by names:', error)
+    return []
+  }
+
+  return data.map((profile: { id: string }) => profile.id)
+}
 
 export async function GET(
   request: NextRequest,
@@ -185,6 +217,7 @@ export async function POST(
     const body = await request.json()
     const { content, parent_id } = body
 
+
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
         { data: null, error: 'El contenido del comentario es requerido' },
@@ -300,6 +333,11 @@ export async function POST(
       .eq('id', user.id)
       .single()
 
+    // Extraer menciones del contenido
+    const mentionedNames = extractMentions(content.trim())
+    
+    const mentionedUserIds = await getUserIdsByNames(mentionedNames, supabase)
+
     // Crear notificaciones según el caso
     if (postData && commenterProfile) {
       if (!parent_id) {
@@ -312,6 +350,19 @@ export async function POST(
           postId: id,
           postTitle: postData.title
         })
+
+        // Enviar notificaciones de mención (si hay menciones)
+        if (mentionedUserIds.length > 0) {
+          await createMentionNotifications({
+            mentionedUserIds,
+            parentCommentAuthorId: postData.author_id, // En comentarios principales, el "padre" es el autor del post
+            actorUserId: user.id,
+            actorName: commenterProfile.full_name || 'Un usuario',
+            postId: id,
+            postTitle: postData.title,
+            commentId: commentData.id
+          })
+        }
       } else {
         // Es una respuesta a un comentario
         // Obtener el comentario padre para notificar a su autor
@@ -322,6 +373,7 @@ export async function POST(
           .single()
 
         if (parentComment) {
+          // Notificación de respuesta al autor del comentario padre
           await createSocialNotification({
             recipientUserId: parentComment.user_id,
             actorUserId: user.id,
@@ -331,6 +383,19 @@ export async function POST(
             postTitle: postData.title,
             commentId: parent_id
           })
+
+          // Enviar notificaciones de mención (si hay menciones)
+          if (mentionedUserIds.length > 0) {
+            await createMentionNotifications({
+              mentionedUserIds,
+              parentCommentAuthorId: parentComment.user_id, // El autor del comentario padre
+              actorUserId: user.id,
+              actorName: commenterProfile.full_name || 'Un usuario',
+              postId: id,
+              postTitle: postData.title,
+              commentId: commentData.id
+            })
+          }
         }
       }
     }

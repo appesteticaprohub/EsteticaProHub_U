@@ -25,7 +25,7 @@ export default function ReplyForm({ userName, onSubmit, onCancel, isSubmitting, 
     <div className="mt-3 ml-11 bg-blue-50 border border-blue-200 rounded-lg p-4">
       <div className="flex justify-between items-center mb-3">
         <h4 className="text-sm font-medium text-blue-900">
-          Respondiendo a {userName}
+          Agregar respuesta
         </h4>
         <button
           onClick={onCancel}
@@ -37,7 +37,7 @@ export default function ReplyForm({ userName, onSubmit, onCancel, isSubmitting, 
       <textarea
         value={replyText}
         onChange={(e) => setReplyText(e.target.value)}
-        placeholder={`Responder a ${userName}...`}
+        placeholder="Usa @ para mencionar usuarios..."
         className="w-full p-3 border border-blue-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
         rows={3}
         disabled={isSubmitting}

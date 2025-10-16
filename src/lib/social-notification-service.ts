@@ -4,7 +4,7 @@ interface CreateSocialNotificationParams {
   recipientUserId: string;
   actorUserId: string;
   actorName: string;
-  type: 'comment' | 'like' | 'reply';
+  type: 'comment' | 'like' | 'reply' | 'mention';
   postId: string;
   postTitle?: string;
   commentId?: string;
@@ -63,6 +63,12 @@ export async function createSocialNotification(params: CreateSocialNotificationP
         message = `${actorName} respondió a tu comentario${postTitle ? ` en: "${postTitle}"` : ''}`
         ctaUrl = commentId ? `/post/${postId}#comment-${commentId}` : `/post/${postId}`
         break
+
+      case 'mention':
+        title = 'Te mencionaron en un comentario'
+        message = `${actorName} te mencionó en un comentario${postTitle ? ` en: "${postTitle}"` : ''}`
+        ctaUrl = commentId ? `/post/${postId}#comment-${commentId}` : `/post/${postId}`
+        break
     }
 
     // Crear notificación in-app
@@ -93,4 +99,56 @@ export async function createSocialNotification(params: CreateSocialNotificationP
     console.error('Error in createSocialNotification:', error)
     return { success: false, error: 'Error interno al crear notificación' }
   }
+}
+
+interface CreateMentionNotificationsParams {
+  mentionedUserIds: string[];
+  parentCommentAuthorId: string;
+  actorUserId: string;
+  actorName: string;
+  postId: string;
+  postTitle?: string;
+  commentId?: string;
+}
+
+export async function createMentionNotifications(params: CreateMentionNotificationsParams) {
+  const {
+    mentionedUserIds,
+    parentCommentAuthorId,
+    actorUserId,
+    actorName,
+    postId,
+    postTitle,
+    commentId
+  } = params
+
+  const results = []
+
+  for (const mentionedUserId of mentionedUserIds) {
+    // Validaciones:
+    // 1. No enviar si el mencionado es el actor
+    if (mentionedUserId === actorUserId) {
+      continue
+    }
+
+    // 2. No enviar si el mencionado es el autor del comentario padre (ya recibe notificación de reply)
+    if (mentionedUserId === parentCommentAuthorId) {
+      continue
+    }
+
+    // Crear notificación de mención
+    const result = await createSocialNotification({
+      recipientUserId: mentionedUserId,
+      actorUserId,
+      actorName,
+      type: 'mention',
+      postId,
+      postTitle,
+      commentId
+    })
+
+    results.push(result)
+  }
+
+  return results
 }

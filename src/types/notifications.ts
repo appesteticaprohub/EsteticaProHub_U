@@ -35,3 +35,6 @@ export interface NotificationsResponse {
   notifications: Notification[];
   total: number;
 }
+
+// Tipos específicos para notificaciones sociales
+export type SocialNotificationType = 'comment' | 'like' | 'reply' | 'mention';
