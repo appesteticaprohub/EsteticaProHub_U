@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       }
 
+      // Actualizar payment session
       const { error } = await supabase
         .from('payment_sessions')
         .update({ 
@@ -71,7 +72,22 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
       }
 
-      console.log(`Subscription ${subscriptionId} activated for session ${customId}`);
+      console.log(`✅ Subscription ${subscriptionId} activated for session ${customId}`);
+
+      // 🧹 LIMPIAR NOTIFICACIONES OBSOLETAS
+      // Buscar el usuario asociado para limpiar notificaciones previas
+      const { data: session } = await supabase
+        .from('payment_sessions')
+        .select('user_id')
+        .eq('external_reference', customId)
+        .single();
+
+      if (session && session.user_id) {
+        console.log('🧹 Limpiando notificaciones obsoletas tras activación...');
+        await NotificationService.clearPaymentNotifications(session.user_id);
+        await NotificationService.clearCancellationNotifications(session.user_id);
+      }
+
       return NextResponse.json({ message: 'Subscription activated' });
     }
 
@@ -84,15 +100,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Missing subscription ID' }, { status: 400 });
       }
 
-      // Extender la fecha de expiración del usuario por 1 mes
-      const { data: session } = await supabase
-        .from('payment_sessions')
-        .select('*')
+      // Buscar el usuario asociado a esta suscripción
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, email, paypal_subscription_id')
         .eq('paypal_subscription_id', subscriptionId)
-        .eq('status', 'active_subscription')
         .single();
 
-      if (session && session.user_id) {
+      if (profile) {
+        const userId = profile.id;
+
+        // Extender la fecha de expiración por 1 mes
         const newExpirationDate = new Date();
         newExpirationDate.setMonth(newExpirationDate.getMonth() + 1);
 
@@ -100,11 +118,20 @@ export async function POST(request: NextRequest) {
           .from('profiles')
           .update({ 
             subscription_expires_at: newExpirationDate.toISOString(),
-            subscription_status: 'Active'
+            subscription_status: 'Active',
+            payment_retry_count: 0,
+            last_payment_attempt: null,
+            grace_period_ends: null
           })
-          .eq('id', session.user_id);
+          .eq('id', userId);
 
-        console.log(`Subscription ${subscriptionId} payment completed, extended expiration`);
+        console.log(`✅ Subscription ${subscriptionId} payment completed, extended expiration`);
+
+        // 🧹 LIMPIAR NOTIFICACIONES OBSOLETAS DE PAGO
+        console.log('🧹 Limpiando notificaciones obsoletas de pago...');
+        await NotificationService.clearPaymentNotifications(userId);
+      } else {
+        console.error('❌ Profile not found for subscription:', subscriptionId);
       }
 
       return NextResponse.json({ message: 'Subscription payment processed' });

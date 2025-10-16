@@ -268,6 +268,17 @@ export async function reactivateSubscription(userId: string) {
     console.error('Error reactivating subscription:', error)
     return false
   }
+
+  // 🧹 LIMPIAR NOTIFICACIONES OBSOLETAS
+  try {
+    const { NotificationService } = await import('./notification-service')
+    console.log('🧹 Limpiando notificaciones obsoletas tras reactivación...')
+    await NotificationService.clearPaymentNotifications(userId)
+    await NotificationService.clearCancellationNotifications(userId)
+  } catch (error) {
+    console.error('⚠️ Error limpiando notificaciones (no crítico):', error)
+    // No retornamos false porque la reactivación fue exitosa
+  }
   
   return true
 }

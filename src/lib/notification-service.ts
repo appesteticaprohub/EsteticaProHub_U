@@ -382,4 +382,65 @@ export class NotificationService {
       }
     }
   }
+  // Limpiar notificaciones obsoletas de problemas de pago y suspensión
+  static async clearPaymentNotifications(userId: string) {
+    try {
+      const supabase = createServerSupabaseAdminClient()
+
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', userId)
+        .eq('category', 'critical')
+        .in('title', [
+          'Problema con tu Pago',
+          'Recordatorio: Problema con tu Pago',
+          'Suscripción Suspendida'
+        ])
+
+      if (error) {
+        console.error('❌ Error al limpiar notificaciones de pago:', error)
+        return { success: false, error: error.message }
+      }
+
+      console.log('✅ Notificaciones de pago y suspensión eliminadas para usuario:', userId)
+      return { success: true, error: null }
+
+    } catch (error) {
+      console.error('❌ Error al limpiar notificaciones de pago:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      }
+    }
+  }
+
+  // Limpiar notificaciones obsoletas de cancelación
+  static async clearCancellationNotifications(userId: string) {
+    try {
+      const supabase = createServerSupabaseAdminClient()
+
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', userId)
+        .eq('category', 'important')
+        .eq('title', 'Suscripción Cancelada')
+
+      if (error) {
+        console.error('❌ Error al limpiar notificaciones de cancelación:', error)
+        return { success: false, error: error.message }
+      }
+
+      console.log('✅ Notificaciones de cancelación eliminadas para usuario:', userId)
+      return { success: true, error: null }
+
+    } catch (error) {
+      console.error('❌ Error al limpiar notificaciones de cancelación:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      }
+    }
+  }
 }

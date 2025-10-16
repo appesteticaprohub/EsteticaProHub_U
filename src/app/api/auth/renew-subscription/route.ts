@@ -81,10 +81,14 @@ export async function POST(request: NextRequest) {
       // No es crítico, el usuario ya fue actualizado
     }
 
-    // Si era una reactivación, enviar notificación
+    // Si era una reactivación, enviar notificación y limpiar obsoletas
     if (wasInactive && currentProfile) {
       const { NotificationService } = await import('@/lib/notification-service')
       const userName = currentProfile.full_name || currentProfile.email.split('@')[0]
+      
+      console.log('🧹 Limpiando notificaciones obsoletas...')
+      await NotificationService.clearPaymentNotifications(user.id)
+      await NotificationService.clearCancellationNotifications(user.id)
       
       console.log('📧 Enviando notificación de reactivación...')
       await NotificationService.sendSubscriptionReactivatedNotification(
@@ -92,6 +96,11 @@ export async function POST(request: NextRequest) {
         currentProfile.email,
         userName
       )
+    } else {
+      // Incluso si no era reactivación, limpiar notificaciones de pago por si acaso
+      const { NotificationService } = await import('@/lib/notification-service')
+      console.log('🧹 Limpiando notificaciones de pago obsoletas...')
+      await NotificationService.clearPaymentNotifications(user.id)
     }
 
     return NextResponse.json({
