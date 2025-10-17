@@ -326,7 +326,7 @@ export class NotificationService {
           month: 'long',
           day: 'numeric'
         }),
-        payment_url: `${process.env.NEXT_PUBLIC_APP_URL}/suscripcion`
+        profile_url: `${process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '')}/perfil`
       }
 
       // Crear notificación in-app crítica
@@ -336,8 +336,8 @@ export class NotificationService {
         category: 'critical',
         title: 'Suscripción Suspendida',
         message: `Tu suscripción ha sido suspendida por PayPal debido a problemas de pago. Por favor actualiza tu método de pago inmediatamente para mantener tu acceso.`,
-        cta_text: 'Actualizar Método de Pago',
-        cta_url: '/suscripcion',
+        cta_text: 'Ir a Mi Perfil',
+        cta_url: '/perfil',
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 días
       })
 
