@@ -242,7 +242,7 @@ export class NotificationService {
           month: 'long',
           day: 'numeric'
         }),
-        reactivate_url: this.getAppUrl('/suscripcion')
+        reactivate_url: this.getAppUrl('/perfil')
       }
 
       // Crear notificación in-app importante
@@ -252,8 +252,8 @@ export class NotificationService {
         category: 'important',
         title: 'Suscripción Cancelada',
         message: `Tu suscripción ha sido cancelada. Tendrás acceso hasta el ${variables.fecha_expiracion}. Puedes reactivarla en cualquier momento.`,
-        cta_text: 'Reactivar Suscripción',
-        cta_url: '/suscripcion',
+        cta_text: 'Ir a Mi Perfil',
+        cta_url: '/perfil',
         expires_at: expirationDate
       })
 
