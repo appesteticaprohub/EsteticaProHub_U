@@ -4,6 +4,14 @@ import type { CreateNotificationRequest } from '@/types/api'
 
 export class NotificationService {
   
+  // Helper para construir URLs sin doble slash
+  private static getAppUrl(path: string): string {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const cleanBaseUrl = baseUrl.replace(/\/$/, '') // Elimina slash final si existe
+    const cleanPath = path.startsWith('/') ? path : `/${path}` // Asegura que path empiece con /
+    return `${cleanBaseUrl}${cleanPath}`
+  }
+  
   // Crear notificación in-app
   static async createInAppNotification(data: CreateNotificationRequest) {
     try {
@@ -52,7 +60,7 @@ export class NotificationService {
     const variables = {
       nombre: userName,
       email: userEmail,
-      app_url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      app_url: this.getAppUrl('/')
     }
 
     return await sendEmailWithTemplate('welcome', userEmail, userId, variables)
@@ -140,7 +148,7 @@ export class NotificationService {
         nombre: userName,
         precio: amount,
         intento: retryCount.toString(),
-        payment_url: `${process.env.NEXT_PUBLIC_APP_URL}/suscripcion`
+        payment_url: this.getAppUrl('/perfil')
       }
 
       // Crear notificación in-app crítica
@@ -150,8 +158,8 @@ export class NotificationService {
         category: 'critical',
         title: 'Recordatorio: Problema con tu Pago',
         message: `Este es el intento ${retryCount} de procesar tu pago de $${amount}. Por favor actualiza tu método de pago pronto.`,
-        cta_text: 'Actualizar Pago',
-        cta_url: '/suscripcion',
+        cta_text: 'Ir a Mi Perfil',
+        cta_url: '/perfil',
         expires_at: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString() // 4 días
       })
 
@@ -184,7 +192,7 @@ export class NotificationService {
       const variables = {
         nombre: userName,
         precio: amount,
-        payment_url: `${process.env.NEXT_PUBLIC_APP_URL}/suscripcion`
+        payment_url: this.getAppUrl('/perfil')
       }
 
       // Crear notificación in-app crítica
@@ -194,8 +202,8 @@ export class NotificationService {
         category: 'critical',
         title: 'Problema con tu Pago',
         message: `No pudimos procesar tu pago de $${amount}. Por favor verifica tu método de pago para mantener tu cuenta activa.`,
-        cta_text: 'Actualizar Pago',
-        cta_url: '/suscripcion',
+        cta_text: 'Ir a Mi Perfil',
+        cta_url: '/perfil',
         expires_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() // 3 días
       })
       
@@ -234,7 +242,7 @@ export class NotificationService {
           month: 'long',
           day: 'numeric'
         }),
-        reactivate_url: `${process.env.NEXT_PUBLIC_APP_URL}/suscripcion`
+        reactivate_url: this.getAppUrl('/suscripcion')
       }
 
       // Crear notificación in-app importante
@@ -277,7 +285,7 @@ export class NotificationService {
     try {
       const variables = {
         nombre: userName,
-        profile_url: `${process.env.NEXT_PUBLIC_APP_URL}/perfil`
+        profile_url: this.getAppUrl('/perfil')
       }
 
       // Crear notificación in-app normal
@@ -326,7 +334,7 @@ export class NotificationService {
           month: 'long',
           day: 'numeric'
         }),
-        profile_url: `${process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '')}/perfil`
+        profile_url: this.getAppUrl('/perfil')
       }
 
       // Crear notificación in-app crítica
