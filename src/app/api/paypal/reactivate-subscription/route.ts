@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/server-supabase';
 import { reactivateSubscription } from '@/lib/subscription-utils';
+import { NotificationService } from '@/lib/notification-service';
 
 export async function POST() {
   try {
@@ -38,16 +39,41 @@ export async function POST() {
     }
 
     // Reactivar suscripción
-    const success = await reactivateSubscription(userId);
+const success = await reactivateSubscription(userId);
 
-    if (!success) {
-      return NextResponse.json({ error: 'Error reactivando suscripción' }, { status: 500 });
-    }
+if (!success) {
+  return NextResponse.json({ error: 'Error reactivando suscripción' }, { status: 500 });
+}
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Suscripción reactivada exitosamente. Se renovará automáticamente.' 
-    });
+// 📧 ENVIAR NOTIFICACIONES DE REACTIVACIÓN
+try {
+  // Obtener datos del usuario para el email
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('email, full_name')
+    .eq('id', userId)
+    .single();
+
+  if (userProfile) {
+    const userName = userProfile.full_name || userProfile.email.split('@')[0];
+    
+    console.log('📧 Enviando notificación de reactivación...');
+    await NotificationService.sendSubscriptionReactivatedNotification(
+      userId,
+      userProfile.email,
+      userName
+    );
+    console.log('✅ Notificación de reactivación enviada');
+  }
+} catch (notificationError) {
+  // No fallar la reactivación si el email falla
+  console.error('❌ Error enviando notificación de reactivación:', notificationError);
+}
+
+return NextResponse.json({ 
+  success: true, 
+  message: 'Suscripción reactivada exitosamente. Se renovará automáticamente.' 
+});
 
   } catch (error) {
     console.error('Error reactivando suscripción:', error);

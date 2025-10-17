@@ -285,7 +285,7 @@ export class NotificationService {
     try {
       const variables = {
         nombre: userName,
-        profile_url: this.getAppUrl('/perfil')
+        dashboard_url: this.getAppUrl('/perfil')
       }
 
       // Crear notificación in-app normal
