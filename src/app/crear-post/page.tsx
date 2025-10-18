@@ -10,6 +10,7 @@ import PaymentRecoveryModal from '@/components/PaymentRecoveryModal';
 import { createPost } from '@/lib/supabase';
 import ImageUploader from '@/components/ImageUploader';
 import { ImageSettings } from '@/types/api';
+import imageCompression from 'browser-image-compression';
 
 // Tipo para la respuesta del post creado
 interface CreatedPost {
@@ -37,7 +38,8 @@ export default function CrearPost() {
   const [categoria, setCategoria] = useState('');
   const [titulo, setTitulo] = useState('');
   const [contenido, setContenido] = useState('');
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [imageSettings, setImageSettings] = useState<ImageSettings | null>(null);
 
   // Cargar configuración de imágenes
@@ -138,26 +140,43 @@ export default function CrearPost() {
     return;
   }
 
+  setIsUploading(true);
+
   try {
+    let uploadedUrls: string[] = [];
+    
+    // 1. Si hay imágenes seleccionadas, subirlas AHORA
+    if (selectedFiles.length > 0) {
+      uploadedUrls = await uploadImages(selectedFiles);
+      
+      if (!uploadedUrls || uploadedUrls.length === 0) {
+        throw new Error('Error al subir imágenes');
+      }
+    }
+    
+    // 2. Crear post con las URLs (o array vacío si no hay imágenes)
     const { data, error } = await createPost({
       title: titulo,
       content: contenido,
       category: categoria,
       authorId: user.id,
-      images: imageUrls
+      images: uploadedUrls
     }) as { data: CreatedPost | null; error: string | null };
 
     if (error) {
-      console.error('Error al crear el post:', error);
-      return;
+      throw new Error(error);
     }
 
     if (data) {
       // Redirigir al post creado
       router.push(`/post/${data.id}`);
     }
+    
   } catch (error) {
-    console.error('Error inesperado:', error);
+    console.error('Error al crear post:', error);
+    alert('Error al crear el post. Por favor intenta de nuevo.');
+  } finally {
+    setIsUploading(false);
   }
 };
 
@@ -166,6 +185,46 @@ export default function CrearPost() {
     // Redirigir al inicio después de cerrar el modal
     router.push('/');
   };
+
+  const uploadImages = async (files: File[]): Promise<string[]> => {
+  if (!imageSettings) {
+    throw new Error('Configuración de imágenes no disponible');
+  }
+
+  const formData = new FormData();
+  
+  // Comprimir cada imagen antes de subir
+  for (const file of files) {
+    try {
+      const compressedFile = await imageCompression(file, {
+        maxSizeMB: imageSettings.max_image_size_mb,
+        maxWidthOrHeight: Math.max(imageSettings.max_width, imageSettings.max_height),
+        useWebWorker: true,
+        fileType: file.type,
+        initialQuality: imageSettings.compression_quality
+      });
+      formData.append('images', compressedFile);
+    } catch (error) {
+      console.error('Error al comprimir imagen:', error);
+      // Si falla la compresión, usar archivo original
+      formData.append('images', file);
+    }
+  }
+  
+  // Subir a la API
+  const response = await fetch('/api/posts/upload-images', {
+    method: 'POST',
+    body: formData
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Error al subir imágenes');
+  }
+  
+  const result = await response.json();
+  return result.urls || [];
+};
 
 
   const handleGoToSubscription = () => {
@@ -308,30 +367,26 @@ export default function CrearPost() {
 
           {/* Imágenes */}
           {imageSettings && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Imágenes (opcional)
-              </label>
-              <ImageUploader
-                settings={imageSettings}
-                onImagesUploaded={(urls) => setImageUrls(urls)}
-                disabled={!user}
-              />
-              {imageUrls.length > 0 && (
-                <div className="mt-3 text-sm text-green-600">
-                  {imageUrls.length} {imageUrls.length === 1 ? 'imagen subida' : 'imágenes subidas'} correctamente
-                </div>
-              )}
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Imágenes (opcional)
+            </label>
+            <ImageUploader
+              settings={imageSettings}
+              onFilesSelected={(files) => setSelectedFiles(files)}
+              disabled={!user}
+            />
+          </div>
+        )}
 
           {/* Botones */}
           <div className="flex gap-4 pt-4">
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors"
+              disabled={isUploading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              Crear Post
+              {isUploading ? 'Creando post...' : 'Crear Post'}
             </button>
             <Link
               href="/"
@@ -342,6 +397,24 @@ export default function CrearPost() {
           </div>
         </form>
       </div>
+
+      {/* Modal de progreso */}
+      {isUploading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900">Creando tu post...</h3>
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+              <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+            </div>
+            <p className="text-sm text-gray-600">
+              {selectedFiles.length > 0 
+                ? `Subiendo ${selectedFiles.length} ${selectedFiles.length === 1 ? 'imagen' : 'imágenes'}...` 
+                : 'Guardando...'
+              }
+            </p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
