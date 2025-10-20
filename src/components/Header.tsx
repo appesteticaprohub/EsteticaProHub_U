@@ -29,6 +29,7 @@ export default function Header() {
   });
   
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const getInitials = (name: string | null, email: string) => {
@@ -68,6 +69,16 @@ export default function Header() {
       document.body.style.overflow = 'unset';
     };
   }, [showNotifications]);
+
+  const handleRefresh = async (e: React.MouseEvent) => {
+  e.stopPropagation();
+  setIsRefreshing(true);
+  await refresh();
+  // Esperar un mínimo de 500ms para que se vea la animación
+  setTimeout(() => {
+    setIsRefreshing(false);
+  }, 500);
+};
 
   const handleNotificationClick = async (notificationId: string, ctaUrl: string | null) => {
     await markAsRead(notificationId);
@@ -156,31 +167,32 @@ export default function Header() {
               {showNotifications && (
                 <div className="notification-dropdown fixed md:absolute right-2 md:right-0 top-[5rem] md:top-auto md:mt-3 w-[calc(100vw-1rem)] md:w-96 bg-white rounded-lg z-50 max-h-[500px] overflow-y-auto">
                   {/* Header con botón refrescar */}
-                  <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                    <h3 className="font-semibold text-gray-800">Notificaciones</h3>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        refresh();
-                      }}
-                      className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                      title="Refrescar notificaciones"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 text-gray-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                  <div className="p-4 border-b border-gray-200">
+                    <div className="flex justify-between items-center mb-1">
+                      <h3 className="font-semibold text-gray-800">Notificaciones</h3>
+                      <button
+                        onClick={handleRefresh}
+                        disabled={isRefreshing}
+                        className="refresh-button p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:hover:bg-transparent"
+                        title="Refrescar notificaciones"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                    </button>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className={`h-5 w-5 text-gray-600 ${isRefreshing ? 'refresh-icon-spinning' : ''}`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500">Toca 🔄 para actualizar</p>
                   </div>
 
                   {/* Link Ver todas */}

@@ -215,4 +215,31 @@ body {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
     transform: translateY(-1px);
   }
+
+  /* Animación para el icono de refrescar notificaciones */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.refresh-icon-spinning {
+  animation: spin 1s linear infinite;
+}
+
+.refresh-button {
+  transition: all 0.2s ease;
+}
+
+.refresh-button:hover:not(:disabled) {
+  transform: scale(1.1);
+}
+
+.refresh-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 }
