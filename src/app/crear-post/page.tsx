@@ -362,7 +362,12 @@ export default function CrearPost() {
             <textarea
               id="contenido"
               value={contenido}
-              onChange={(e) => setContenido(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Capitalizar primera letra si hay texto
+                const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1);
+                setContenido(capitalizedValue);
+              }}
               required
               rows={8}
               placeholder="Escribe el contenido de tu post..."
