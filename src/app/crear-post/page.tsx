@@ -342,7 +342,12 @@ export default function CrearPost() {
               type="text"
               id="titulo"
               value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Capitalizar primera letra si hay texto
+                const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1);
+                setTitulo(capitalizedValue);
+              }}
               required
               placeholder="Ingresa el título de tu post"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
