@@ -130,6 +130,7 @@ export async function POST(request: NextRequest) {
         // 🧹 LIMPIAR NOTIFICACIONES OBSOLETAS DE PAGO
         console.log('🧹 Limpiando notificaciones obsoletas de pago...');
         await NotificationService.clearPaymentNotifications(userId);
+        await NotificationService.clearPriceChangeNotifications(userId);
       } else {
         console.error('❌ Profile not found for subscription:', subscriptionId);
       }

@@ -422,6 +422,35 @@ export class NotificationService {
     }
   }
 
+  // Limpiar notificaciones obsoletas de cambio de precio
+  static async clearPriceChangeNotifications(userId: string) {
+    try {
+      const supabase = createServerSupabaseAdminClient()
+
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', userId)
+        .eq('category', 'important')
+        .eq('title', 'Actualización de Precios')
+
+      if (error) {
+        console.error('❌ Error al limpiar notificaciones de cambio de precio:', error)
+        return { success: false, error: error.message }
+      }
+
+      console.log('✅ Notificaciones de cambio de precio eliminadas para usuario:', userId)
+      return { success: true, error: null }
+
+    } catch (error) {
+      console.error('❌ Error al limpiar notificaciones de cambio de precio:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      }
+    }
+  }
+
   // Limpiar notificaciones obsoletas de cancelación
   static async clearCancellationNotifications(userId: string) {
     try {

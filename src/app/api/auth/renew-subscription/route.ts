@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
       console.log('🧹 Limpiando notificaciones obsoletas...')
       await NotificationService.clearPaymentNotifications(user.id)
       await NotificationService.clearCancellationNotifications(user.id)
+      await NotificationService.clearPriceChangeNotifications(user.id)
       
       console.log('📧 Enviando notificación de reactivación...')
       await NotificationService.sendSubscriptionReactivatedNotification(
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
       const { NotificationService } = await import('@/lib/notification-service')
       console.log('🧹 Limpiando notificaciones de pago obsoletas...')
       await NotificationService.clearPaymentNotifications(user.id)
+      await NotificationService.clearPriceChangeNotifications(user.id)
     }
 
     return NextResponse.json({
