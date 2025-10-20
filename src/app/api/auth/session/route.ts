@@ -22,7 +22,7 @@ export async function GET() {
     // Obtener el perfil del usuario
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('user_type, subscription_status, is_banned, avatar_url, full_name')
+      .select('user_type, subscription_status, is_banned, avatar_url, full_name, specialty, country')
       .eq('id', session.user.id)
       .single()
 
@@ -56,7 +56,9 @@ export async function GET() {
           subscriptionStatus: profile.subscription_status || null,
           isBanned: true,
           avatarUrl: profile.avatar_url || null,
-          fullName: profile.full_name || null
+          fullName: profile.full_name || null,
+          specialty: profile.specialty || null,
+          country: profile.country || null
         },
         error: null
       })
@@ -70,7 +72,9 @@ export async function GET() {
         subscriptionStatus: profile.subscription_status || null,
         isBanned: false,
         avatarUrl: profile.avatar_url || null,
-        fullName: profile.full_name || null
+        fullName: profile.full_name || null,
+        specialty: profile.specialty || null,
+        country: profile.country || null
       },
       error: null
     })

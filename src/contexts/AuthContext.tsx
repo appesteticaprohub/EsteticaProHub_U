@@ -27,6 +27,8 @@ interface AuthData {
   isBanned: boolean
   avatarUrl: string | null
   fullName: string | null
+  specialty: string | null
+  country: string | null
 }
 
 interface AuthContextType {
@@ -37,6 +39,8 @@ interface AuthContextType {
   isBanned: boolean
   avatarUrl: string | null
   fullName: string | null
+  specialty: string | null
+  country: string | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: { message: string; isBanned?: boolean } | null }>
   signUp: (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string, paymentReference?: string) => Promise<{ error: { message: string } | null }>
@@ -50,7 +54,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const fetcher = async (url: string): Promise<AuthData> => {
   const { data, error } = await apiClient.get<AuthData>(url)
   if (error) throw new Error(error)
-  return data || { user: null, session: null, userType: 'anonymous', subscriptionStatus: null, isBanned: false, avatarUrl: null, fullName: null }
+  return data || { user: null, session: null, userType: 'anonymous', subscriptionStatus: null, isBanned: false, avatarUrl: null, fullName: null, specialty: null, country: null }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -121,6 +125,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isBanned = data?.isBanned || false
   const avatarUrl = data?.avatarUrl || null
   const fullName = data?.fullName || null
+  const specialty = data?.specialty || null
+  const country = data?.country || null
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -185,7 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Limpiar cache de auth inmediatamente
       mutateAuth(
-        { user: null, session: null, userType: 'anonymous', subscriptionStatus: null, isBanned: false, avatarUrl: null, fullName: null },
+        { user: null, session: null, userType: 'anonymous', subscriptionStatus: null, isBanned: false, avatarUrl: null, fullName: null, specialty: null, country: null },
         false
       )
 
@@ -224,6 +230,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isBanned,
     avatarUrl,
     fullName,
+    specialty,
+    country,
     loading,
     signIn,
     signUp,
