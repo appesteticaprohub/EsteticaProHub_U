@@ -308,20 +308,10 @@ const handleSubmit = async (e: React.FormEvent) =>  {
         text: '¡Registro exitoso! Tu suscripción Premium está activa.'
       });
       
-      // Limpiar el formulario
-      setFormData({
-        nombre: '',
-        apellido: '',
-        email: '',
-        contraseña: '',
-        especialidad: '',
-        pais: '',
-        fechaNacimiento: {
-          day: '',
-          month: '',
-          year: ''
-        }
-      });
+      // Redirigir al perfil después de 2 segundos
+      setTimeout(() => {
+        router.push('/perfil');
+      }, 2000);
     }
   } catch {
     setMessage({
