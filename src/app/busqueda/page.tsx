@@ -38,13 +38,13 @@ export default function BusquedaPage() {
   // Categorías (las mismas de crear-post)
   const categorias = [
     { value: '', label: 'Todas las categorías' },
-    { value: 'tratamientos-faciales', label: 'Tratamientos Faciales' },
-    { value: 'tratamientos-corporales', label: 'Tratamientos Corporales' },
-    { value: 'depilacion', label: 'Depilación' },
-    { value: 'cuidado-piel', label: 'Cuidado de la Piel' },
-    { value: 'productos', label: 'Productos y Equipos' },
-    { value: 'capacitacion', label: 'Capacitación y Cursos' },
-    { value: 'experiencias', label: 'Experiencias y Casos' }
+    { value: 'casos-clinicos', label: 'Casos Clínicos' },
+    { value: 'complicaciones', label: 'Complicaciones' },
+    { value: 'tendencias-facial', label: 'Tendencias Facial' },
+    { value: 'tendencias-corporal', label: 'Tendencias Corporal' },
+    { value: 'tendencias-capilar', label: 'Tendencias Capilar' },
+    { value: 'tendencias-spa', label: 'Tendencias Spa' },
+    { value: 'gestion-empresarial', label: 'Gestión Empresarial' }
   ];
 
   // Validación de suscripción (igual que crear-post)

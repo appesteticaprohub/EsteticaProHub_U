@@ -71,14 +71,14 @@ export default function CrearPost() {
 
   // Categorías de ejemplo para estética profesional
   const categorias = [
-    { value: '', label: 'Seleccionar categoría' },
-    { value: 'tratamientos-faciales', label: 'Tratamientos Faciales' },
-    { value: 'tratamientos-corporales', label: 'Tratamientos Corporales' },
-    { value: 'depilacion', label: 'Depilación' },
-    { value: 'cuidado-piel', label: 'Cuidado de la Piel' },
-    { value: 'productos', label: 'Productos y Equipos' },
-    { value: 'capacitacion', label: 'Capacitación y Cursos' },
-    { value: 'experiencias', label: 'Experiencias y Casos' }
+    { value: '', label: 'Todas las categorías' },
+    { value: 'casos-clinicos', label: 'Casos Clínicos' },
+    { value: 'complicaciones', label: 'Complicaciones' },
+    { value: 'tendencias-facial', label: 'Tendencias Facial' },
+    { value: 'tendencias-corporal', label: 'Tendencias Corporal' },
+    { value: 'tendencias-capilar', label: 'Tendencias Capilar' },
+    { value: 'tendencias-spa', label: 'Tendencias Spa' },
+    { value: 'gestion-empresarial', label: 'Gestión Empresarial' }
   ];
 
   useEffect(() => {
