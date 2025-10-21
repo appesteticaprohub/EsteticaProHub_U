@@ -83,8 +83,22 @@ export function sanitizeHTML(html: string): string {
  */
 export function htmlToPlainText(html: string): string {
   if (!html) return '';
-  if (typeof window === 'undefined') return html;
   
+  // Si estamos en el servidor (Node.js), hacer limpieza básica con regex
+  if (typeof window === 'undefined') {
+    return html
+      .replace(/<[^>]*>/g, ' ')  // Eliminar todas las etiquetas HTML
+      .replace(/&nbsp;/g, ' ')    // Reemplazar &nbsp; con espacio
+      .replace(/&amp;/g, '&')     // Decodificar &amp;
+      .replace(/&lt;/g, '<')      // Decodificar &lt;
+      .replace(/&gt;/g, '>')      // Decodificar &gt;
+      .replace(/&quot;/g, '"')    // Decodificar &quot;
+      .replace(/&#39;/g, "'")     // Decodificar &#39;
+      .replace(/\s+/g, ' ')       // Múltiples espacios a uno solo
+      .trim();                    // Eliminar espacios al inicio/final
+  }
+  
+  // En el navegador, usar el método DOM
   const temp = document.createElement('div');
   temp.innerHTML = html;
   return temp.textContent || temp.innerText || '';

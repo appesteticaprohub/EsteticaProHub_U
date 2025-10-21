@@ -22,14 +22,23 @@ export default function RichTextEditor({
 
   // Solo inicializar al montar, NUNCA sobrescribir durante la edición
   useEffect(() => {
-    if (!editorRef.current) return;
-    
-    // Solo inicializar si el editor está vacío y hay un valor inicial
-    if (editorRef.current.innerHTML === '' && value) {
-      editorRef.current.innerHTML = value;
-      lastValueRef.current = value;
+  if (!editorRef.current) return;
+  
+  // Solo inicializar si el editor está vacío y hay un valor inicial
+  if (editorRef.current.innerHTML === '' && value) {
+    editorRef.current.innerHTML = value;
+    lastValueRef.current = value;
+  }
+  
+  // Configurar el editor para usar <p> por defecto
+  if (typeof document !== 'undefined') {
+    try {
+      document.execCommand('defaultParagraphSeparator', false, 'p');
+    } catch (e) {
+      console.warn('No se pudo configurar el separador de párrafos');
     }
-  }, []); // Array vacío = solo se ejecuta al montar el componente
+  }
+}, []);
 
   // Sincronizar solo cuando el value cambie EXTERNAMENTE (reset de formulario, etc)
   useEffect(() => {
@@ -100,24 +109,32 @@ export default function RichTextEditor({
   };
 
   // Capitalizar primera letra al escribir
-  const handleKeyUp = () => {
-    if (!editorRef.current) return;
-    
-    const text = editorRef.current.innerText;
-    if (text.length === 1) {
-      const firstChar = text.charAt(0).toUpperCase();
-      if (firstChar !== text.charAt(0)) {
-        editorRef.current.innerText = firstChar;
-        // Mover cursor al final
-        const range = document.createRange();
-        const sel = window.getSelection();
-        range.selectNodeContents(editorRef.current);
-        range.collapse(false);
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-      }
+  const handleKeyUp = (e: React.KeyboardEvent) => {
+  if (!editorRef.current) return;
+  
+  const text = editorRef.current.innerText;
+  
+  // Capitalizar primera letra
+  if (text.length === 1) {
+    const firstChar = text.charAt(0).toUpperCase();
+    if (firstChar !== text.charAt(0)) {
+      editorRef.current.innerText = firstChar;
+      // Mover cursor al final
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
     }
-  };
+  }
+  
+  // Asegurar que Enter crea párrafos <p> en lugar de <div> o <br>
+  if (e.key === 'Enter' && !e.shiftKey) {
+    // formatBlock crea <p> automáticamente
+    document.execCommand('formatBlock', false, 'p');
+  }
+};
 
   return (
     <div className="border border-gray-300 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
@@ -199,9 +216,19 @@ export default function RichTextEditor({
       <div
         ref={editorRef}
         contentEditable={!disabled}
+        data-gramm="false"
+        data-gramm_editor="false"
+        data-enable-grammarly="false"
         onInput={handleInput}
         onPaste={handlePaste}
         onKeyUp={handleKeyUp}
+        onKeyDown={(e) => {
+          // Forzar que Enter cree <p> en lugar de <div>
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            document.execCommand('insertParagraph', false);
+          }
+        }}
         onFocus={() => setIsFocused(true)}
          onBlur={() => {
           setIsFocused(false);
