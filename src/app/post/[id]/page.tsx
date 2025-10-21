@@ -220,15 +220,17 @@ export default function PostPage({ params }: PostPageProps) {
           <div className="prose prose-lg max-w-none">
             {shouldShowTruncatedContent() ? (
               <div className="relative">
-                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed break-words overflow-wrap-anywhere">
-                  {contentToShow}
-                </div>
+                <div 
+                  className="post-content text-gray-800 leading-relaxed break-words overflow-wrap-anywhere"
+                  dangerouslySetInnerHTML={{ __html: contentToShow }}
+                />
                 <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-none"></div>
               </div>
             ) : (
-              <div className="whitespace-pre-wrap text-gray-800 leading-relaxed break-words overflow-wrap-anywhere">
-                {contentToShow}
-              </div>
+              <div 
+                className="post-content text-gray-800 leading-relaxed break-words overflow-wrap-anywhere"
+                dangerouslySetInnerHTML={{ __html: contentToShow }}
+              />
             )}
 
             {/* Galería de imágenes */}
@@ -453,6 +455,42 @@ export default function PostPage({ params }: PostPageProps) {
         isVisible={showSnackBar}
         onHide={hideSnackBar}
       />
+      {/* Estilos para renderizar el contenido HTML del post */}
+      <style jsx global>{`
+        .post-content strong,
+        .post-content b {
+          font-weight: 700 !important;
+        }
+        
+        .post-content em,
+        .post-content i {
+          font-style: italic !important;
+        }
+        
+        .post-content ul {
+          list-style-type: disc !important;
+          list-style-position: outside !important;
+          padding-left: 2.5rem !important;
+          margin: 1rem 0 !important;
+        }
+        
+        .post-content ol {
+          list-style-type: decimal !important;
+          list-style-position: outside !important;
+          padding-left: 2.5rem !important;
+          margin: 1rem 0 !important;
+        }
+        
+        .post-content li {
+          display: list-item !important;
+          margin: 0.5rem 0 !important;
+          padding-left: 0.5rem !important;
+        }
+        
+        .post-content p {
+          margin: 0.5rem 0;
+        }
+      `}</style>
     </main>
   );
 }

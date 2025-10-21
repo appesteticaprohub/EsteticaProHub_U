@@ -10,6 +10,8 @@ import PaymentRecoveryModal from '@/components/PaymentRecoveryModal';
 import { createPost } from '@/lib/supabase';
 import ImageUploader from '@/components/ImageUploader';
 import { ImageSettings } from '@/types/api';
+import RichTextEditor from '@/components/RichTextEditor';
+import { sanitizeHTML } from '@/lib/html-sanitizer';
 import imageCompression from 'browser-image-compression';
 
 // Tipo para la respuesta del post creado
@@ -135,6 +137,12 @@ export default function CrearPost() {
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   
+  // Validar que el contenido no esté vacío
+  if (!contenido.trim() || contenido === '<br>' || contenido === '<p><br></p>') {
+    alert('Por favor ingresa contenido para tu post');
+    return;
+  }
+  
   if (!user) {
     console.error('Usuario no autenticado');
     return;
@@ -153,11 +161,14 @@ export default function CrearPost() {
         throw new Error('Error al subir imágenes');
       }
     }
+
+    // 2. Sanitizar el contenido antes de enviarlo
+    const sanitizedContent = sanitizeHTML(contenido);
     
-    // 2. Crear post con las URLs (o array vacío si no hay imágenes)
+    // 3. Crear post con las URLs (o array vacío si no hay imágenes)
     const { data, error } = await createPost({
       title: titulo,
-      content: contenido,
+      content: sanitizedContent,
       category: categoria,
       authorId: user.id,
       images: uploadedUrls
@@ -359,20 +370,15 @@ export default function CrearPost() {
             <label htmlFor="contenido" className="block text-sm font-medium text-gray-700 mb-2">
               Contenido *
             </label>
-            <textarea
-              id="contenido"
+            <RichTextEditor
               value={contenido}
-              onChange={(e) => {
-                const value = e.target.value;
-                // Capitalizar primera letra si hay texto
-                const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1);
-                setContenido(capitalizedValue);
-              }}
-              required
-              rows={8}
+              onChange={(value) => setContenido(value)}
               placeholder="Escribe el contenido de tu post..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical"
+              disabled={isUploading}
             />
+            {contenido.length === 0 && (
+              <p className="text-xs text-red-500 mt-1">Este campo es obligatorio</p>
+            )}
           </div>
 
           {/* Imágenes */}
