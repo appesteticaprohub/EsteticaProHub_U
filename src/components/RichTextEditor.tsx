@@ -110,32 +110,27 @@ export default function RichTextEditor({
   };
 
   // Capitalizar primera letra al escribir
-  const handleKeyUp = (e: React.KeyboardEvent) => {
-  if (!editorRef.current) return;
-  
-  const text = editorRef.current.innerText;
-  
-  // Capitalizar primera letra
-  if (text.length === 1) {
-    const firstChar = text.charAt(0).toUpperCase();
-    if (firstChar !== text.charAt(0)) {
-      editorRef.current.innerText = firstChar;
-      // Mover cursor al final
-      const range = document.createRange();
-      const sel = window.getSelection();
-      range.selectNodeContents(editorRef.current);
-      range.collapse(false);
-      sel?.removeAllRanges();
-      sel?.addRange(range);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!editorRef.current) return;
+    
+    // Forzar que Enter cree <p> en lugar de <div>
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      document.execCommand('insertParagraph', false);
+      return;
     }
-  }
-  
-  // Asegurar que Enter crea párrafos <p> en lugar de <div> o <br>
-  if (e.key === 'Enter' && !e.shiftKey) {
-    // formatBlock crea <p> automáticamente
-    document.execCommand('formatBlock', false, 'p');
-  }
-};
+    
+    // Capitalizar primera letra
+    const text = editorRef.current.innerText.trim();
+    
+    // Solo aplicar si el editor está vacío o casi vacío y se presiona una letra
+    if (text.length === 0 && e.key.length === 1 && /[a-záéíóúñ]/i.test(e.key)) {
+      e.preventDefault();
+      const upperChar = e.key.toUpperCase();
+      document.execCommand('insertText', false, upperChar);
+      handleInput();
+    }
+  };
 
   return (
     <div className="border border-gray-300 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
@@ -222,14 +217,7 @@ export default function RichTextEditor({
         data-enable-grammarly="false"
         onInput={handleInput}
         onPaste={handlePaste}
-        onKeyUp={handleKeyUp}
-        onKeyDown={(e) => {
-          // Forzar que Enter cree <p> en lugar de <div>
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            document.execCommand('insertParagraph', false);
-          }
-        }}
+        onKeyDown={handleKeyDown}
         onFocus={() => setIsFocused(true)}
          onBlur={() => {
           setIsFocused(false);
