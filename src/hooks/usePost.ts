@@ -1,7 +1,7 @@
 import useSWR, { mutate } from 'swr'
 import { apiClient } from '@/lib/api-client'
 
-interface PostWithoutCategory {
+interface PostDetail {
   id: string;
   title: string;
   content: string;
@@ -11,6 +11,7 @@ interface PostWithoutCategory {
   likes_count: number;
   comments_count: number;
   images: string[];
+  category?: string; // NUEVO: Categoría del post
   author?: {
     full_name: string | null;
     email: string;
@@ -21,15 +22,15 @@ interface PostWithoutCategory {
 }
 
 // Fetcher function para SWR
-const fetcher = async (url: string): Promise<PostWithoutCategory> => {
-  const { data, error } = await apiClient.get<PostWithoutCategory>(url)
+const fetcher = async (url: string): Promise<PostDetail> => {
+  const { data, error } = await apiClient.get<PostDetail>(url)
   if (error) throw new Error(error)
   if (!data) throw new Error('Post not found')
   return data
 }
 
 export function usePost(postId: string | null) {
-  const { data: post = null, error, isLoading } = useSWR<PostWithoutCategory>(
+  const { data: post = null, error, isLoading } = useSWR<PostDetail>(
     postId ? `/posts/${postId}` : null,
     fetcher,
     {

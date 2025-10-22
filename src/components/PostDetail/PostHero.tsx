@@ -2,6 +2,7 @@ import PostAuthorInfo from './PostAuthorInfo';
 
 interface PostHeroProps {
   title: string;
+  category?: string; // NUEVO: Categoría del post
   author?: {
     full_name: string | null;
     email: string;
@@ -16,11 +17,58 @@ interface PostHeroProps {
 
 export default function PostHero({
   title,
+  category,
   author,
   createdAt,
   subscriptionStatus,
   onResolvePayment
 }: PostHeroProps) {
+  // Función para obtener color según categoría
+  const getCategoryInfo = (category?: string) => {
+    if (!category) return null;
+    
+    const categories: Record<string, { label: string; color: string; bg: string }> = {
+      'casos-clinicos': { 
+        label: 'Casos Clínicos',
+        color: 'text-blue-700', 
+        bg: 'bg-blue-50'
+      },
+      'complicaciones': { 
+        label: 'Complicaciones',
+        color: 'text-red-700', 
+        bg: 'bg-red-50'
+      },
+      'tendencias-facial': { 
+        label: 'Tendencias Facial',
+        color: 'text-purple-700', 
+        bg: 'bg-purple-50'
+      },
+      'tendencias-corporal': { 
+        label: 'Tendencias Corporal',
+        color: 'text-pink-700', 
+        bg: 'bg-pink-50'
+      },
+      'tendencias-capilar': { 
+        label: 'Tendencias Capilar',
+        color: 'text-indigo-700', 
+        bg: 'bg-indigo-50'
+      },
+      'tendencias-spa': { 
+        label: 'Tendencias Spa',
+        color: 'text-teal-700', 
+        bg: 'bg-teal-50'
+      },
+      'gestion-empresarial': { 
+        label: 'Gestión Empresarial',
+        color: 'text-orange-700', 
+        bg: 'bg-orange-50'
+      },
+    };
+    
+    return categories[category] || { label: category, color: 'text-gray-700', bg: 'bg-gray-50' };
+  };
+
+  const categoryInfo = getCategoryInfo(category);
   return (
     <header className="mb-8">
       {/* Indicador de estado de suscripción */}
@@ -68,9 +116,16 @@ export default function PostHero({
       )}
       
       <div className="bg-white shadow-md border-t-4 border-purple-500 rounded-lg px-4 sm:px-6 py-4 sm:py-5 mb-6">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 leading-tight">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 leading-tight mb-3">
           {title}
         </h1>
+        
+        {/* Etiqueta de Categoría */}
+        {categoryInfo && (
+          <span className={`inline-block px-3 py-1.5 ${categoryInfo.bg} ${categoryInfo.color} rounded-md text-xs font-semibold`}>
+            {categoryInfo.label}
+          </span>
+        )}
       </div>
       
       {/* Información del autor */}

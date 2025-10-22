@@ -197,6 +197,7 @@ export default function PostClient({ postId }: PostClientProps) {
         <article className="bg-white rounded-lg shadow-sm p-8">
           <PostHero
             title={post.title}
+            category={post.category}
             author={post.author}
             createdAt={post.created_at}
             subscriptionStatus={user ? subscriptionStatus : null}
