@@ -19,7 +19,7 @@ function extractMentions(content: string): string[] {
 }
 
 // Función para obtener IDs de usuarios por nombres
-async function getUserIdsByNames(names: string[], supabase: any): Promise<string[]> {
+async function getUserIdsByNames(names: string[], supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>): Promise<string[]> {
   if (names.length === 0) return []
 
   const { data, error } = await supabase
@@ -136,7 +136,6 @@ export async function GET(
 
     // Organizar comentarios en estructura anidada
     const commentsMap = new Map<string, Comment>()
-    const topLevelComments: Comment[] = []
 
     // Primero, crear todos los comentarios
     allComments.forEach((comment: {
