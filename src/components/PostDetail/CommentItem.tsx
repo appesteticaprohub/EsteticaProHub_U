@@ -23,7 +23,6 @@ interface CommentItemProps {
   onReply: (commentId: string, content: string) => Promise<void>;
   onUpdate: (commentId: string, content: string) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
-  onPrefillReply?: (mention: string) => void; // NUEVA: Para pre-rellenar el campo principal
   currentUserId: string | null;
   user: {
     id: string;
@@ -39,7 +38,6 @@ export default function CommentItem({
   onReply, 
   onUpdate, 
   onDelete,
-  onPrefillReply,
   currentUserId, 
   user, 
   subscriptionStatus,

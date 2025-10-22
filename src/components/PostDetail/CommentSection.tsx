@@ -83,12 +83,6 @@ export default function CommentSection({
     }
   };
 
-  const handlePrefillReply = (mention: string) => {
-    setCommentText(mention);
-    textareaRef.current?.focus();
-    textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
-
   // Función para obtener respuestas de un comentario principal
   const getReplies = (commentId: string) => {
     return comments.filter(comment => comment.parent_id === commentId);
@@ -232,7 +226,6 @@ export default function CommentSection({
                             onReply={onReply}
                             onUpdate={onUpdate}
                             onDelete={onDelete}
-                            onPrefillReply={handlePrefillReply}
                             currentUserId={currentUserId}
                             user={user}
                             subscriptionStatus={subscriptionStatus}
