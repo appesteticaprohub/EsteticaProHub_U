@@ -7,13 +7,14 @@ interface Post {
   content: string;
   author_id: string;
   author_name?: string;
-  author_avatar?: string; // CAMBIADO: Removido el | null
+  author_avatar?: string;
   author_specialty?: string;
   author_country?: string;
   created_at: string;
   views_count: number;
   likes_count: number;
   comments_count: number;
+  category?: string; // NUEVO: Categoría del post
 }
 
 interface PostFromAPI {
@@ -25,6 +26,7 @@ interface PostFromAPI {
   views_count: number;
   likes_count: number;
   comments_count: number;
+  category?: string; // NUEVO: Categoría del post
   author?: {
     full_name: string;
     email: string;
@@ -41,9 +43,10 @@ const fetcher = async (url: string): Promise<Post[]> => {
   const mappedData = (data || []).map(post => ({
     ...post,
     author_name: post.author?.full_name || 'Usuario',
-    author_avatar: post.author?.avatar_url || undefined, // CAMBIADO: null -> undefined
-    author_specialty: post.author?.specialty || undefined, // CAMBIADO: null -> undefined
-    author_country: post.author?.country || undefined // CAMBIADO: null -> undefined
+    author_avatar: post.author?.avatar_url || undefined,
+    author_specialty: post.author?.specialty || undefined,
+    author_country: post.author?.country || undefined,
+    category: post.category || undefined // NUEVO: Incluir categoría
   }))
   
   console.log('Posts mapeados:', mappedData) // DEBUG

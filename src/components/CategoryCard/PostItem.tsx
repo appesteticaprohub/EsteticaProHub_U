@@ -10,6 +10,7 @@ interface PostItemProps {
     id: string;
     title: string;
     created_at: string;
+    category?: string; // NUEVO: Categoría del post
     author_name?: string;
     author_avatar?: string | null;
     author_specialty?: string | null;
@@ -21,6 +22,54 @@ interface PostItemProps {
 }
 
 export default function PostItem({ post, showMetric }: PostItemProps) {
+
+  // Función para obtener color y label según categoría
+  const getCategoryInfo = (category?: string) => {
+    if (!category) return null;
+    
+    const categories: Record<string, { label: string; color: string; bg: string }> = {
+      'casos-clinicos': { 
+        label: 'Casos Clínicos',
+        color: 'text-blue-700', 
+        bg: 'bg-blue-50'
+      },
+      'complicaciones': { 
+        label: 'Complicaciones',
+        color: 'text-red-700', 
+        bg: 'bg-red-50'
+      },
+      'tendencias-facial': { 
+        label: 'Tendencias Facial',
+        color: 'text-purple-700', 
+        bg: 'bg-purple-50'
+      },
+      'tendencias-corporal': { 
+        label: 'Tendencias Corporal',
+        color: 'text-pink-700', 
+        bg: 'bg-pink-50'
+      },
+      'tendencias-capilar': { 
+        label: 'Tendencias Capilar',
+        color: 'text-indigo-700', 
+        bg: 'bg-indigo-50'
+      },
+      'tendencias-spa': { 
+        label: 'Tendencias Spa',
+        color: 'text-teal-700', 
+        bg: 'bg-teal-50'
+      },
+      'gestion-empresarial': { 
+        label: 'Gestión Empresarial',
+        color: 'text-orange-700', 
+        bg: 'bg-orange-50'
+      },
+    };
+    
+    return categories[category] || { label: category, color: 'text-gray-700', bg: 'bg-gray-50' };
+  };
+
+  const categoryInfo = getCategoryInfo(post.category);
+
   const isNew = showMetric === 'new' && 
     new Date().getTime() - new Date(post.created_at).getTime() < 24 * 60 * 60 * 1000;
 
@@ -73,9 +122,18 @@ export default function PostItem({ post, showMetric }: PostItemProps) {
           
           {/* Título */}
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-base font-bold text-gray-900 group-hover:text-blue-600 transition-colors leading-snug">
-              {truncateText(post.title, 60)}
-            </h3>
+            <div className="flex flex-col gap-1.5 flex-1">
+              <h3 className="text-base font-bold text-gray-900 group-hover:text-blue-600 transition-colors leading-snug">
+                {truncateText(post.title, 60)}
+              </h3>
+              
+              {/* Etiqueta de Categoría */}
+              {categoryInfo && (
+                <span className={`inline-block px-2.5 py-1 ${categoryInfo.bg} ${categoryInfo.color} rounded-md text-xs font-semibold w-fit`}>
+                {categoryInfo.label}
+                </span>
+              )}
+            </div>
             
             {/* Badges según métrica */}
             <div className="flex-shrink-0 flex items-center gap-2">
