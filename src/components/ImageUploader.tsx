@@ -29,7 +29,7 @@ export default function ImageUploader({
     return () => {
       previews.forEach(p => URL.revokeObjectURL(p.preview))
     }
-  }, [])
+  }, [previews])
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
   const files = Array.from(e.target.files || [])
