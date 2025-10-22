@@ -34,10 +34,11 @@ export default function RichTextEditor({
   if (typeof document !== 'undefined') {
     try {
       document.execCommand('defaultParagraphSeparator', false, 'p');
-    } catch (e) {
+    } catch {
       console.warn('No se pudo configurar el separador de párrafos');
     }
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
 
   // Sincronizar solo cuando el value cambie EXTERNAMENTE (reset de formulario, etc)
@@ -95,7 +96,7 @@ export default function RichTextEditor({
     if (typeof window === 'undefined') return false;
     try {
       return document.queryCommandState(command);
-    } catch (error) {
+    } catch {
       return false;
     }
   };
