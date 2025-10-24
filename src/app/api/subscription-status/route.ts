@@ -24,7 +24,8 @@ export async function GET() {
         payment_retry_count,
         last_payment_attempt,
         grace_period_ends,
-        auto_renewal_enabled
+        auto_renewal_enabled,
+        paypal_subscription_id
       `)
       .eq('id', user.id)
       .single()
@@ -43,7 +44,8 @@ export async function GET() {
         payment_retry_count: profile?.payment_retry_count || 0,
         last_payment_attempt: profile?.last_payment_attempt || null,
         grace_period_ends: profile?.grace_period_ends || null,
-        auto_renewal_enabled: profile?.auto_renewal_enabled || false
+        auto_renewal_enabled: profile?.auto_renewal_enabled || false,
+        paypal_subscription_id: profile?.paypal_subscription_id || null
       },
       error: null
     })
