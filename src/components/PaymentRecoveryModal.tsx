@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Modal from './Modal'
 
 interface PaymentRecoveryModalProps {
@@ -18,12 +18,55 @@ export default function PaymentRecoveryModal({
   gracePeriodEnds
 }: PaymentRecoveryModalProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [paypalSubscriptionId, setPaypalSubscriptionId] = useState<string | null>(null)
+
+  // Obtener el paypal_subscription_id del usuario
+  useEffect(() => {
+    const fetchSubscriptionId = async () => {
+      try {
+        const response = await fetch('/api/subscription-status')
+        if (response.ok) {
+          const data = await response.json()
+          setPaypalSubscriptionId(data.paypal_subscription_id || null)
+        }
+      } catch (error) {
+        console.error('Error obteniendo subscription ID:', error)
+      }
+    }
+
+    if (isOpen) {
+      fetchSubscriptionId()
+    }
+  }, [isOpen])
 
   const handleUpdatePaymentMethod = async () => {
     setIsLoading(true)
-    // TODO: Implementar redirección a PayPal para actualizar método de pago
-    console.log('Redirigir a actualización de método de pago')
-    setIsLoading(false)
+    
+    try {
+      if (paypalSubscriptionId) {
+        // Construir la URL de PayPal para actualizar método de pago
+        const paypalEnvironment = process.env.NEXT_PUBLIC_PAYPAL_ENVIRONMENT || 'sandbox'
+        const baseUrl = paypalEnvironment === 'live' 
+          ? 'https://www.paypal.com' 
+          : 'https://www.sandbox.paypal.com'
+        
+        const paypalUrl = `${baseUrl}/myaccount/autopay/connect/${paypalSubscriptionId}`
+        
+        // Redirigir a PayPal en una nueva pestaña
+        window.open(paypalUrl, '_blank')
+        
+        // Mostrar mensaje informativo
+        alert('Se abrirá PayPal en una nueva pestaña donde podrás actualizar tu método de pago. Una vez actualizado, los cobros se reanudarán automáticamente.')
+      } else {
+        // Si no hay subscription ID, mostrar mensaje de error
+        alert('No se pudo obtener la información de tu suscripción. Por favor contacta a soporte.')
+      }
+    } catch (error) {
+      console.error('Error al abrir PayPal:', error)
+      alert('Hubo un error al intentar abrir PayPal. Por favor intenta nuevamente.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const getModalContent = () => {
@@ -90,16 +133,24 @@ export default function PaymentRecoveryModal({
             </p>
           </div>
         )}
+
+        {!paypalSubscriptionId && (
+          <div className="mb-4 p-3 bg-white rounded border border-gray-300">
+            <p className="text-sm text-gray-600">
+              <strong>Nota:</strong> Estamos obteniendo la información de tu suscripción...
+            </p>
+          </div>
+        )}
         
         <div className="flex gap-3">
           <button
             onClick={handleUpdatePaymentMethod}
-            disabled={isLoading}
+            disabled={isLoading || !paypalSubscriptionId}
             className={`px-6 py-2 rounded font-medium transition-colors ${
               content.urgency === 'high' 
                 ? 'bg-red-600 hover:bg-red-700 text-white'
                 : 'bg-blue-600 hover:bg-blue-700 text-white'
-            } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            } ${(isLoading || !paypalSubscriptionId) ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {isLoading ? 'Procesando...' : content.buttonText}
           </button>
