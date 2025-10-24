@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServerSupabaseAdminClient();
 
     // ==================== EVENTOS DE PAGO ÚNICO ====================
-    if (body.event_type === 'PAYMENT.SALE.COMPLETED') {
+    if (body.event_type === 'PAYMENT.SALE.COMPLETED' || body.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
       const paymentId = body.resource?.parent_payment;
       const customField = body.resource?.custom;
 
