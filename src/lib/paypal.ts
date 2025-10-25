@@ -7,9 +7,9 @@ export const PAYPAL_CONFIG = {
   clientSecret: process.env.PAYPAL_CLIENT_SECRET!,
 };
 
-const PAYPAL_BASE_URL = PAYPAL_CONFIG.environment === 'production' 
-  ? 'https://api.paypal.com'
-  : 'https://api.sandbox.paypal.com';
+const PAYPAL_BASE_URL = PAYPAL_CONFIG.environment === 'live' 
+  ? 'https://api-m.paypal.com'
+  : 'https://api-m.sandbox.paypal.com';
 
 // Obtener token de acceso de PayPal
 async function getPayPalAccessToken(): Promise<string> {
