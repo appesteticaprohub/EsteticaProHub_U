@@ -150,8 +150,7 @@ export async function createOrGetPayPalProduct() {
       description: "Suscripción premium mensual para EsteticaProHub - Acceso completo a contenido exclusivo y funciones avanzadas",
       type: "SERVICE",
       category: "SOFTWARE",
-      image_url: `${PAYPAL_CONFIG.baseUrl}/logo.png`,
-      home_url: PAYPAL_CONFIG.baseUrl
+      home_url: PAYPAL_CONFIG.baseUrl.replace(/\/$/, '') // Remover slash final si existe
     };
 
     const response = await fetch(`${PAYPAL_BASE_URL}/v1/catalogs/products`, {
