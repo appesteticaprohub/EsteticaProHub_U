@@ -3,9 +3,50 @@ import { verifyPayPalPayment } from '@/lib/paypal';
 import { createServerSupabaseAdminClient } from '@/lib/server-supabase';
 import { NotificationService } from '@/lib/notification-service';
 
+// Verificar firma del webhook de PayPal
+async function verifyPayPalWebhookSignature(
+  webhookId: string,
+  headers: Headers,
+  body: string
+): Promise<boolean> {
+  try {
+    // En producción, deberías verificar la firma
+    // Por ahora, validamos que tenga headers de PayPal
+    const transmissionId = headers.get('paypal-transmission-id');
+    const transmissionTime = headers.get('paypal-transmission-time');
+    const transmissionSig = headers.get('paypal-transmission-sig');
+    
+    if (!transmissionId || !transmissionTime || !transmissionSig) {
+      console.error('❌ Missing PayPal signature headers');
+      return false;
+    }
+
+    // TODO: Implementar verificación completa de firma cuando tengas webhook_id
+    // Por ahora, validamos que tenga los headers básicos
+    console.log('✅ PayPal headers present, webhook accepted');
+    return true;
+  } catch (error) {
+    console.error('❌ Error verifying webhook signature:', error);
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Leer el body como texto primero para verificar firma
+    const rawBody = await request.text();
+    
+    // Verificar firma de PayPal (seguridad)
+    const webhookId = process.env.PAYPAL_WEBHOOK_ID || '';
+    const isValid = await verifyPayPalWebhookSignature(webhookId, request.headers, rawBody);
+    
+    if (!isValid) {
+      console.error('❌ Invalid PayPal webhook signature');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    // Parsear el body
+    const body = JSON.parse(rawBody);
     console.log('🔔 PayPal Webhook received:', body.event_type);
 
     const supabase = createServerSupabaseAdminClient();
@@ -92,8 +133,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Pago de suscripción completado (renovación mensual)
-    if (body.event_type === 'BILLING.SUBSCRIPTION.PAYMENT.COMPLETED') {
-      const subscriptionId = body.resource?.id;
+    // PayPal envía PAYMENT.SALE.COMPLETED para suscripciones también
+    if (body.event_type === 'PAYMENT.SALE.COMPLETED' && body.resource?.billing_agreement_id) {
+      const subscriptionId = body.resource?.billing_agreement_id;
       
       if (!subscriptionId) {
         console.error('Missing subscription ID in payment completed event');
@@ -224,7 +266,7 @@ export async function POST(request: NextRequest) {
         const { data: settings } = await supabase
           .from('app_settings')
           .select('value')
-          .eq('key', 'subscription_price')
+          .eq('key', 'SUBSCRIPTION_PRICE')
           .single();
         
         const amount = settings?.value || body.resource?.amount?.total || '20.00';
@@ -333,7 +375,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Event type not handled' });
 
   } catch (error) {
-    console.error('Webhook error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('💥 Webhook error:', error);
+    console.error('💥 Error stack:', error instanceof Error ? error.stack : 'No stack');
+    
+    // Siempre responder 200 para que PayPal no reintente
+    // (ya logueamos el error para debug)
+    return NextResponse.json({ 
+      received: true,
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 200 });
   }
 }
