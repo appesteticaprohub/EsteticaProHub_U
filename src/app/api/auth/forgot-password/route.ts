@@ -23,6 +23,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Verificar si el usuario es staff (los usuarios staff no pueden recuperar contraseña)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('email', email.toLowerCase())
+      .single()
+    
+    if (profile && profile.role === 'staff') {
+      return NextResponse.json(
+        { error: 'Los usuarios staff no pueden recuperar su contraseña. Contacta al administrador para restablecer tus credenciales.' },
+        { status: 403 }
+      )
+    }
+
     // Solicitar reset de contraseña a Supabase
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/restablecer-contrasena`,

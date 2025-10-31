@@ -40,6 +40,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Verificar si el usuario autenticado es staff
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'No se pudo verificar el usuario' },
+        { status: 401 }
+      )
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    
+    if (profile && profile.role === 'staff') {
+      // Cerrar la sesión inmediatamente
+      await supabase.auth.signOut()
+      
+      return NextResponse.json(
+        { error: 'Los usuarios staff no pueden cambiar su contraseña. Contacta al administrador para actualizar tus credenciales.' },
+        { status: 403 }
+      )
+    }
+
     // Actualizar la contraseña del usuario
     const { error: updateError } = await supabase.auth.updateUser({
       password: password
