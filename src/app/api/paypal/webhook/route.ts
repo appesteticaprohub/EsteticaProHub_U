@@ -55,11 +55,15 @@ export async function POST(request: NextRequest) {
     if (body.event_type === 'PAYMENT.SALE.COMPLETED' || body.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
       const paymentId = body.resource?.parent_payment;
       const customField = body.resource?.custom;
+      const billingAgreementId = body.resource?.billing_agreement_id;
 
-      if (!paymentId || !customField) {
-        console.error('Missing payment ID or custom field');
+      // Si es pago de suscripción, dejarlo pasar al bloque de suscripciones
+      if (billingAgreementId) {
+        console.log('🔄 Subscription payment detected, processing below...');
+      } else if (!paymentId || !customField) {
+        console.error('Missing payment ID or custom field for one-time payment');
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-      }
+      } else {
 
       // Verificar el pago en PayPal
       const paypalPayment = await verifyPayPalPayment(paymentId);
@@ -85,6 +89,7 @@ export async function POST(request: NextRequest) {
 
       console.log(`Payment session ${customField} marked as paid`);
       return NextResponse.json({ message: 'Payment confirmed' });
+      }
     }
 
     // ==================== EVENTOS DE SUSCRIPCIÓN ====================
