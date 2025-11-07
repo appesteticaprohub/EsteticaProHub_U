@@ -147,12 +147,32 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Missing subscription ID' }, { status: 400 });
       }
 
-      // Buscar el usuario asociado a esta suscripción
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, email, paypal_subscription_id')
-        .eq('paypal_subscription_id', subscriptionId)
-        .single();
+      // Función de retry para buscar el perfil
+      const findProfileWithRetry = async (subscriptionId: string, maxAttempts = 3, delayMs = 2000) => {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          console.log(`🔍 Attempt ${attempt}/${maxAttempts} - Searching for profile with subscription: ${subscriptionId}`);
+          
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, email, paypal_subscription_id')
+            .eq('paypal_subscription_id', subscriptionId)
+            .single();
+
+          if (profile) {
+            console.log(`✅ Profile found on attempt ${attempt}: ${profile.email}`);
+            return profile;
+          }
+
+          if (attempt < maxAttempts) {
+            console.log(`⏰ Profile not found, waiting ${delayMs}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
+        }
+        return null;
+      };
+
+      // Buscar el usuario con retry
+      const profile = await findProfileWithRetry(subscriptionId);
 
       if (profile) {
         const userId = profile.id;
@@ -187,13 +207,22 @@ export async function POST(request: NextRequest) {
           .eq('id', userId);
 
         console.log(`✅ Subscription ${subscriptionId} payment completed, extended expiration`);
+        if (paymentAmount) {
+          console.log(`💰 Payment amount saved: $${paymentAmount}`);
+        }
 
         // 🧹 LIMPIAR NOTIFICACIONES OBSOLETAS DE PAGO
         console.log('🧹 Limpiando notificaciones obsoletas de pago...');
         await NotificationService.clearPaymentNotifications(userId);
         await NotificationService.clearPriceChangeNotifications(userId);
       } else {
-        console.error('❌ Profile not found for subscription:', subscriptionId);
+        console.error('❌ Profile not found for subscription after all retries:', subscriptionId);
+        console.log('⚠️ This webhook will be processed when PayPal sends the next billing cycle notification');
+        // Retornar 200 para evitar que PayPal reintente inmediatamente
+        return NextResponse.json({ 
+          message: 'Profile not found, will be processed on next cycle',
+          subscription_id: subscriptionId 
+        });
       }
 
       return NextResponse.json({ message: 'Subscription payment processed' });
@@ -242,6 +271,9 @@ export async function POST(request: NextRequest) {
         );
       } else {
         console.error('❌ Profile not found for subscription:', subscriptionId);
+        console.log('⏰ This might be a timing issue. PayPal webhook arrived before user registration completed.');
+        console.log('💡 Suggestion: User should complete registration and this payment will be processed on next billing cycle.');
+        // TODO: En producción, considerar implementar queue/retry para webhook con delay
       }
 
       return NextResponse.json({ message: 'Subscription cancelled' });
