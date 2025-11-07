@@ -156,6 +156,9 @@ export async function POST(request: NextRequest) {
         const newExpirationDate = new Date();
         newExpirationDate.setMonth(newExpirationDate.getMonth() + 1);
 
+        // Obtener el monto del pago desde el webhook
+        const paymentAmount = body.resource?.amount?.total || body.resource?.amount?.value || null;
+
         await supabase
           .from('profiles')
           .update({ 
@@ -163,7 +166,9 @@ export async function POST(request: NextRequest) {
             subscription_status: 'Active',
             payment_retry_count: 0,
             last_payment_attempt: null,
-            grace_period_ends: null
+            grace_period_ends: null,
+            last_payment_amount: paymentAmount ? parseFloat(paymentAmount) : null,
+            last_payment_date: new Date().toISOString()
           })
           .eq('id', userId);
 
