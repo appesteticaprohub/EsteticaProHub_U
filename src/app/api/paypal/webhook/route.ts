@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       // Buscar el usuario asociado para limpiar notificaciones previas
       const { data: session } = await supabase
         .from('payment_sessions')
-        .select('user_id')
+        .select('user_id, amount')
         .eq('external_reference', customId)
         .single();
 
@@ -132,6 +132,23 @@ export async function POST(request: NextRequest) {
         console.log('🧹 Limpiando notificaciones obsoletas tras activación...');
         await NotificationService.clearPaymentNotifications(session.user_id);
         await NotificationService.clearCancellationNotifications(session.user_id);
+
+        // 💰 PROCESAR PAGO INICIAL - Actualizar campos de pago en el perfil
+        console.log('💰 Processing initial payment for activated subscription...');
+        const { error: paymentUpdateError } = await supabase
+          .from('profiles')
+          .update({
+            last_payment_amount: session.amount ? parseFloat(session.amount.toString()) : null,
+            last_payment_date: new Date().toISOString()
+          })
+          .eq('id', session.user_id);
+
+        if (paymentUpdateError) {
+          console.error('❌ Error updating payment info:', paymentUpdateError);
+        } else {
+          console.log('✅ Payment info updated successfully');
+          console.log(`💰 Payment amount: $${session.amount}`);
+        }
       }
 
       return NextResponse.json({ message: 'Subscription activated' });
