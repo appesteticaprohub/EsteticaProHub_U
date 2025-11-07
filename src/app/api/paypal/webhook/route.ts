@@ -161,8 +161,17 @@ export async function POST(request: NextRequest) {
         const newExpirationDate = new Date();
         newExpirationDate.setMonth(newExpirationDate.getMonth() + 1);
 
-        // Obtener el monto del pago desde el webhook
-        const paymentAmount = body.resource?.amount?.total || body.resource?.amount?.value || null;
+        // Obtener el monto del pago desde el webhook - PayPal envía diferentes formatos
+        let paymentAmount = null;
+        if (body.resource?.amount?.total) {
+          paymentAmount = body.resource.amount.total;
+        } else if (body.resource?.amount?.value) {
+          paymentAmount = body.resource.amount.value;
+        } else if (body.resource?.billing_info?.last_payment?.amount?.value) {
+          paymentAmount = body.resource.billing_info.last_payment.amount.value;
+        }
+        
+        console.log('💰 Payment amount extracted:', paymentAmount);
 
         await supabase
           .from('profiles')
