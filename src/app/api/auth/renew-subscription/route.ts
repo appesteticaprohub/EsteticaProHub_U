@@ -48,18 +48,27 @@ export async function POST(request: NextRequest) {
 
     const wasInactive = currentProfile && ['Cancelled', 'Expired', 'Grace_Period', 'Payment_Failed'].includes(currentProfile.subscription_status)
 
+    // CRÍTICO: Transferir paypal_subscription_id al perfil del usuario
+    const profileUpdateData = {
+      subscription_status: 'Active',
+      subscription_expires_at: subscription_expires_at,
+      auto_renewal_enabled: true,
+      // Resetear campos de problemas de pago
+      payment_retry_count: 0,
+      last_payment_attempt: null,
+      grace_period_ends: null
+    } as Record<string, unknown>
+
+    // Transferir paypal_subscription_id si existe en la sesión
+    if (session.paypal_subscription_id) {
+      profileUpdateData.paypal_subscription_id = session.paypal_subscription_id
+      console.log(`📄 Transferring PayPal subscription ID: ${session.paypal_subscription_id} to user: ${user.id}`)
+    }
+
     // Actualizar el perfil del usuario con nueva fecha de expiración
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ 
-        subscription_status: 'Active',
-        subscription_expires_at: subscription_expires_at,
-        auto_renewal_enabled: true,
-        // Resetear campos de problemas de pago
-        payment_retry_count: 0,
-        last_payment_attempt: null,
-        grace_period_ends: null
-      })
+      .update(profileUpdateData)
       .eq('id', user.id)
 
     if (updateError) {

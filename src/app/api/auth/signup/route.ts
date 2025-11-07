@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
             .eq('external_reference', paymentReference)
             .single()
 
-          if (!sessionFetchError && sessionData && sessionData.status === 'paid') {
+          if (!sessionFetchError && sessionData && (sessionData.status === 'paid' || sessionData.status === 'active_subscription')) {
             // Obtener la sesión completa con paypal_subscription_id
             const { data: fullSessionData, error: fullSessionError } = await supabaseAdmin
               .from('payment_sessions')
