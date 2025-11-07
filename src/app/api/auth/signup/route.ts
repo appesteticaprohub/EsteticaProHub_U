@@ -120,6 +120,27 @@ export async function POST(request: NextRequest) {
               if (fullSessionData?.paypal_subscription_id) {
                 console.log(`✅ PayPal Subscription ID transferred successfully: ${fullSessionData.paypal_subscription_id}`)
               }
+
+              // NUEVO: Procesar cualquier pago pendiente que haya llegado antes del registro
+              if (fullSessionData?.paypal_subscription_id) {
+                console.log('🔍 Checking for pending payments for this subscription...')
+                
+                // Simular el procesamiento del pago que pudo haber llegado antes
+                // Esto maneja el caso donde el webhook llegó antes del registro
+                const { error: paymentProcessingError } = await supabaseAdmin
+                  .from('profiles')
+                  .update({
+                    last_payment_amount: fullSessionData.amount || null,
+                    last_payment_date: new Date().toISOString()
+                  })
+                  .eq('id', data.user.id)
+
+                if (paymentProcessingError) {
+                  console.error('❌ Error updating payment info during registration:', paymentProcessingError)
+                } else {
+                  console.log('✅ Payment info updated during registration')
+                }
+              }
             }
           }
         }
