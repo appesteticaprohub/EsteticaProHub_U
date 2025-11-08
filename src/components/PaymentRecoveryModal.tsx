@@ -40,34 +40,40 @@ export default function PaymentRecoveryModal({
   }, [isOpen])
 
   const handleUpdatePaymentMethod = async () => {
-    setIsLoading(true)
-    
-    try {
-      if (paypalSubscriptionId) {
-        // Construir la URL de PayPal para actualizar método de pago
-        const paypalEnvironment = process.env.NEXT_PUBLIC_PAYPAL_ENVIRONMENT || 'sandbox'
-        const baseUrl = paypalEnvironment === 'live' 
-          ? 'https://www.paypal.com' 
-          : 'https://www.sandbox.paypal.com'
-        
-        const paypalUrl = `${baseUrl}/myaccount/autopay/connect/${paypalSubscriptionId}`
-        
-        // Redirigir a PayPal en una nueva pestaña
-        window.open(paypalUrl, '_blank')
-        
-        // Mostrar mensaje informativo
-        alert('Se abrirá PayPal en una nueva pestaña donde podrás actualizar tu método de pago. Una vez actualizado, los cobros se reanudarán automáticamente.')
-      } else {
-        // Si no hay subscription ID, mostrar mensaje de error
-        alert('No se pudo obtener la información de tu suscripción. Por favor contacta a soporte.')
-      }
-    } catch (error) {
-      console.error('Error al abrir PayPal:', error)
-      alert('Hubo un error al intentar abrir PayPal. Por favor intenta nuevamente.')
-    } finally {
-      setIsLoading(false)
+  setIsLoading(true)
+  
+  try {
+    if (paypalSubscriptionId) {
+      // Obtener el ambiente desde variable de entorno
+      const paypalEnvironment = process.env.NEXT_PUBLIC_PAYPAL_ENVIRONMENT || 'sandbox'
+      
+      // Construir la URL de PayPal según el ambiente
+      const baseUrl = paypalEnvironment === 'live' 
+        ? 'https://www.paypal.com' 
+        : 'https://www.sandbox.paypal.com'
+      
+      const paypalUrl = `${baseUrl}/myaccount/autopay/connect/${paypalSubscriptionId}`
+      
+      // Log para debugging (puedes removerlo después)
+      console.log('🔧 PayPal Environment:', paypalEnvironment)
+      console.log('🔗 PayPal URL generada:', paypalUrl)
+      
+      // Redirigir a PayPal en una nueva pestaña
+      window.open(paypalUrl, '_blank')
+      
+      // Mostrar mensaje informativo
+      alert('Se abrirá PayPal en una nueva pestaña donde podrás actualizar tu método de pago. Una vez actualizado, los cobros se reanudarán automáticamente.')
+    } else {
+      // Si no hay subscription ID, mostrar mensaje de error
+      alert('No se pudo obtener la información de tu suscripción. Por favor contacta a soporte.')
     }
+  } catch (error) {
+    console.error('Error al abrir PayPal:', error)
+    alert('Hubo un error al intentar abrir PayPal. Por favor intenta nuevamente.')
+  } finally {
+    setIsLoading(false)
   }
+}
 
   const getModalContent = () => {
     switch (subscriptionStatus) {
