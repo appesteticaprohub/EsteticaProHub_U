@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useNewestPosts, useMostViewedPosts, useMostCommentedPosts } from '@/hooks/usePosts';
+import { useHomepagePosts } from '@/hooks/useHomepagePosts';
 import Link from 'next/link';
 import WelcomeHero from '@/components/WelcomeHero';
 import SearchHero from '@/components/SearchHero';
@@ -13,10 +13,22 @@ export default function Home() {
   const [mostViewedLimit, setMostViewedLimit] = useState(5);
   const [mostCommentedLimit, setMostCommentedLimit] = useState(5);
 
-  // Hooks para obtener los datos
-  const { posts: newestPosts, loading: newestLoading, error: newestError } = useNewestPosts(newestLimit);
-  const { posts: mostViewedPosts, loading: mostViewedLoading, error: mostViewedError } = useMostViewedPosts(mostViewedLimit);
-  const { posts: mostCommentedPosts, loading: mostCommentedLoading, error: mostCommentedError } = useMostCommentedPosts(mostCommentedLimit);
+  // Hook consolidado para obtener todos los datos en una sola llamada
+  const { 
+    newestPosts, 
+    mostViewedPosts, 
+    mostCommentedPosts, 
+    loading, 
+    error 
+  } = useHomepagePosts(newestLimit, mostViewedLimit, mostCommentedLimit);
+
+  // Variables para mantener compatibilidad con los componentes existentes
+  const newestLoading = loading;
+  const newestError = error;
+  const mostViewedLoading = loading;
+  const mostViewedError = error;
+  const mostCommentedLoading = loading;
+  const mostCommentedError = error;
 
   return (
     <main className="p-6 max-w-7xl mx-auto">
