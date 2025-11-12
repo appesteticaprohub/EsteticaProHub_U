@@ -164,10 +164,50 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Verificar que el usuario fue creado exitosamente
+    if (!data.user) {
+      return NextResponse.json(
+        { data: null, error: 'User creation failed' },
+        { status: 400 }
+      )
+    }
+
+    // Después del registro exitoso, obtener datos completos del perfil
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select(`
+        user_type,
+        subscription_status,
+        subscription_expires_at,
+        is_banned,
+        avatar_url,
+        full_name,
+        specialty,
+        country,
+        payment_retry_count,
+        grace_period_ends,
+        auto_renewal_enabled
+      `)
+      .eq('id', data.user.id)
+      .single()
+
     return NextResponse.json({
       data: {
         user: data.user,
-        session: data.session
+        session: data.session,
+        userType: profile?.user_type || 'premium',
+        subscriptionStatus: profile?.subscription_status || 'Active',
+        isBanned: profile?.is_banned || false,
+        avatarUrl: profile?.avatar_url || null,
+        fullName: profile?.full_name || null,
+        specialty: profile?.specialty || null,
+        country: profile?.country || null,
+        subscriptionData: {
+          subscription_expires_at: profile?.subscription_expires_at || null,
+          payment_retry_count: profile?.payment_retry_count || 0,
+          grace_period_ends: profile?.grace_period_ends || null,
+          auto_renewal_enabled: profile?.auto_renewal_enabled || false
+        }
       },
       error: null
     })

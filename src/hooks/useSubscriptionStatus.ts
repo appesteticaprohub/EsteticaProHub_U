@@ -13,7 +13,9 @@ interface SubscriptionData {
 }
 
 export function useSubscriptionStatus() {
-  const { user } = useAuth()
+  const { user, subscriptionStatus, loading } = useAuth()
+  
+  // ✅ Obtener datos de suscripción desde AuthContext (sin requests adicionales)
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData>({
     subscription_status: null,
     subscription_expires_at: null,
@@ -22,10 +24,10 @@ export function useSubscriptionStatus() {
     grace_period_ends: null,
     auto_renewal_enabled: false
   })
-  const [loading, setLoading] = useState(true)
 
+  // ✅ Solo hacer fetch inicial una vez, luego usar datos de AuthContext
   useEffect(() => {
-    if (!user) {
+    if (!user || loading) {
       setSubscriptionData({
         subscription_status: null,
         subscription_expires_at: null,
@@ -34,31 +36,20 @@ export function useSubscriptionStatus() {
         grace_period_ends: null,
         auto_renewal_enabled: false
       })
-      setLoading(false)
       return
     }
 
-    const fetchStatus = async () => {
+    // Solo hacer fetch la primera vez
+    const fetchInitialData = async () => {
       try {
         const { data, error } = await apiClient.get('/subscription-status')
         
         if (error) {
-          // Si el error es "Not authenticated", no es un error crítico
-          if (error === 'Not authenticated') {
-            console.log('Usuario no autenticado en subscription status')
-          } else {
-            console.error('Error fetching subscription status:', error)
-          }
-          
-          setSubscriptionData({
-            subscription_status: null,
-            subscription_expires_at: null,
-            payment_retry_count: 0,
-            last_payment_attempt: null,
-            grace_period_ends: null,
-            auto_renewal_enabled: false
-          })
-        } else if (data && typeof data === 'object') {
+          console.log('Error inicial subscription status:', error)
+          return
+        }
+
+        if (data && typeof data === 'object') {
           const subscriptionData = data as SubscriptionData
           setSubscriptionData({
             subscription_status: subscriptionData.subscription_status || null,
@@ -70,20 +61,22 @@ export function useSubscriptionStatus() {
           })
         }
       } catch (error) {
-        // Manejar errores de red silenciosamente
-        console.log('Error de red en subscription status:', error)
-      } finally {
-        setLoading(false)
+        console.log('Error de red en subscription status inicial:', error)
       }
     }
 
-    fetchStatus()
-  }, [user])
+    fetchInitialData()
+  }, [user?.id]) // Solo cuando cambie el usuario
 
-  // Mantener compatibilidad hacia atrás
-  const subscriptionStatus = subscriptionData.subscription_status
+  // ✅ Actualizar datos cuando AuthContext cambie (via Realtime)
+  useEffect(() => {
+    setSubscriptionData(current => ({
+      ...current,
+      subscription_status: subscriptionStatus
+    }))
+  }, [subscriptionStatus])
 
-  // Funciones helper para nuevos estados
+  // Funciones helper (sin cambios)
   const isInGracePeriod = () => {
     if (!subscriptionData.grace_period_ends) return false
     const now = new Date()
@@ -97,9 +90,9 @@ export function useSubscriptionStatus() {
   }
 
   return { 
-    subscriptionStatus, // Mantener para compatibilidad
-    subscriptionData,   // Nueva data completa
-    loading,
+    subscriptionStatus, // Del AuthContext
+    subscriptionData,   // Datos completos
+    loading,           // Del AuthContext
     isInGracePeriod,
     hasPaymentIssues
   }

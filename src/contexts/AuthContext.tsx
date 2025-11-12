@@ -3,6 +3,7 @@
 import React, { createContext, useContext } from 'react'
 import useSWR, { mutate } from 'swr'
 import { apiClient } from '@/lib/api-client'
+import { createClient } from '@supabase/supabase-js'
 
 interface User {
   id: string
@@ -58,14 +59,20 @@ const fetcher = async (url: string): Promise<AuthData> => {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data, error, isLoading, mutate: mutateAuth } = useSWR<AuthData>(
     '/auth/session',
     fetcher,
     {
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
-      refreshInterval: 30000,
+      revalidateOnFocus: false,     // ❌ Eliminado
+      revalidateOnReconnect: false, // ❌ Eliminado
+      refreshInterval: 0,           // ❌ Eliminado polling
+      dedupingInterval: 300000,     // ✅ Cache por 5 minutos
       onError: (err) => {
         console.error('Error en AuthContext:', err)
       }
@@ -117,6 +124,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [data?.user?.id, isLoading])
 
+  // ✅ SUPABASE REALTIME - Escuchar cambios del perfil en tiempo real
+  React.useEffect(() => {
+    if (!data?.user?.id) return
+
+    console.log('🔄 Iniciando escucha Realtime para usuario:', data.user?.id)
+
+    const subscription = supabase
+      .channel('user_profile_changes')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${data.user?.id}`
+      }, (payload) => {
+        const newProfile = payload.new
+        const oldProfile = payload.old
+        
+        console.log('🔄 Cambio detectado en tiempo real:', {
+          de: oldProfile.subscription_status,
+          a: newProfile.subscription_status,
+          campos: newProfile
+        })
+        
+        // ⚡ Actualizar estado inmediatamente
+        mutateAuth(currentData => currentData ? ({
+          ...currentData,
+          subscriptionStatus: newProfile.subscription_status,
+          isBanned: newProfile.is_banned,
+          avatarUrl: newProfile.avatar_url,
+          fullName: newProfile.full_name,
+          specialty: newProfile.specialty,
+          country: newProfile.country
+        }) : currentData, false)
+        
+        // 🚨 ACCIONES AUTOMÁTICAS
+        if (newProfile.is_banned && !oldProfile.is_banned) {
+          console.log('🚫 Usuario baneado - redirigiendo...')
+          window.location.href = '/banned'
+        }
+      })
+      .subscribe()
+
+    return () => {
+      console.log('🔄 Desconectando Realtime para usuario:', data.user?.id)
+      subscription.unsubscribe()
+    }
+  }, [data?.user?.id, mutateAuth])
+
   const user = data?.user || null
   const session = data?.session || null
   const userType = data?.userType || 'anonymous'
@@ -147,9 +202,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Actualizar cache inmediatamente
+      // ✅ OBTENER DATOS COMPLETOS después del login (como signup)
       if (result.data) {
-        mutateAuth(result.data, false)
+        console.log('🔄 Login exitoso, obteniendo datos completos del usuario...')
+        
+        // Hacer fetch completo para obtener todos los datos
+        try {
+          const { data: completeData } = await apiClient.get<AuthData>('/auth/session')
+          if (completeData) {
+            console.log('🔄 Actualizando AuthContext con datos completos del login:', completeData)
+            mutateAuth(completeData, false)
+          } else {
+            // Fallback si falla el fetch completo
+            mutateAuth(result.data, false)
+          }
+        } catch (error) {
+          console.error('Error obteniendo datos completos:', error)
+          // Fallback
+          mutateAuth(result.data, false)
+        }
       }
 
       return { error: null }
@@ -159,31 +230,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, fullName?: string, specialty?: string, country?: string, birthDate?: string, paymentReference?: string) => {
-  try {
-    const { data: authData, error } = await apiClient.post<AuthData>('/auth/signup', {
-      email,
-      password,
-      fullName,
-      specialty,
-      country,
-      birthDate,
-      paymentReference,
-    })
+    try {
+      const { data: authData, error } = await apiClient.post<AuthData>('/auth/signup', {
+        email,
+        password,
+        fullName,
+        specialty,
+        country,
+        birthDate,
+        paymentReference,
+      })
 
-    if (error) {
-      return { error: { message: error } }
+      if (error) {
+        return { error: { message: error } }
+      }
+
+      // ✅ ACTUALIZAR CACHE INMEDIATAMENTE con todos los datos del signup
+      if (authData) {
+        console.log('🔄 Actualizando AuthContext con datos completos del signup:', authData)
+        mutateAuth(authData, false)
+      }
+
+      return { error: null }
+    } catch {
+      return { error: { message: 'Network error' } }
     }
-
-    // Actualizar cache inmediatamente
-    if (authData) {
-      mutateAuth(authData, false)
-    }
-
-    return { error: null }
-  } catch {
-    return { error: { message: 'Network error' } }
   }
-}
 
   const signOut = async () => {
     try {
