@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useNotificationsContext } from '@/contexts/NotificationsContext';
 import Avatar from './Avatar';
 import { useState, useRef, useEffect } from 'react';
 
@@ -23,10 +23,12 @@ const formatDateColombia = (utcDate: string) => {
 
 export default function Header() {
   const { user, loading, signOut, fullName, avatarUrl } = useAuth();
-  const { notifications, unreadCount, markAsRead, refresh, isLoading: notificationsLoading } = useNotifications({ 
-    limit: 5,
-    enabled: !!user && !loading
-  });
+  const { notifications, unreadCount, markAsRead, refresh, loading: notificationsLoading } = useNotificationsContext();
+
+  console.log('🏠 [HEADER] Usando contexto - Notifications:', notifications.length, 'Unread:', unreadCount);
+  
+  // Limitar a 5 notificaciones para el dropdown
+  const dropdownNotifications = notifications.slice(0, 5);
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -233,13 +235,13 @@ export default function Header() {
                     </div>
                   ) : (
                     <div className="divide-y divide-gray-100">
-                      {notifications.map((notification) => (
+                      {dropdownNotifications.map((notification) => (
                         <div
                           key={notification.id}
                           className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
                             !notification.is_read ? 'bg-blue-50' : ''
                           }`}
-                          onClick={() => handleNotificationClick(notification.id, notification.cta_url)}
+                          onClick={() => handleNotificationClick(notification.id, notification.cta_url || null)}
                         >
                           <div className={`border-l-4 px-3 py-2 ${getCategoryColor(notification.category)}`}>
                             <div className="flex justify-between items-start mb-1">

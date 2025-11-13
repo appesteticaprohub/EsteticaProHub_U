@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useNotificationsContext } from '@/contexts/NotificationsContext';
 
 // Formatear fecha usando componentes UTC directamente
 const formatDateColombia = (utcDate: string) => {
@@ -23,12 +23,16 @@ export default function NotificationsPage() {
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [limit, setLimit] = useState(20);
 
-  const { notifications, total, unreadCount, isLoading, markAsRead, markAllAsRead, deleteNotification, refresh } = useNotifications({
-    limit,
-    onlyUnread,
-    type: selectedType === 'all' ? undefined : selectedType,
-    category: selectedCategory === 'all' ? undefined : selectedCategory
-  });
+  const { notifications: allNotifications, unreadCount, loading: isLoading, markAsRead, markAllAsRead, deleteNotification, refresh } = useNotificationsContext();
+
+  // ✅ Filtrar en el cliente ya que el contexto trae todas las notificaciones
+  const notifications = allNotifications
+    .filter(notif => selectedType === 'all' || notif.type === selectedType)
+    .filter(notif => selectedCategory === 'all' || notif.category === selectedCategory)
+    .filter(notif => !onlyUnread || !notif.is_read)
+    .slice(0, limit);
+    
+  const total = notifications.length;
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -229,7 +233,7 @@ export default function NotificationsPage() {
                 className={`p-5 hover:bg-gray-50 transition-colors cursor-pointer ${
                   !notification.is_read ? 'bg-blue-50' : ''
                 }`}
-                onClick={() => handleNotificationClick(notification.id, notification.cta_url, notification.is_read)}
+                onClick={() => handleNotificationClick(notification.id, notification.cta_url || null, notification.is_read)}
               >
                 <div className="flex items-start gap-4">
                   {/* Contenido principal */}
