@@ -24,33 +24,33 @@ interface PostClientProps {
 export default function PostClient({ postId }: PostClientProps) {
   const { post, loading, error, incrementViews } = usePost(postId);
   const { user } = useAuth();
-  const { subscriptionStatus, subscriptionData } = useSubscriptionStatus();
+  const { subscriptionStatus, subscriptionData, loading: statusLoading } = useSubscriptionStatus();
   const expirationDate = useMemo(() => {
     return subscriptionData?.subscription_expires_at ? new Date(subscriptionData.subscription_expires_at) : null;
   }, [subscriptionData?.subscription_expires_at]);
   const { viewedPostsCount, incrementViewedPosts, limit } = useAnonymousPostTracker();
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(postId);
   
   const { comments, loading: commentsLoading, error: commentsError, hasMore, loadMore, isLoadingMore, createComment, updateComment, deleteComment } = useCommentsWithActions(postId);
   const [showSnackBar, setShowSnackBar] = useState(false);
   const [snackBarMessage, setSnackBarMessage] = useState('');
   const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false);
-  const [modalContent, setModalContent] = useState<{
-    title: string;
-    message: string;
-    primaryButton: string;
-    primaryAction: () => void;
-    secondaryButton?: string;
-    secondaryAction?: () => void;
-  } | null>(null);
+
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
   
   const router = useRouter();
   const hasIncrementedViews = useRef(false);
   const hasTrackedAnonymousView = useRef(false);
 
   const handleLikeClick = async () => {
+    if (!hasValidAccess()) {
+      setSnackBarMessage('Necesitas una suscripción');
+      setShowSnackBar(true);
+      return;
+    }
+    
     const result = await toggleLike();
     if (result && result.showSnackBar && result.message) {
       setSnackBarMessage(result.message);
@@ -62,54 +62,62 @@ export default function PostClient({ postId }: PostClientProps) {
     setShowSnackBar(false);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setModalContent(null);
-  };
-
   const goToSubscription = () => {
     console.log('Navegando a /suscripcion');
     router.push('/suscripcion');
   };
 
+  const handleCloseModal = () => {
+    setShowModal(false);
+    router.push('/');
+  };
+
+  const handleGoToSubscription = () => {
+    setShowModal(false);
+    router.push('/suscripcion');
+  };
+
   useEffect(() => {
-    if (!loading && post) {
+    if (!loading && !statusLoading && post) {
+      // Usuario con estado Expired
       if (user && subscriptionStatus === 'Expired') {
-        setModalContent({
-          title: 'Suscripción Expirada',
-          message: 'Tu suscripción ha expirado. Renueva ahora para continuar disfrutando del contenido premium.',
-          primaryButton: 'Renovar Suscripción',
-          primaryAction: () => {
-            setIsModalOpen(false);
-            router.push('/suscripcion');
-          }
-        });
-        setIsModalOpen(true);
+        setModalMessage('Tu suscripción ha expirado. Necesitas renovar para continuar.');
+        setShowModal(true);
         return;
       }
 
+      // Usuario con estado Cancelled - verificar si aún tiene acceso
       if (user && subscriptionStatus === 'Cancelled') {
-        const now = new Date();
-        const expirationDate = subscriptionData.subscription_expires_at ? new Date(subscriptionData.subscription_expires_at) : null;
-        
-        if (expirationDate && now <= expirationDate) {
-          setIsModalOpen(false);
-          setModalContent(null);
-        } else {
-          setModalContent({
-            title: 'Suscripción Cancelada Expirada',
-            message: 'Tu suscripción cancelada ha expirado. Renueva ahora para continuar accediendo al contenido premium.',
-            primaryButton: 'Renovar Suscripción',
-            primaryAction: () => {
-              setIsModalOpen(false);
-              router.push('/suscripcion');
-            }
-          });
-          setIsModalOpen(true);
+        // ✅ Esperar a que subscriptionData esté completamente cargado
+        if (!subscriptionData?.subscription_expires_at) {
+          console.log('⏳ [POST] Esperando datos completos de suscripción...');
+          return; // No hacer nada hasta que los datos estén listos
         }
-        return;
+        
+        const now = new Date();
+        const expirationDate = new Date(subscriptionData.subscription_expires_at);
+        
+        console.log('🔍 [POST] Usuario Cancelled - verificando acceso:', {
+          ahora: now.toISOString(),
+          expira: expirationDate.toISOString(),
+          tieneAcceso: now <= expirationDate
+        });
+        
+        if (now <= expirationDate) {
+          // Aún tiene acceso hasta la fecha de expiración
+          console.log('✅ [POST] Usuario Cancelled con acceso válido hasta:', expirationDate);
+          setShowModal(false);
+          return;
+        } else {
+          // Ya expiró el acceso
+          console.log('❌ [POST] Usuario Cancelled sin acceso válido');
+          setModalMessage('Tu suscripción cancelada ha expirado. Necesitas renovar para continuar.');
+          setShowModal(true);
+          return;
+        }
       }
 
+      // Usuario con problemas de pago
       if (user && (subscriptionStatus === 'Payment_Failed' || 
                    subscriptionStatus === 'Grace_Period' || 
                    subscriptionStatus === 'Suspended')) {
@@ -117,13 +125,13 @@ export default function PostClient({ postId }: PostClientProps) {
         return;
       }
 
+      // Usuario anónimo tracking
       if (!user && !hasTrackedAnonymousView.current) {
         incrementViewedPosts();
         hasTrackedAnonymousView.current = true;
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, post, user, subscriptionStatus, expirationDate]);
+  }, [loading, statusLoading, post, user, subscriptionStatus, subscriptionData?.subscription_expires_at]);
 
   useEffect(() => {
     if (post && !loading && !error && !hasIncrementedViews.current) {
@@ -142,6 +150,20 @@ export default function PostClient({ postId }: PostClientProps) {
 
   const shouldShowTruncatedContent = () => {
     return !user && viewedPostsCount > limit;
+  };
+
+  const hasValidAccess = () => {
+    if (!user) return false;
+    
+    if (subscriptionStatus === 'Active') return true;
+    
+    if (subscriptionStatus === 'Cancelled' && subscriptionData?.subscription_expires_at) {
+      const now = new Date();
+      const expirationDate = new Date(subscriptionData.subscription_expires_at);
+      return now <= expirationDate;
+    }
+    
+    return false;
   };
 
   if (loading) {
@@ -312,7 +334,7 @@ export default function PostClient({ postId }: PostClientProps) {
           onLoadMore={loadMore}
           onCreateComment={createComment}
           onReply={async (commentId: string, content: string) => {
-            if (!user || subscriptionStatus !== 'Active') {
+            if (!hasValidAccess()) {
               setSnackBarMessage('Necesitas una suscripción');
               setShowSnackBar(true);
               throw new Error('Sin suscripción');
@@ -334,7 +356,7 @@ export default function PostClient({ postId }: PostClientProps) {
             }
           }}
           onUpdate={async (commentId: string, content: string) => {
-            if (!user || subscriptionStatus !== 'Active') {
+            if (!hasValidAccess()) {
               setSnackBarMessage('Necesitas una suscripción');
               setShowSnackBar(true);
               throw new Error('Sin suscripción');
@@ -356,7 +378,7 @@ export default function PostClient({ postId }: PostClientProps) {
             }
           }}
           onDelete={async (commentId: string) => {
-            if (!user || subscriptionStatus !== 'Active') {
+            if (!hasValidAccess()) {
               setSnackBarMessage('Necesitas una suscripción');
               setShowSnackBar(true);
               throw new Error('Sin suscripción');
@@ -379,7 +401,7 @@ export default function PostClient({ postId }: PostClientProps) {
           }}
           currentUserId={user?.id || null}
           user={user}
-          subscriptionStatus={subscriptionStatus}
+          subscriptionStatus={hasValidAccess() ? 'Active' : subscriptionStatus}
           onShowSnackBar={(message: string) => {
             setSnackBarMessage(message);
             setShowSnackBar(true);
@@ -393,39 +415,30 @@ export default function PostClient({ postId }: PostClientProps) {
         paymentRetryCount={subscriptionData.payment_retry_count}
         gracePeriodEnds={subscriptionData.grace_period_ends}
       />
-      {modalContent && (
-        <Modal isOpen={isModalOpen} onClose={closeModal}>
-          <div className="text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
-              <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {modalContent.title}
-            </h3>
-            <p className="text-sm text-gray-500 mb-6">
-              {modalContent.message}
-            </p>
-            <div className="flex gap-3 justify-center">
-              {modalContent.secondaryButton && modalContent.secondaryAction && (
-                <button
-                  onClick={modalContent.secondaryAction}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
-                >
-                  {modalContent.secondaryButton}
-                </button>
-              )}
-              <button
-                onClick={modalContent.primaryAction}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200"
-              >
-                {modalContent.primaryButton}
-              </button>
-            </div>
+      <Modal isOpen={showModal} onClose={handleCloseModal}>
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Acceso Restringido
+          </h3>
+          <p className="text-gray-600 mb-6">
+            {modalMessage}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={handleGoToSubscription}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md transition-colors"
+            >
+              Renovar Suscripción
+            </button>
           </div>
-        </Modal>
-      )}
+          <button
+            onClick={handleCloseModal}
+            className="mt-4 text-gray-500 hover:text-gray-700 text-sm"
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </Modal>
       <SnackBar 
         message={snackBarMessage}
         isVisible={showSnackBar}

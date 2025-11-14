@@ -82,7 +82,7 @@ export default function CrearPost() {
   ];
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && !statusLoading) {
       // Situación 1: Usuario anónimo o sin sesión
       if (!session || userType === 'anonymous') {
         setModalMessage('Necesitas una suscripción');
@@ -107,15 +107,29 @@ export default function CrearPost() {
 
       // Situación 4: Usuario premium con estado Cancelled - verificar si aún tiene acceso
       if (session && userType === 'premium' && subscriptionStatus === 'Cancelled') {
-        const now = new Date();
-        const expirationDate = subscriptionData.subscription_expires_at ? new Date(subscriptionData.subscription_expires_at) : null;
+        // ✅ Esperar a que subscriptionData esté completamente cargado
+        if (!subscriptionData?.subscription_expires_at) {
+          console.log('⏳ Esperando datos completos de suscripción...');
+          return; // No hacer nada hasta que los datos estén listos
+        }
         
-        if (expirationDate && now <= expirationDate) {
+        const now = new Date();
+        const expirationDate = new Date(subscriptionData.subscription_expires_at);
+        
+        console.log('🔍 Usuario Cancelled - verificando acceso:', {
+          ahora: now.toISOString(),
+          expira: expirationDate.toISOString(),
+          tieneAcceso: now <= expirationDate
+        });
+        
+        if (now <= expirationDate) {
           // Aún tiene acceso hasta la fecha de expiración
+          console.log('✅ Usuario Cancelled con acceso válido hasta:', expirationDate);
           setShowModal(false);
           return;
         } else {
           // Ya expiró el acceso
+          console.log('❌ Usuario Cancelled sin acceso válido');
           setModalMessage('Tu suscripción cancelada ha expirado. Necesitas renovar para continuar.');
           setModalButtons('renew');
           setShowModal(true);
@@ -132,7 +146,7 @@ export default function CrearPost() {
         return;
       }
     }
-  }, [session, userType, subscriptionStatus, loading, subscriptionData.subscription_expires_at]);
+  }, [session, userType, subscriptionStatus, loading, statusLoading, subscriptionData?.subscription_expires_at]);
 
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();

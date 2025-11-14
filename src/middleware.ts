@@ -1,6 +1,12 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/server-supabase'
+import { 
+  getUserProfileForMiddleware, 
+  isSubscriptionExpired, 
+  updateExpiredSubscription,
+  isInGracePeriod 
+} from '@/lib/subscription-utils'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -123,11 +129,16 @@ if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')
 
   console.log('Ruta visitada:', request.nextUrl.pathname)
 
-  // Definir rutas
+  // Definir rutas con lógica inteligente
+  const publicRoutes = ['/', '/login', '/olvidaste-contrasena', '/restablecer-contrasena']
   const authRoutes = ['/login']
   const registrationRoute = '/registro'
   const fullyProtectedRoutes = ['/perfil']  // Solo perfil requiere login obligatorio
   const subscriptionVerificationRoutes = ['/crear-post', '/post', '/suscripcion', '/busqueda']  // Verifican suscripción si hay usuario autenticado
+  
+  const isPublicRoute = publicRoutes.some(route => 
+    request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route)
+  )
   
   const isAuthRoute = authRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
@@ -139,7 +150,7 @@ if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')
     request.nextUrl.pathname.startsWith(route)
   )
   
-  // Rutas de búsqueda también verifican suscripción
+  // Rutas que verifican suscripción cuando hay usuario autenticado
   const needsSubscriptionCheck = subscriptionVerificationRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   )
@@ -150,15 +161,14 @@ if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Verificación de suscripciones para rutas específicas cuando hay usuario
-  if ((isFullyProtected || needsSubscriptionCheck) && user) {
-    console.log('Verificando suscripción para usuario:', user.email)
+  // ✅ OPTIMIZACIÓN: Solo hacer validaciones complejas donde se necesitan
+  // Para páginas públicas con usuario autenticado: NO consultar BD (AuthContext maneja los datos)
+  if (user && !isPublicRoute && (isFullyProtected || needsSubscriptionCheck)) {
+    console.log('Verificando suscripción para usuario en página protegida:', user.email)
     
     try {
-      // Importar las funciones de verificación
-      const { getUserProfile, isSubscriptionExpired, updateExpiredSubscription } = await import('@/lib/subscription-utils')
-      
-      const profile = await getUserProfile(user.id)
+      // ✅ UNA SOLA consulta consolidada con campos específicos
+      const profile = await getUserProfileForMiddleware(user.id)
       
       if (profile) {
         console.log('Perfil encontrado:', {
@@ -166,10 +176,7 @@ if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')
           expiresAt: profile.subscription_expires_at
         })
         
-        // Importar nuevas funciones para estados avanzados
-        const { isInGracePeriod } = await import('@/lib/subscription-utils')
-        
-        // Manejar diferentes estados de suscripción
+        // Manejar diferentes estados de suscripción con validaciones mínimas
         if (profile.subscription_status === 'Active' && 
             isSubscriptionExpired(profile.subscription_expires_at)) {
           
@@ -183,21 +190,6 @@ if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')
           console.log('Período de gracia expirado, actualizando a Expired...')
           await updateExpiredSubscription(user.id)
           
-        } else if (profile.subscription_status === 'Payment_Failed') {
-          
-          console.log('Usuario con pago fallido detectado - UI manejará recovery')
-          
-        } else if (profile.subscription_status === 'Suspended' && 
-                   isSubscriptionExpired(profile.subscription_expires_at)) {
-          
-          console.log('Suscripción Suspended expirada, actualizando a Expired...')
-          await updateExpiredSubscription(user.id)
-          
-        } else if (profile.subscription_status === 'Suspended' && 
-                   !isSubscriptionExpired(profile.subscription_expires_at)) {
-          
-          console.log('Usuario con suscripción suspendida pero aún con acceso válido hasta:', profile.subscription_expires_at)
-          
         } else if (profile.subscription_status === 'Cancelled' && 
            isSubscriptionExpired(profile.subscription_expires_at)) {
           
@@ -205,14 +197,25 @@ if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')
           await updateExpiredSubscription(user.id)
         }
         
-        // Permitir acceso - las páginas manejarán el UI para usuarios expirados
+        // ✅ Estados como Payment_Failed y Suspended solo se registran, UI los maneja
+        if (profile.subscription_status === 'Payment_Failed') {
+          console.log('Usuario con pago fallido detectado - UI manejará recovery')
+        } else if (profile.subscription_status === 'Suspended') {
+          console.log('Usuario con suscripción suspendida - UI manejará recovery')  
+        }
+        
       } else {
-        console.log('No se pudo obtener el perfil del usuario')
+        console.log('No se pudo obtener el perfil del usuario para middleware')
       }
     } catch (error) {
       console.error('Error en verificación de suscripción:', error)
     }
+  } else if (user && isPublicRoute) {
+    console.log('✅ Usuario en página pública - sin validaciones BD (AuthContext maneja datos)')
+  } else if (!user) {
+    console.log('✅ Usuario anónimo - sin consultas BD innecesarias')
   }
+  
 
   // Si ya está autenticado y trata de acceder a login, redirigir a home
   if (isAuthRoute && user) {

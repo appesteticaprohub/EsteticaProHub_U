@@ -72,6 +72,43 @@ export async function getUserProfile(userId: string) {
   return profile
 }
 
+// Función optimizada específica para middleware - solo campos necesarios
+export async function getUserProfileForMiddleware(userId: string) {
+  const cookieStore = await cookies()
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    }
+  )
+  
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select(`
+      id, 
+      is_banned, 
+      role,
+      subscription_status, 
+      subscription_expires_at,
+      grace_period_ends
+    `)
+    .eq('id', userId)
+    .single()
+  
+  if (error) {
+    console.error('Error fetching user profile for middleware:', error)
+    return null
+  }
+  
+  return profile
+}
+
 // ==================== FUNCIONES PARA PAGOS RECURRENTES ====================
 
 export async function updatePaymentFailed(userId: string, retryCount: number = 0) {
@@ -281,4 +318,41 @@ export async function reactivateSubscription(userId: string) {
   }
   
   return true
+}
+
+// Función helper para validar acceso válido (backend)
+export async function hasValidSubscriptionAccess(userId: string): Promise<boolean> {
+  const cookieStore = await cookies()
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    }
+  )
+  
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('subscription_status, subscription_expires_at')
+    .eq('id', userId)
+    .single()
+  
+  if (error || !profile) return false
+  
+  // Usuario con suscripción activa
+  if (profile.subscription_status === 'Active') return true
+  
+  // Usuario cancelado pero con fecha válida
+  if (profile.subscription_status === 'Cancelled' && profile.subscription_expires_at) {
+    const now = new Date()
+    const expirationDate = new Date(profile.subscription_expires_at)
+    return now <= expirationDate
+  }
+  
+  return false
 }

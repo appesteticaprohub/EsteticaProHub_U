@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/server-supabase'
 import { Comment } from '@/types/api'
+import { hasValidSubscriptionAccess } from '@/lib/subscription-utils'
 
 export async function PUT(
   request: NextRequest,
@@ -30,14 +31,10 @@ export async function PUT(
       )
     }
 
-    // Verificar que el usuario tiene suscripción activa
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('subscription_status')
-      .eq('id', user.id)
-      .single()
+    // Verificar que el usuario tiene acceso válido (Active o Cancelled con fecha válida)
+    const hasAccess = await hasValidSubscriptionAccess(user.id)
 
-    if (profileError || !profile || profile.subscription_status !== 'Active') {
+    if (!hasAccess) {
       return NextResponse.json(
         { data: null, error: 'Necesitas una suscripción activa' },
         { status: 403 }
@@ -143,14 +140,10 @@ export async function DELETE(
       )
     }
 
-    // Verificar que el usuario tiene suscripción activa
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('subscription_status')
-      .eq('id', user.id)
-      .single()
+    // Verificar que el usuario tiene acceso válido (Active o Cancelled con fecha válida)
+    const hasAccess = await hasValidSubscriptionAccess(user.id)
 
-    if (profileError || !profile || profile.subscription_status !== 'Active') {
+    if (!hasAccess) {
       return NextResponse.json(
         { data: null, error: 'Necesitas una suscripción activa' },
         { status: 403 }
