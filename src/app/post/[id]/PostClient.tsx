@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePost } from '@/hooks/usePost';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,9 +25,6 @@ export default function PostClient({ postId }: PostClientProps) {
   const { post, loading, error, incrementViews } = usePost(postId);
   const { user } = useAuth();
   const { subscriptionStatus, subscriptionData, loading: statusLoading } = useSubscriptionStatus();
-  const expirationDate = useMemo(() => {
-    return subscriptionData?.subscription_expires_at ? new Date(subscriptionData.subscription_expires_at) : null;
-  }, [subscriptionData?.subscription_expires_at]);
   const { viewedPostsCount, incrementViewedPosts, limit } = useAnonymousPostTracker();
   
   const { isLiked, likesCount, loading: likesLoading, toggleLike } = useLikes(postId);
@@ -131,14 +128,14 @@ export default function PostClient({ postId }: PostClientProps) {
         hasTrackedAnonymousView.current = true;
       }
     }
-  }, [loading, statusLoading, post, user, subscriptionStatus, subscriptionData?.subscription_expires_at]);
+  }, [loading, statusLoading, post, user, subscriptionStatus, subscriptionData?.subscription_expires_at, incrementViewedPosts]);
 
-  useEffect(() => {
-    if (post && !loading && !error && !hasIncrementedViews.current) {
-      incrementViews(postId);
-      hasIncrementedViews.current = true;
-    }
-  }, [post, loading, error, incrementViews, postId]);
+useEffect(() => {
+  if (post && !loading && !error && !hasIncrementedViews.current) {
+    incrementViews(postId);
+    hasIncrementedViews.current = true;
+  }
+}, [post, loading, error, incrementViews, postId]);
 
   const getTruncatedContent = (content: string, lines: number = 4) => {
     const contentLines = content.split('\n');
