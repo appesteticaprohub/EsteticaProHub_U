@@ -12,6 +12,7 @@ import ImageUploader from '@/components/ImageUploader';
 import { ImageSettings } from '@/types/api';
 import RichTextEditor from '@/components/RichTextEditor';
 import { sanitizeHTML } from '@/lib/html-sanitizer';
+import { getCachedSettings, setCachedSettings } from '@/lib/image-utils';
 import imageCompression from 'browser-image-compression';
 
 // Tipo para la respuesta del post creado
@@ -44,30 +45,63 @@ export default function CrearPost() {
   const [isUploading, setIsUploading] = useState(false);
   const [imageSettings, setImageSettings] = useState<ImageSettings | null>(null);
 
-  // Cargar configuración de imágenes
-  useEffect(() => {
-    const loadImageSettings = async () => {
-      try {
-        const response = await fetch('/api/settings');
-        const result = await response.json();
-        if (result.data) {
-          // Construir objeto ImageSettings desde las configuraciones individuales
-          const settings: ImageSettings = {
-            max_images_per_post: result.data.max_images_per_post || 3,
-            max_image_size_mb: result.data.max_image_size_mb || 2,
-            allowed_formats: result.data.allowed_formats || ['image/jpeg', 'image/png', 'image/webp'],
-            compression_quality: result.data.compression_quality || 0.8,
-            max_width: result.data.max_width || 1920,
-            max_height: result.data.max_height || 1920
-          };
-          setImageSettings(settings);
-        }
-      } catch (error) {
-        console.error('Error al cargar configuración de imágenes:', error);
+  // Estado para evitar múltiples cargas
+const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+// Cargar configuración de imágenes con cache inteligente
+useEffect(() => {
+  if (settingsLoaded) return; // ✅ Evitar múltiples ejecuciones
+  
+  const loadImageSettings = async () => {
+    try {
+      // ✅ Primero intentar obtener desde cache
+      const cachedSettings = await getCachedSettings<ImageSettings>();
+      console.log('🔍 Cache check result:', cachedSettings ? 'FOUND' : 'NOT_FOUND');
+      if (cachedSettings) {
+        console.log('✅ Usando configuración desde cache:', cachedSettings);
+        setImageSettings(cachedSettings);
+        setSettingsLoaded(true); // ✅ Marcar como cargado
+        return;
       }
-    };
-    loadImageSettings();
-  }, []);
+
+      // ✅ Si no hay cache, hacer fetch al servidor
+      console.log('🔄 Descargando configuración desde servidor');
+      const response = await fetch('/api/settings');
+      const result = await response.json();
+      
+      if (result.data) {
+        // Construir objeto ImageSettings desde las configuraciones individuales
+        const settings: ImageSettings = {
+          max_images_per_post: result.data.max_images_per_post || 3,
+          max_image_size_mb: result.data.max_image_size_mb || 2,
+          allowed_formats: result.data.allowed_formats || ['image/jpeg', 'image/png', 'image/webp'],
+          compression_quality: result.data.compression_quality || 0.8,
+          max_width: result.data.max_width || 1920,
+          max_height: result.data.max_height || 1920
+        };
+        
+        // ✅ Guardar en cache por 24 horas
+        setCachedSettings(settings);
+        console.log('✅ Configuración guardada en cache por 24 horas');
+        
+        setImageSettings(settings);
+        setSettingsLoaded(true); // ✅ Marcar como cargado
+      }
+    } catch (error) {
+      console.error('Error al cargar configuración de imágenes:', error);
+      
+      // ✅ Fallback: intentar usar cache aunque esté expirado
+      const expiredCache = await getCachedSettings<ImageSettings>();
+      if (expiredCache) {
+        console.log('⚠️ Usando configuración expirada como fallback');
+        setImageSettings(expiredCache);
+        setSettingsLoaded(true); // ✅ Marcar como cargado
+      }
+    }
+  };
+  
+  loadImageSettings();
+}, [settingsLoaded]);
 
   // Categorías de ejemplo para estética profesional
   const categorias = [
@@ -267,6 +301,7 @@ export default function CrearPost() {
         subscriptionStatus={subscriptionStatus || ''}
         paymentRetryCount={subscriptionData.payment_retry_count}
         gracePeriodEnds={subscriptionData.grace_period_ends}
+        paypalSubscriptionId={subscriptionData.paypal_subscription_id}
       />
       {/* Modal de protección */}
       <Modal isOpen={showModal} onClose={handleCloseModal}>

@@ -100,3 +100,88 @@ export function formatFileSize(bytes: number): string {
   
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
 }
+
+/**
+ * Utilidades de cache para datos que no cambian frecuentemente
+ */
+
+interface CacheItem<T> {
+  data: T
+  timestamp: number
+  ttl: number // Time to live en milliseconds
+}
+
+/**
+ * Guarda un item en cache con TTL
+ */
+export function setCacheItem<T>(key: string, data: T, ttlHours: number = 24): void {
+  try {
+    const item: CacheItem<T> = {
+      data,
+      timestamp: Date.now(),
+      ttl: ttlHours * 60 * 60 * 1000 // Convertir horas a milliseconds
+    }
+    localStorage.setItem(`estetica_cache_${key}`, JSON.stringify(item))
+  } catch (error) {
+    console.warn('Error guardando en cache:', error)
+  }
+}
+
+/**
+ * Obtiene un item del cache si no ha expirado
+ */
+export function getCacheItem<T>(key: string): T | null {
+  try {
+    const cached = localStorage.getItem(`estetica_cache_${key}`)
+    if (!cached) return null
+
+    const item: CacheItem<T> = JSON.parse(cached)
+    const now = Date.now()
+    
+    // Verificar si el cache ha expirado
+    if (now - item.timestamp > item.ttl) {
+      // Cache expirado, eliminar
+      localStorage.removeItem(`estetica_cache_${key}`)
+      return null
+    }
+
+    return item.data
+  } catch (error) {
+    console.warn('Error leyendo cache:', error)
+    return null
+  }
+}
+
+/**
+ * Limpia un item específico del cache
+ */
+export function clearCacheItem(key: string): void {
+  try {
+    localStorage.removeItem(`estetica_cache_${key}`)
+  } catch (error) {
+    console.warn('Error limpiando cache:', error)
+  }
+}
+
+/**
+ * Limpia todo el cache de la aplicación
+ */
+export function clearAllCache(): void {
+  try {
+    const keys = Object.keys(localStorage).filter(key => key.startsWith('estetica_cache_'))
+    keys.forEach(key => localStorage.removeItem(key))
+  } catch (error) {
+    console.warn('Error limpiando todo el cache:', error)
+  }
+}
+
+/**
+ * Cache específico para settings de la aplicación
+ */
+export async function getCachedSettings<T>(): Promise<T | null> {
+  return getCacheItem<T>('app_settings')
+}
+
+export function setCachedSettings<T>(settings: T): void {
+  setCacheItem('app_settings', settings, 24) // Cache por 24 horas
+}

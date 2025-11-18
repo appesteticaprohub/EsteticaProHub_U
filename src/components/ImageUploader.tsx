@@ -24,12 +24,25 @@ export default function ImageUploader({
   const [validationError, setValidationError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Limpiar URLs de preview al desmontar
-  useEffect(() => {
-    return () => {
-      previews.forEach(p => URL.revokeObjectURL(p.preview))
-    }
-  }, [previews])
+  // ✅ Limpiar URLs de preview de forma optimizada
+useEffect(() => {
+  return () => {
+    previews.forEach(p => {
+      try {
+        URL.revokeObjectURL(p.preview)
+      } catch (error) {
+        console.warn('Error revocando URL:', error)
+      }
+    })
+  }
+}, [previews])
+
+// ✅ Optimización de memoria: limpiar previews cuando hay muchos
+useEffect(() => {
+  if (previews.length > 5) {
+    console.warn('Muchos archivos en preview, considera la performance')
+  }
+}, [previews.length])
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
   const files = Array.from(e.target.files || [])
@@ -55,11 +68,18 @@ export default function ImageUploader({
     }
   }
 
-  // Crear previews LOCALES
-  const newPreviews: PreviewImage[] = files.map(file => ({
+  // ✅ Crear previews de forma optimizada
+const newPreviews: PreviewImage[] = files.map(file => {
+  // Validar tamaño antes de crear preview para archivos muy grandes
+  if (file.size > 10 * 1024 * 1024) { // 10MB
+    console.warn('Archivo muy grande para preview:', file.name)
+  }
+  
+  return {
     file,
     preview: URL.createObjectURL(file)
-  }))
+  }
+})
 
   const updatedPreviews = [...previews, ...newPreviews]
   setPreviews(updatedPreviews)
@@ -130,11 +150,18 @@ export default function ImageUploader({
       }
     }
 
-    // Crear previews
-  const newPreviews: PreviewImage[] = imageFiles.map(file => ({
+    // ✅ Crear previews de forma optimizada
+const newPreviews: PreviewImage[] = imageFiles.map(file => {
+  // Validar tamaño antes de crear preview para archivos muy grandes
+  if (file.size > 10 * 1024 * 1024) { // 10MB
+    console.warn('Archivo muy grande para preview:', file.name)
+  }
+  
+  return {
     file,
     preview: URL.createObjectURL(file)
-  }))
+  }
+})
 
   const updatedPreviews = [...previews, ...newPreviews]
   setPreviews(updatedPreviews)

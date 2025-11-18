@@ -1,3 +1,5 @@
+//src/hooks/useSubscriptionStatus.ts
+
 'use client'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -27,8 +29,80 @@ export function useSubscriptionStatus() {
     paypal_subscription_id: null
   })
 
-  // ✅ Solo hacer fetch inicial una vez, luego usar datos de AuthContext
-  useEffect(() => {
+  // ✅ Bandera para evitar múltiples llamadas simultáneas
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+
+  // ✅ FUNCIONES DEFINIDAS ANTES DEL useEffect
+  const fetchInitialData = async () => {
+    try {
+      console.log('🔄 Fetching initial subscription data')
+      const { data, error } = await apiClient.get('/subscription-status')
+      
+      if (error) {
+        console.log('Error inicial subscription status:', error)
+        return
+      }
+
+      if (data && typeof data === 'object') {
+        const subscriptionData = data as SubscriptionData
+        setSubscriptionData({
+          subscription_status: subscriptionData.subscription_status || null,
+          subscription_expires_at: subscriptionData.subscription_expires_at || null,
+          payment_retry_count: subscriptionData.payment_retry_count || 0,
+          last_payment_attempt: subscriptionData.last_payment_attempt || null,
+          grace_period_ends: subscriptionData.grace_period_ends || null,
+          auto_renewal_enabled: subscriptionData.auto_renewal_enabled || false,
+          paypal_subscription_id: subscriptionData.paypal_subscription_id || null
+        })
+      }
+    } catch (error) {
+      console.log('Error de red en subscription status inicial:', error)
+    }
+  }
+
+  // ✅ NUEVA FUNCIÓN: Solo para casos que necesitan datos adicionales
+  const fetchDetailedData = async () => {
+    try {
+      console.log('🔄 Iniciando fetch de datos detallados...')
+      const { data, error } = await apiClient.get('/subscription-status')
+      
+      console.log('🔄 Respuesta del API:', { data, error })
+      
+      if (error) {
+        console.log('❌ Error fetching detailed subscription data:', error)
+        setIsLoadingDetails(false)
+        return
+      }
+
+      if (data && typeof data === 'object') {
+        const subscriptionData = data as SubscriptionData
+        console.log('🔄 Datos de suscripción recibidos:', subscriptionData)
+        console.log('🔄 PayPal Subscription ID:', subscriptionData.paypal_subscription_id)
+        
+        setSubscriptionData({
+          subscription_status: subscriptionStatus, // Usar del AuthContext
+          subscription_expires_at: subscriptionData.subscription_expires_at || null,
+          payment_retry_count: subscriptionData.payment_retry_count || 0,
+          last_payment_attempt: subscriptionData.last_payment_attempt || null,
+          grace_period_ends: subscriptionData.grace_period_ends || null,
+          auto_renewal_enabled: subscriptionData.auto_renewal_enabled || false,
+          paypal_subscription_id: subscriptionData.paypal_subscription_id || null
+        })
+        
+        console.log('✅ subscriptionData actualizado con paypal_subscription_id:', subscriptionData.paypal_subscription_id)
+        setIsLoadingDetails(false)
+      } else {
+        console.log('❌ No se recibieron datos válidos:', data)
+        setIsLoadingDetails(false)
+      }
+    } catch (error) {
+      console.log('❌ Error de red en fetchDetailedData:', error)
+      setIsLoadingDetails(false)
+    }
+  }
+
+  // ✅ CORREGIDO: Solo hacer fetch cuando realmente sea necesario
+useEffect(() => {
     if (!user || loading) {
       setSubscriptionData({
         subscription_status: null,
@@ -42,36 +116,34 @@ export function useSubscriptionStatus() {
       return
     }
 
-    // Solo hacer fetch la primera vez
-    const fetchInitialData = async () => {
-      try {
-        const { data, error } = await apiClient.get('/subscription-status')
-        
-        if (error) {
-          console.log('Error inicial subscription status:', error)
-          return
-        }
-
-        if (data && typeof data === 'object') {
-          const subscriptionData = data as SubscriptionData
-          setSubscriptionData({
-            subscription_status: subscriptionData.subscription_status || null,
-            subscription_expires_at: subscriptionData.subscription_expires_at || null,
-            payment_retry_count: subscriptionData.payment_retry_count || 0,
-            last_payment_attempt: subscriptionData.last_payment_attempt || null,
-            grace_period_ends: subscriptionData.grace_period_ends || null,
-            auto_renewal_enabled: subscriptionData.auto_renewal_enabled || false,
-            paypal_subscription_id: subscriptionData.paypal_subscription_id || null
-          })
-        }
-      } catch (error) {
-        console.log('Error de red en subscription status inicial:', error)
+    if (subscriptionStatus && !isLoadingDetails) {
+      const needsDetailedData = subscriptionStatus === 'Payment_Failed' || 
+                               subscriptionStatus === 'Grace_Period' || 
+                               subscriptionStatus === 'Suspended' ||
+                               subscriptionStatus === 'Cancelled'
+      
+      // Solo hacer fetch si necesita datos detallados Y no los tiene aún
+      if (needsDetailedData && !subscriptionData.paypal_subscription_id) {
+        console.log('🔄 Fetching detailed data for status:', subscriptionStatus)
+        setIsLoadingDetails(true)
+        fetchDetailedData()
+      } else if (!needsDetailedData) {
+        // Para estados simples, usar solo datos del AuthContext
+        setSubscriptionData(current => ({
+          ...current,
+          subscription_status: subscriptionStatus
+        }))
       }
+      return
     }
 
-    fetchInitialData()
+    // Fetch inicial solo si no hay subscriptionStatus del AuthContext
+    if (!subscriptionStatus && !isLoadingDetails) {
+      fetchInitialData()
+    }
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]) // ✅ Solo cuando cambie el ID - elimina fetches innecesarios
+}, [user?.id, subscriptionStatus, isLoadingDetails])
 
   // ✅ Actualizar datos cuando AuthContext cambie (via Realtime)
   useEffect(() => {

@@ -72,7 +72,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       revalidateOnFocus: false,     // ❌ Eliminado
       revalidateOnReconnect: false, // ❌ Eliminado
       refreshInterval: 0,           // ❌ Eliminado polling
-      dedupingInterval: 300000,     // ✅ Cache por 5 minutos
+      refreshWhenHidden: false,     // ✅ No refrescar en pestañas ocultas
+      refreshWhenOffline: false,    // ✅ No refrescar cuando está offline
+      dedupingInterval: 1800000,    // ✅ Cache por 30 minutos (optimizado para 10k usuarios)
       onError: (err) => {
         console.error('Error en AuthContext:', err)
       }

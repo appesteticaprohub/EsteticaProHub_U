@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { sanitizeHTML } from '@/lib/html-sanitizer';
 
 interface RichTextEditorProps {
@@ -19,6 +19,7 @@ export default function RichTextEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const lastValueRef = useRef(value);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Solo inicializar al montar, NUNCA sobrescribir durante la edición
   useEffect(() => {
@@ -54,14 +55,42 @@ export default function RichTextEditor({
     }
   }, [value, isFocused]);
 
-  // Manejar cambios en el editor
-  const handleInput = () => {
-    if (!editorRef.current) return;
-    
-    const html = editorRef.current.innerHTML;
-    lastValueRef.current = html;
-    onChange(html);
+  // ✅ Cleanup del timeout al desmontar
+useEffect(() => {
+  return () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
   };
+}, []);
+
+  // ✅ Debounced onChange para evitar procesamiento excesivo
+const debouncedOnChange = useMemo(
+  () => {
+    return (html: string) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
+      timeoutRef.current = setTimeout(() => {
+        const sanitizedHtml = sanitizeHTML(html);
+        onChange(sanitizedHtml);
+      }, 300); // 300ms de delay
+    };
+  },
+  [onChange]
+);
+
+// Manejar cambios en el editor (ahora con debouncing)
+const handleInput = useCallback(() => {
+  if (!editorRef.current) return;
+  
+  const html = editorRef.current.innerHTML;
+  lastValueRef.current = html;
+  
+  // ✅ Usar debounced onChange en lugar de inmediato
+  debouncedOnChange(html);
+}, [debouncedOnChange]);
 
   // Aplicar formato usando execCommand
   const applyFormat = (command: string, value?: string) => {
@@ -219,18 +248,23 @@ export default function RichTextEditor({
         onPaste={handlePaste}
         onKeyDown={handleKeyDown}
         onFocus={() => setIsFocused(true)}
-         onBlur={() => {
+         onBlur={useCallback(() => {
           setIsFocused(false);
           if (editorRef.current) {
+            // ✅ Al perder foco, aplicar cambios inmediatamente (cancelar debounce)
+            if (timeoutRef.current) {
+              clearTimeout(timeoutRef.current);
+              timeoutRef.current = null;
+            }
+            
             const html = editorRef.current.innerHTML;
             const sanitized = sanitizeHTML(html);
-            // Solo llamar onChange si el contenido cambió
             if (sanitized !== lastValueRef.current) {
               lastValueRef.current = sanitized;
               onChange(sanitized);
             }
           }
-        }}
+        }, [onChange])}
         className="rich-text-editor min-h-[200px] p-3 focus:outline-none text-gray-900"
         style={{
           whiteSpace: 'pre-wrap',
