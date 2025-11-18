@@ -6,8 +6,7 @@ import { NotificationService } from '@/lib/notification-service';
 // Verificar firma del webhook de PayPal
 async function verifyPayPalWebhookSignature(
   webhookId: string,
-  headers: Headers,
-  body: string
+  headers: Headers
 ): Promise<boolean> {
   try {
     // En producción, deberías verificar la firma
@@ -38,7 +37,7 @@ export async function POST(request: NextRequest) {
     
     // Verificar firma de PayPal (seguridad)
     const webhookId = process.env.PAYPAL_WEBHOOK_ID || '';
-    const isValid = await verifyPayPalWebhookSignature(webhookId, request.headers, rawBody);
+    const isValid = await verifyPayPalWebhookSignature(webhookId, request.headers);
     
     if (!isValid) {
       console.error('❌ Invalid PayPal webhook signature');
@@ -46,16 +45,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Parsear el body
-    const body = JSON.parse(rawBody);
-    console.log('🔔 PayPal Webhook received:', body.event_type);
+const webhookData = JSON.parse(rawBody);
+    console.log('🔔 PayPal Webhook received:', webhookData.event_type);
 
     const supabase = createServerSupabaseAdminClient();
 
     // ==================== EVENTOS DE PAGO ÚNICO ====================
-    if (body.event_type === 'PAYMENT.SALE.COMPLETED' || body.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
-      const paymentId = body.resource?.parent_payment;
-      const customField = body.resource?.custom;
-      const billingAgreementId = body.resource?.billing_agreement_id;
+    if (webhookData.event_type === 'PAYMENT.SALE.COMPLETED' || webhookData.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
+      const paymentId = webhookData.resource?.parent_payment;
+      const customField = webhookData.resource?.custom;
+      const billingAgreementId = webhookData.resource?.billing_agreement_id;
 
       // Si es pago de suscripción, dejarlo pasar al bloque de suscripciones
       if (billingAgreementId) {
@@ -95,9 +94,9 @@ export async function POST(request: NextRequest) {
     // ==================== EVENTOS DE SUSCRIPCIÓN ====================
     
     // Suscripción activada
-    if (body.event_type === 'BILLING.SUBSCRIPTION.ACTIVATED') {
-      const subscriptionId = body.resource?.id;
-      const customId = body.resource?.custom_id;
+    if (webhookData.event_type === 'BILLING.SUBSCRIPTION.ACTIVATED') {
+      const subscriptionId = webhookData.resource?.id;
+      const customId = webhookData.resource?.custom_id;
 
       if (!subscriptionId || !customId) {
         console.error('Missing subscription ID or custom ID');
@@ -155,8 +154,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Suscripción cancelada
-    if (body.event_type === 'BILLING.SUBSCRIPTION.CANCELLED') {
-      const subscriptionId = body.resource?.id;
+    if (webhookData.event_type === 'BILLING.SUBSCRIPTION.CANCELLED') {
+      const subscriptionId = webhookData.resource?.id;
 
       if (!subscriptionId) {
         console.error('❌ Missing subscription ID in cancellation event');
@@ -206,8 +205,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Pago de suscripción fallido
-    if (body.event_type === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED') {
-      const subscriptionId = body.resource?.id;
+    if (webhookData.event_type === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED') {
+      const subscriptionId = webhookData.resource?.id;
       
       if (!subscriptionId) {
         console.error('❌ Missing subscription ID in payment failed event');
@@ -246,7 +245,7 @@ export async function POST(request: NextRequest) {
           .eq('key', 'SUBSCRIPTION_PRICE')
           .single();
         
-        const amount = settings?.value || body.resource?.amount?.total || '20.00';
+        const amount = settings?.value || webhookData.resource?.amount?.total || '20.00';
         const userName = profile.full_name || profile.email.split('@')[0];
 
         if (newRetryCount === 1) {
@@ -303,8 +302,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Suscripción suspendida por PayPal
-    if (body.event_type === 'BILLING.SUBSCRIPTION.SUSPENDED') {
-      const subscriptionId = body.resource?.id;
+    if (webhookData.event_type === 'BILLING.SUBSCRIPTION.SUSPENDED') {
+      const subscriptionId = webhookData.resource?.id;
       
       if (!subscriptionId) {
         console.error('❌ Missing subscription ID in suspended event');
@@ -348,7 +347,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Evento no manejado
-    console.log(`Unhandled webhook event type: ${body.event_type}`);
+    console.log(`Unhandled webhook event type: ${webhookData.event_type}`);
     return NextResponse.json({ message: 'Event type not handled' });
 
   } catch (error) {
