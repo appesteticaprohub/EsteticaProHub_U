@@ -26,6 +26,30 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
   // ✅ Estado local para unread count (sin polling)
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Obtener notificaciones - MOVIDO ANTES de los useEffects
+  const queryParams = new URLSearchParams({
+    limit: limit.toString(),
+    ...(type && { type }),
+    ...(category && { category }),
+  });
+
+  // Si onlyUnread es true, agregar is_read=false
+  if (onlyUnread) {
+    queryParams.append('is_read', 'false');
+  }
+
+  const { data: notificationsData, mutate: mutateNotifications, isLoading } = useSWR<NotificationsResponse>(
+    enabled ? `/notifications?${queryParams}` : null,
+    async (url) => {
+      const { data, error } = await apiClient.get<NotificationsResponse>(url);
+      if (error) throw new Error(error);
+      return data || { notifications: [], total: 0 };
+    },
+    {
+      revalidateOnFocus: false,
+    }
+  );
   
   // ✅ Fetch inicial del unread count
   useEffect(() => {
@@ -64,8 +88,8 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       }, (payload) => {
         
         // Verificar si la notificación es para este usuario
-        const newRecord = payload.new as any;
-        const oldRecord = payload.old as any;
+        const newRecord = payload.new as { id: string; user_id: string; is_read: boolean; [key: string]: unknown };
+        const oldRecord = payload.old as { id: string; user_id: string; is_read: boolean; [key: string]: unknown };
         
         console.log('🔔 EVENTO REALTIME DETECTADO (sin filtro):', {
           eventType: payload.eventType,
@@ -117,31 +141,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       console.log('🔔 Desconectando Realtime notificaciones para usuario:', user.id);
       subscription.unsubscribe();
     };
-  }, [enabled, user?.id]);
-
-  // Obtener notificaciones
-  const queryParams = new URLSearchParams({
-    limit: limit.toString(),
-    ...(type && { type }),
-    ...(category && { category }),
-  });
-
-  // Si onlyUnread es true, agregar is_read=false
-  if (onlyUnread) {
-    queryParams.append('is_read', 'false');
-  }
-
-  const { data: notificationsData, mutate: mutateNotifications, isLoading } = useSWR<NotificationsResponse>(
-    enabled ? `/notifications?${queryParams}` : null,
-    async (url) => {
-      const { data, error } = await apiClient.get<NotificationsResponse>(url);
-      if (error) throw new Error(error);
-      return data || { notifications: [], total: 0 };
-    },
-    {
-      revalidateOnFocus: false,
-    }
-  );
+  }, [enabled, user?.id, mutateNotifications, supabase]);
 
   // Marcar como leída
   const markAsRead = async (notificationId: string) => {
