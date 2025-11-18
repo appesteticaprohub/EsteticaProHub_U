@@ -170,7 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔄 Desconectando Realtime para usuario:', data.user?.id)
       subscription.unsubscribe()
     }
-  }, [data?.user?.id, mutateAuth])
+  }, [data?.user?.id, mutateAuth, supabase])
 
   const user = data?.user || null
   const session = data?.session || null
