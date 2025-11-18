@@ -7,9 +7,6 @@ if (!process.env.RESEND_API_KEY) {
 
 export const resend = new Resend(process.env.RESEND_API_KEY)
 
-// Detectar ambiente usando VERCEL_ENV (automático de Vercel)
-const isProduction = process.env.VERCEL_ENV === 'production'
-
 // Configuración base para emails
 export const EMAIL_CONFIG = {
   from: process.env.RESEND_FROM_EMAIL || 'EsteticaProHub <onboarding@resend.dev>',

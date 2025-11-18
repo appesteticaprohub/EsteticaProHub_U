@@ -66,7 +66,7 @@ export function useSubscriptionStatus() {
     }
 
     fetchInitialData()
-  }, [user?.id]) // Solo cuando cambie el usuario
+  }, [user?.id, loading, user]) // Solo cuando cambie el usuario, loading o user
 
   // ✅ Actualizar datos cuando AuthContext cambie (via Realtime)
   useEffect(() => {
