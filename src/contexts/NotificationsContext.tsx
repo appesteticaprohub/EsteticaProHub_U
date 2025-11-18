@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { useAuth } from './AuthContext'
 import { apiClient } from '@/lib/api-client'
@@ -44,7 +44,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   )
 
   // ✅ Fetch inicial de notificaciones y unread count
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!user?.id) {
       setNotifications([])
       setUnreadCount(0)
@@ -75,12 +75,12 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     } finally {
       setLoading(false)
     }
-  }
+  }, [user?.id])
 
   // ✅ Fetch inicial cuando el usuario cambie
   useEffect(() => {
     fetchNotifications()
-  }, [user?.id])
+  }, [user?.id, fetchNotifications])
 
   // ✅ REALTIME: Escuchar cambios en notifications
   useEffect(() => {
@@ -113,7 +113,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
         if (payload.eventType === 'UPDATE') {
           const updatedNotification = payload.new as Notification
-          const oldNotification = payload.old as any
+          const oldNotification = payload.old as Partial<Notification>
           
           console.log('🔔 [CONTEXTO] Notificación actualizada')
           
@@ -181,7 +181,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       console.log('🔔 [CONTEXTO] Desconectando Realtime notificaciones')
       subscription.unsubscribe()
     }
-  }, [user?.id])
+  }, [user?.id, supabase, notifications])
 
   // ✅ Funciones de manejo
   const markAsRead = async (notificationId: string): Promise<boolean> => {
