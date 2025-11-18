@@ -4,12 +4,19 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus'
 import PaymentRecoveryModal from '@/components/PaymentRecoveryModal'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { NotificationPreferences } from '@/types/notifications'
+import useSWR from 'swr'
+import { apiClient } from '@/lib/api-client'
 import CancelSubscriptionModal from '@/components/CancelSubscriptionModal'
 import AvatarUploader from '@/components/AvatarUploader'
 
-
+// Fetcher function para SWR
+const preferencesFetcher = async (url: string): Promise<NotificationPreferences | null> => {
+  const { data, error } = await apiClient.get<NotificationPreferences>(url)
+  if (error) throw new Error(error)
+  return data
+}
 
 export default function MiPerfil() {
   const { user, signOut, loading, avatarUrl, fullName, specialty, country, updateAvatar } = useAuth()
@@ -18,14 +25,30 @@ export default function MiPerfil() {
   const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'perfil' | 'notificaciones'>('perfil')
-  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null)
-  const [loadingPreferences, setLoadingPreferences] = useState(false)
   const [savingPreferences, setSavingPreferences] = useState(false)
+  
+  // ✅ SWR para cache de preferencias (solo cuando se necesita)
+  const shouldFetchPreferences = user && activeTab === 'notificaciones'
+  const { 
+    data: preferences, 
+    error: preferencesError, 
+    isLoading: loadingPreferences,
+    mutate: mutatePreferences 
+  } = useSWR<NotificationPreferences | null>(
+    shouldFetchPreferences ? '/notifications/preferences' : null,
+    preferencesFetcher,
+    {
+      dedupingInterval: 300000, // Cache por 5 minutos
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false
+    }
+  )
 
-  // Función para capitalizar primera letra de cada palabra
+  // Función para capitalizar primera letra de cada palabra y formatear guiones bajos
   const capitalizeWords = (text: string | null) => {
     if (!text) return null
     return text
+      .replace(/_/g, ' ') // ✅ Convertir guiones bajos en espacios
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ')
@@ -61,26 +84,10 @@ export default function MiPerfil() {
   }
 }
 
-const loadPreferences = async () => {
-  setLoadingPreferences(true)
-  try {
-    const response = await fetch('/api/notifications/preferences')
-    if (response.ok) {
-      const result = await response.json()
-      setPreferences(result.data)
-    } else {
-      console.error('Error loading preferences:', response.status)
-    }
-  } catch (error) {
-    console.error('Error loading preferences:', error)
-  } finally {
-    setLoadingPreferences(false)
-  }
-}
-
 const handlePreferenceChange = (key: keyof NotificationPreferences, value: boolean) => {
   if (preferences) {
-    setPreferences({ ...preferences, [key]: value })
+    // ✅ Actualizar cache local inmediatamente para UX fluida
+    mutatePreferences({ ...preferences, [key]: value }, false)
   }
 }
 
@@ -89,26 +96,25 @@ const savePreferences = async () => {
   
   setSavingPreferences(true)
   try {
-    const response = await fetch('/api/notifications/preferences', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email_promotional: preferences.email_promotional,
-        email_content: preferences.email_content,
-        in_app_notifications: preferences.in_app_notifications,
-      }),
+    const { data, error } = await apiClient.put('/notifications/preferences', {
+      email_promotional: preferences.email_promotional,
+      email_content: preferences.email_content,
+      in_app_notifications: preferences.in_app_notifications,
     })
 
-    if (response.ok) {
-      const result = await response.json()
-      setPreferences(result.data)
-      // Opcional: podrías agregar un toast notification aquí en el futuro
-    } else {
+    if (error) {
       alert('Error al guardar preferencias')
+      // ✅ Revertir cambios locales si hay error
+      mutatePreferences(undefined, true)
+    } else if (data) {
+      // ✅ Actualizar cache con datos del servidor
+      mutatePreferences(data as NotificationPreferences, false)
     }
   } catch (error) {
     console.error('Error saving preferences:', error)
     alert('Error al guardar preferencias')
+    // ✅ Revertir cambios locales si hay error
+    mutatePreferences(undefined, true)
   } finally {
     setSavingPreferences(false)
   }
@@ -148,12 +154,6 @@ const handleReactivateSubscription = async () => {
     })
   }
 
-  useEffect(() => {
-  if (user && activeTab === 'notificaciones') {
-    loadPreferences()
-  }
-}, [user, activeTab])
-
   if (loading || statusLoading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -174,6 +174,7 @@ const handleReactivateSubscription = async () => {
         subscriptionStatus={subscriptionStatus || ''}
         paymentRetryCount={subscriptionData.payment_retry_count}
         gracePeriodEnds={subscriptionData.grace_period_ends}
+        paypalSubscriptionId={subscriptionData.paypal_subscription_id}
       />
 
       <CancelSubscriptionModal
@@ -528,11 +529,17 @@ const handleReactivateSubscription = async () => {
                         </button>
                       </div>
                     </>
-                  ) : (
+                  ) : preferencesError ? (
                     <div className="text-center py-8">
                       <div className="text-lg text-gray-600">Error al cargar preferencias</div>
+                      <button 
+                        onClick={() => mutatePreferences(undefined, true)}
+                        className="mt-2 text-blue-600 hover:text-blue-700"
+                      >
+                        Reintentar
+                      </button>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               )}
             

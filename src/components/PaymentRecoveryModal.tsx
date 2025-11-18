@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Modal from './Modal'
 
 interface PaymentRecoveryModalProps {
@@ -8,6 +8,7 @@ interface PaymentRecoveryModalProps {
   subscriptionStatus: string
   paymentRetryCount: number
   gracePeriodEnds: string | null
+  paypalSubscriptionId?: string | null
 }
 
 export default function PaymentRecoveryModal({
@@ -15,38 +16,10 @@ export default function PaymentRecoveryModal({
   onClose,
   subscriptionStatus,
   paymentRetryCount,
-  gracePeriodEnds
+  gracePeriodEnds,
+  paypalSubscriptionId
 }: PaymentRecoveryModalProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [paypalSubscriptionId, setPaypalSubscriptionId] = useState<string | null>(null)
-
-  // Obtener el paypal_subscription_id del usuario
-useEffect(() => {
-  const fetchSubscriptionId = async () => {
-    try {
-      const response = await fetch('/api/subscription-status')
-      if (response.ok) {
-        const result = await response.json()
-        // El endpoint retorna { data: {...}, error: null }
-        if (result.data && result.data.paypal_subscription_id) {
-          setPaypalSubscriptionId(result.data.paypal_subscription_id)
-          console.log('✅ PayPal Subscription ID obtenido:', result.data.paypal_subscription_id)
-        } else {
-          console.warn('⚠️ No se encontró paypal_subscription_id en la respuesta')
-          setPaypalSubscriptionId(null)
-        }
-      } else {
-        console.error('❌ Error en la respuesta:', response.status)
-      }
-    } catch (error) {
-      console.error('❌ Error obteniendo subscription ID:', error)
-    }
-  }
-
-  if (isOpen) {
-    fetchSubscriptionId()
-  }
-}, [isOpen])
 
   const handleUpdatePaymentMethod = async () => {
   setIsLoading(true)

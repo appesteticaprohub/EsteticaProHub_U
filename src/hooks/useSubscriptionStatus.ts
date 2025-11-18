@@ -10,6 +10,7 @@ interface SubscriptionData {
   last_payment_attempt: string | null
   grace_period_ends: string | null
   auto_renewal_enabled: boolean
+  paypal_subscription_id: string | null
 }
 
 export function useSubscriptionStatus() {
@@ -22,7 +23,8 @@ export function useSubscriptionStatus() {
     payment_retry_count: 0,
     last_payment_attempt: null,
     grace_period_ends: null,
-    auto_renewal_enabled: false
+    auto_renewal_enabled: false,
+    paypal_subscription_id: null
   })
 
   // ✅ Solo hacer fetch inicial una vez, luego usar datos de AuthContext
@@ -34,7 +36,8 @@ export function useSubscriptionStatus() {
         payment_retry_count: 0,
         last_payment_attempt: null,
         grace_period_ends: null,
-        auto_renewal_enabled: false
+        auto_renewal_enabled: false,
+        paypal_subscription_id: null
       })
       return
     }
@@ -57,7 +60,8 @@ export function useSubscriptionStatus() {
             payment_retry_count: subscriptionData.payment_retry_count || 0,
             last_payment_attempt: subscriptionData.last_payment_attempt || null,
             grace_period_ends: subscriptionData.grace_period_ends || null,
-            auto_renewal_enabled: subscriptionData.auto_renewal_enabled || false
+            auto_renewal_enabled: subscriptionData.auto_renewal_enabled || false,
+            paypal_subscription_id: subscriptionData.paypal_subscription_id || null
           })
         }
       } catch (error) {
@@ -66,7 +70,8 @@ export function useSubscriptionStatus() {
     }
 
     fetchInitialData()
-  }, [user?.id, loading, user]) // Solo cuando cambie el usuario, loading o user
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]) // ✅ Solo cuando cambie el ID - elimina fetches innecesarios
 
   // ✅ Actualizar datos cuando AuthContext cambie (via Realtime)
   useEffect(() => {
