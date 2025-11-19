@@ -23,7 +23,7 @@ const formatDateColombia = (utcDate: string) => {
 
 export default function Header() {
   const { user, loading, signOut, fullName, avatarUrl } = useAuth();
-  const { notifications, unreadCount, markAsRead, refresh, loading: notificationsLoading } = useNotificationsContext();
+  const { notifications, unreadCount, markAsRead, markAsReadAndNavigate, refresh, loading: notificationsLoading } = useNotificationsContext();
 
   console.log('🏠 [HEADER] Usando contexto - Notifications:', notifications.length, 'Unread:', unreadCount);
   
@@ -82,13 +82,14 @@ export default function Header() {
   }, 500);
 };
 
-  const handleNotificationClick = async (notificationId: string, ctaUrl: string | null) => {
-    await markAsRead(notificationId);
-    setShowNotifications(false);
-    if (ctaUrl) {
-      window.location.href = ctaUrl;
-    }
-  };
+  const handleNotificationRead = async (notificationId: string) => {
+  await markAsRead(notificationId);
+};
+
+const handleNotificationNavigate = async (notificationId: string, ctaUrl: string | null) => {
+  setShowNotifications(false);
+  await markAsReadAndNavigate(notificationId, ctaUrl);
+};
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -235,39 +236,45 @@ export default function Header() {
                     </div>
                   ) : (
                     <div className="divide-y divide-gray-100">
-                      {dropdownNotifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
-                            !notification.is_read ? 'bg-blue-50' : ''
-                          }`}
-                          onClick={() => handleNotificationClick(notification.id, notification.cta_url || null)}
-                        >
-                          <div className={`border-l-4 px-3 py-2 ${getCategoryColor(notification.category)}`}>
-                            <div className="flex justify-between items-start mb-1">
-                              <h4 className="font-semibold text-sm text-gray-800">
-                                {notification.title}
-                              </h4>
-                              {!notification.is_read && (
-                                <span className="ml-2 h-2 w-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></span>
-                              )}
-                            </div>
-                            <div 
-                              className="text-sm text-gray-600 mb-2"
-                              dangerouslySetInnerHTML={{ __html: notification.message }}
-                            />
-                            {notification.cta_text && (
-                              <span className="text-xs text-blue-600 font-medium">
-                                {notification.cta_text} →
-                              </span>
+                    {dropdownNotifications.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
+                          !notification.is_read ? 'bg-blue-50' : ''
+                        }`}
+                        onClick={() => handleNotificationRead(notification.id)}
+                      >
+                        <div className={`border-l-4 px-3 py-2 ${getCategoryColor(notification.category)}`}>
+                          <div className="flex justify-between items-start mb-1">
+                            <h4 className="font-semibold text-sm text-gray-800">
+                              {notification.title}
+                            </h4>
+                            {!notification.is_read && (
+                              <span className="ml-2 h-2 w-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></span>
                             )}
-                            <p className="text-xs text-gray-400 mt-1">
-                              {formatDateColombia(notification.created_at)}
-                            </p>
                           </div>
+                          <div 
+                            className="text-sm text-gray-600 mb-2"
+                            dangerouslySetInnerHTML={{ __html: notification.message }}
+                          />
+                          {notification.cta_text && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleNotificationNavigate(notification.id, notification.cta_url || null);
+                              }}
+                              className="text-xs text-blue-600 font-medium hover:text-blue-800 transition-colors"
+                            >
+                              {notification.cta_text} →
+                            </button>
+                          )}
+                          <p className="text-xs text-gray-400 mt-1">
+                            {formatDateColombia(notification.created_at)}
+                          </p>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
+                  </div>
                   )}
                 </div>
               )}

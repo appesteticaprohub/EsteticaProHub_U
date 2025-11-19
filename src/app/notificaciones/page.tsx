@@ -23,7 +23,7 @@ export default function NotificationsPage() {
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [limit, setLimit] = useState(20);
 
-  const { notifications: allNotifications, unreadCount, loading: isLoading, markAsRead, markAllAsRead, deleteNotification, refresh } = useNotificationsContext();
+  const { notifications: allNotifications, unreadCount, loading: isLoading, markAsRead, markAsReadAndNavigate, markAllAsRead, deleteNotification, refresh } = useNotificationsContext();
 
   // ✅ Filtrar en el cliente ya que el contexto trae todas las notificaciones
   const notifications = allNotifications
@@ -73,14 +73,13 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleNotificationClick = async (notificationId: string, ctaUrl: string | null, isRead: boolean) => {
-    if (!isRead) {
-      await markAsRead(notificationId);
-    }
-    if (ctaUrl) {
-      window.location.href = ctaUrl;
-    }
-  };
+  const handleNotificationRead = async (notificationId: string) => {
+  await markAsRead(notificationId);
+};
+
+const handleNotificationNavigate = async (notificationId: string, ctaUrl: string | null) => {
+  await markAsReadAndNavigate(notificationId, ctaUrl);
+};
 
   // Ya no necesitamos filtrar en el cliente porque el hook lo hace
   const filteredNotifications = notifications;
@@ -227,84 +226,90 @@ export default function NotificationsPage() {
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {filteredNotifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`p-5 hover:bg-gray-50 transition-colors cursor-pointer ${
-                  !notification.is_read ? 'bg-blue-50' : ''
-                }`}
-                onClick={() => handleNotificationClick(notification.id, notification.cta_url || null, notification.is_read)}
-              >
-                <div className="flex items-start gap-4">
-                  {/* Contenido principal */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-xs font-medium px-2 py-1 rounded ${getCategoryBadge(notification.category)}`}>
-                        {notification.category === 'critical' && 'Crítica'}
-                        {notification.category === 'important' && 'Importante'}
-                        {notification.category === 'normal' && 'Normal'}
-                        {notification.category === 'promotional' && 'Promocional'}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {formatDateColombia(notification.created_at)}
-                      </span>
-                      {!notification.is_read && (
-                        <span className="h-2 w-2 bg-blue-500 rounded-full"></span>
-                      )}
-                    </div>
-
-                    <div className={`border-l-4 px-4 py-2 ${getCategoryColor(notification.category)}`}>
-                      <h3 className="font-semibold text-gray-800 mb-1">
-                        {notification.title}
-                      </h3>
-                      <div 
-                        className="text-sm text-gray-600"
-                        dangerouslySetInnerHTML={{ __html: notification.message }}
-                      />
-                      {notification.cta_text && (
-                        <div className="mt-3">
-                          <span className="text-sm text-blue-600 font-medium">
-                            {notification.cta_text} →
-                          </span>
-                        </div>
-                      )}
-                    </div>
+          {filteredNotifications.map((notification) => (
+            <div
+              key={notification.id}
+              className={`p-5 hover:bg-gray-50 transition-colors cursor-pointer ${
+                !notification.is_read ? 'bg-blue-50' : ''
+              }`}
+              onClick={() => handleNotificationRead(notification.id)}
+            >
+              <div className="flex items-start gap-4">
+                {/* Contenido principal */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-xs font-medium px-2 py-1 rounded ${getCategoryBadge(notification.category)}`}>
+                      {notification.category === 'critical' && 'Crítica'}
+                      {notification.category === 'important' && 'Importante'}
+                      {notification.category === 'normal' && 'Normal'}
+                      {notification.category === 'promotional' && 'Promocional'}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {formatDateColombia(notification.created_at)}
+                    </span>
+                    {!notification.is_read && (
+                      <span className="h-2 w-2 bg-blue-500 rounded-full"></span>
+                    )}
                   </div>
 
-                  {/* Acciones */}
-                  <div className="flex-shrink-0 flex items-center gap-2">
-                    {/* Badge de tipo */}
-                    {notification.type === 'email' ? (
-                      <div className="text-gray-400" title="Enviada por email">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
+                  <div className={`border-l-4 px-4 py-2 ${getCategoryColor(notification.category)}`}>
+                    <h3 className="font-semibold text-gray-800 mb-1">
+                      {notification.title}
+                    </h3>
+                    <div 
+                      className="text-sm text-gray-600"
+                      dangerouslySetInnerHTML={{ __html: notification.message }}
+                    />
+                    {notification.cta_text && (
+                      <div className="mt-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNotificationNavigate(notification.id, notification.cta_url || null);
+                          }}
+                          className="text-sm text-blue-600 font-medium hover:text-blue-800 transition-colors"
+                        >
+                          {notification.cta_text} →
+                        </button>
                       </div>
-                    ) : (
-                      <div className="text-gray-400" title="Notificación en la app">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                        </svg>
-                      </div>
-                    )}
-                    
-                    {/* Botón eliminar (solo para normal y promotional) */}
-                    {canDeleteNotification(notification.category) && (
-                      <button
-                        onClick={(e) => handleDeleteNotification(e, notification.id, notification.category)}
-                        className="text-red-400 hover:text-red-600 transition-colors p-1"
-                        title="Eliminar notificación"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
                     )}
                   </div>
                 </div>
+
+                {/* Acciones */}
+                <div className="flex-shrink-0 flex items-center gap-2">
+                  {/* Badge de tipo */}
+                  {notification.type === 'email' ? (
+                    <div className="text-gray-400" title="Enviada por email">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="text-gray-400" title="Notificación en la app">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                    </div>
+                  )}
+                  
+                  {/* Botón eliminar (solo para normal y promotional) */}
+                  {canDeleteNotification(notification.category) && (
+                    <button
+                      onClick={(e) => handleDeleteNotification(e, notification.id, notification.category)}
+                      className="text-red-400 hover:text-red-600 transition-colors p-1"
+                      title="Eliminar notificación"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
+       </div>
         )}
 
         {/* Footer con info */}

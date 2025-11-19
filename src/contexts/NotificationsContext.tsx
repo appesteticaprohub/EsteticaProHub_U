@@ -24,6 +24,7 @@ interface NotificationsContextType {
   unreadCount: number
   loading: boolean
   markAsRead: (notificationId: string) => Promise<boolean>
+  markAsReadAndNavigate: (notificationId: string, ctaUrl: string | null) => Promise<void>
   markAllAsRead: () => Promise<boolean>
   deleteNotification: (notificationId: string) => Promise<{ success: boolean; error: string | null }>
   refresh: () => Promise<void>
@@ -155,23 +156,30 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
   // ✅ Funciones de manejo
   const markAsRead = async (notificationId: string): Promise<boolean> => {
-    try {
-      const { error } = await apiClient.patch('/notifications', {
-        notification_id: notificationId,
-      })
+  try {
+    const { error } = await apiClient.patch('/notifications', {
+      notification_id: notificationId,
+    })
 
-      if (error) {
-        console.error('Error marking notification as read:', error)
-        return false
-      }
-
-      // El estado se actualiza via Realtime
-      return true
-    } catch (error) {
+    if (error) {
       console.error('Error marking notification as read:', error)
       return false
     }
+
+    // El estado se actualiza via Realtime
+    return true
+  } catch (error) {
+    console.error('Error marking notification as read:', error)
+    return false
   }
+}
+
+const markAsReadAndNavigate = async (notificationId: string, ctaUrl: string | null): Promise<void> => {
+  await markAsRead(notificationId)
+  if (ctaUrl) {
+    window.location.href = ctaUrl
+  }
+}
 
   const markAllAsRead = async (): Promise<boolean> => {
     try {
@@ -232,14 +240,15 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   }
 
   const value = {
-    notifications,
-    unreadCount,
-    loading,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    refresh,
-  }
+  notifications,
+  unreadCount,
+  loading,
+  markAsRead,
+  markAsReadAndNavigate,
+  markAllAsRead,
+  deleteNotification,
+  refresh,
+}
 
   return (
     <NotificationsContext.Provider value={value}>
