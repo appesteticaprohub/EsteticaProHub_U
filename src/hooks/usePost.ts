@@ -1,4 +1,5 @@
 import useSWR, { mutate } from 'swr'
+import { useCallback, useRef } from 'react'
 import { apiClient } from '@/lib/api-client'
 
 interface PostDetail {
@@ -39,23 +40,40 @@ export function usePost(postId: string | null) {
     }
   )
 
-  const incrementViews = async (postId: string) => {
-    try {
-      const { data, error } = await apiClient.patch(`/posts/${postId}/views`, {})
-      
-      if (error) {
-        console.error('Error incrementing views:', error)
-        return
-      }
-
-      // Actualizar cache de SWR con los nuevos datos
-      if (data) {
-        mutate(`/posts/${postId}`, data, false)
-      }
-    } catch (error) {
+  const incrementViews = useCallback(async (postId: string) => {
+  try {
+    const { data, error } = await apiClient.patch(`/posts/${postId}/views`, {})
+    
+    if (error) {
       console.error('Error incrementing views:', error)
+      return
     }
+
+    // Actualizar cache de SWR con los nuevos datos
+    if (data) {
+      mutate(`/posts/${postId}`, data, false)
+    }
+  } catch (error) {
+    console.error('Error incrementing views:', error)
   }
+}, [])
+
+// Crear versión con throttling (solo una vista por post por sesión)
+const incrementViewsThrottled = useCallback((postId: string) => {
+  const viewedKey = `post_viewed_${postId}`
+  
+  // Verificar si ya se contó la vista en esta sesión
+  if (typeof window !== 'undefined' && sessionStorage.getItem(viewedKey)) {
+    return
+  }
+  
+  // Marcar como visto y incrementar
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem(viewedKey, 'true')
+  }
+  
+  incrementViews(postId)
+}, [incrementViews])
 
   const handleLikeClick = () => {
     // Esta función será manejada desde el componente para abrir el modal
@@ -71,7 +89,7 @@ export function usePost(postId: string | null) {
     post, 
     loading: isLoading, 
     error: error?.message || null, 
-    incrementViews, 
+    incrementViews: incrementViewsThrottled, 
     handleLikeClick, 
     handleCommentClick 
   }
