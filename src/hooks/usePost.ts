@@ -1,5 +1,5 @@
 import useSWR, { mutate } from 'swr'
-import { useCallback, useRef } from 'react'
+import { useCallback } from 'react'
 import { apiClient } from '@/lib/api-client'
 
 interface PostDetail {

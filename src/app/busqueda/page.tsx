@@ -14,7 +14,7 @@ export default function BusquedaPage() {
   const { subscriptionStatus, subscriptionData, loading: statusLoading } = useSubscriptionStatus();
   const loading = authLoading || statusLoading;
   const router = useRouter();
-  const { results, loading: searchLoading, error: searchError, search } = useSearch();
+  const { results, loading: searchLoading, error: searchError, search, clearResults } = useSearch();
 
   // Estados para modales
   const [showModal, setShowModal] = useState(false);
@@ -148,22 +148,28 @@ export default function BusquedaPage() {
       sort_order: 'desc',
       page: 1
     });
+    // ✅ NUEVO: Limpiar también los resultados mostrados
+    clearResults();
   };
 
   const handlePageChange = (newPage: number) => {
     setFilters(prev => ({ ...prev, page: newPage }));
-    // Buscar automáticamente con la nueva página
-    const searchFilters: Record<string, string | number> = {};
-    if (filters.title) searchFilters.title = filters.title;
-    if (filters.content) searchFilters.content = filters.content;
-    if (filters.author) searchFilters.author = filters.author;
-    if (filters.category) searchFilters.category = filters.category;
-    if (filters.date_from) searchFilters.date_from = filters.date_from;
-    if (filters.date_to) searchFilters.date_to = filters.date_to;
-    searchFilters.sort_by = filters.sort_by;
-    searchFilters.sort_order = filters.sort_order;
-    searchFilters.page = newPage;
-    searchFilters.limit = 20;
+    
+    // ✅ OPTIMIZACIÓN: Construir filtros más eficientemente
+    const searchFilters: Record<string, string | number> = {
+      sort_by: filters.sort_by,
+      sort_order: filters.sort_order,
+      page: newPage,
+      limit: 20
+    };
+    
+    // Solo agregar filtros que tienen valor
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value && value !== '' && key !== 'page' && key !== 'sort_by' && key !== 'sort_order') {
+        searchFilters[key] = value;
+      }
+    });
+
     search(searchFilters);
   };
 
@@ -398,14 +404,21 @@ export default function BusquedaPage() {
             <button
               type="submit"
               disabled={searchLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
+              {searchLoading && (
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
               {searchLoading ? 'Buscando...' : 'Buscar'}
             </button>
             <button
               type="button"
               onClick={handleClearFilters}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-md transition-colors"
+              disabled={searchLoading}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Limpiar Filtros
             </button>
@@ -494,26 +507,56 @@ export default function BusquedaPage() {
 
         {/* Paginación */}
         {results.totalPages > 1 && (
-          <div className="mt-6 flex justify-center gap-2">
-            <button
-              onClick={() => handlePageChange(filters.page - 1)}
-              disabled={filters.page === 1}
-              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Anterior
-            </button>
+          <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-sm text-gray-600">
+              Mostrando {((filters.page - 1) * 20) + 1} a {Math.min(filters.page * 20, results.total)} de {results.total} resultados
+            </div>
             
-            <span className="px-4 py-2">
-              Página {filters.page} de {results.totalPages}
-            </span>
-            
-            <button
-              onClick={() => handlePageChange(filters.page + 1)}
-              disabled={filters.page === results.totalPages}
-              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Siguiente
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(filters.page - 1)}
+                disabled={filters.page === 1 || searchLoading}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Anterior
+              </button>
+              
+              {/* Números de página */}
+              <div className="flex gap-1">
+                {Array.from({ length: Math.min(5, results.totalPages) }, (_, i) => {
+                  const pageNum = filters.page <= 3 
+                    ? i + 1 
+                    : filters.page >= results.totalPages - 2 
+                    ? results.totalPages - 4 + i 
+                    : filters.page - 2 + i;
+                  
+                  if (pageNum < 1 || pageNum > results.totalPages) return null;
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      disabled={searchLoading}
+                      className={`px-3 py-2 text-sm rounded-md transition-colors disabled:cursor-not-allowed ${
+                        pageNum === filters.page
+                          ? 'bg-blue-600 text-white'
+                          : 'border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button
+                onClick={() => handlePageChange(filters.page + 1)}
+                disabled={filters.page === results.totalPages || searchLoading}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Siguiente
+              </button>
+            </div>
           </div>
         )}
       </div>
