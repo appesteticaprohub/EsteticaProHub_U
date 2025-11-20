@@ -33,6 +33,12 @@ export default function PostClient({ postId }: PostClientProps) {
   const [showSnackBar, setShowSnackBar] = useState(false);
   const [snackBarMessage, setSnackBarMessage] = useState('');
   const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false);
+const [paymentModalDismissed, setPaymentModalDismissed] = useState(false);
+
+const handleClosePaymentModal = () => {
+  setShowPaymentRecoveryModal(false);
+  setPaymentModalDismissed(true);
+};
 
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
@@ -81,33 +87,25 @@ export default function PostClient({ postId }: PostClientProps) {
         setModalMessage('Tu suscripción ha expirado. Necesitas renovar para continuar.');
         setShowModal(true);
         return;
+        
       }
 
       // Usuario con estado Cancelled - verificar si aún tiene acceso
       if (user && subscriptionStatus === 'Cancelled') {
         // ✅ Esperar a que subscriptionData esté completamente cargado
         if (!subscriptionData?.subscription_expires_at) {
-          console.log('⏳ [POST] Esperando datos completos de suscripción...');
           return; // No hacer nada hasta que los datos estén listos
         }
         
         const now = new Date();
         const expirationDate = new Date(subscriptionData.subscription_expires_at);
         
-        console.log('🔍 [POST] Usuario Cancelled - verificando acceso:', {
-          ahora: now.toISOString(),
-          expira: expirationDate.toISOString(),
-          tieneAcceso: now <= expirationDate
-        });
-        
         if (now <= expirationDate) {
           // Aún tiene acceso hasta la fecha de expiración
-          console.log('✅ [POST] Usuario Cancelled con acceso válido hasta:', expirationDate);
           setShowModal(false);
           return;
         } else {
           // Ya expiró el acceso
-          console.log('❌ [POST] Usuario Cancelled sin acceso válido');
           setModalMessage('Tu suscripción cancelada ha expirado. Necesitas renovar para continuar.');
           setShowModal(true);
           return;
@@ -116,8 +114,9 @@ export default function PostClient({ postId }: PostClientProps) {
 
       // Usuario con problemas de pago
       if (user && (subscriptionStatus === 'Payment_Failed' || 
-                   subscriptionStatus === 'Grace_Period' || 
-                   subscriptionStatus === 'Suspended')) {
+                  subscriptionStatus === 'Grace_Period' || 
+                  subscriptionStatus === 'Suspended') && 
+                  !paymentModalDismissed) {
         setShowPaymentRecoveryModal(true);
         return;
       }
@@ -128,7 +127,7 @@ export default function PostClient({ postId }: PostClientProps) {
         hasTrackedAnonymousView.current = true;
       }
     }
-  }, [loading, statusLoading, post, user, subscriptionStatus, subscriptionData?.subscription_expires_at, incrementViewedPosts]);
+  }, [loading, statusLoading, post, user, subscriptionStatus, subscriptionData?.subscription_expires_at, paymentModalDismissed, incrementViewedPosts]);
 
 useEffect(() => {
   if (post && !loading && !error && !hasIncrementedViews.current) {
@@ -406,12 +405,13 @@ useEffect(() => {
         />
       </div>
       <PaymentRecoveryModal 
-        isOpen={showPaymentRecoveryModal}
-        onClose={() => setShowPaymentRecoveryModal(false)}
-        subscriptionStatus={subscriptionStatus || ''}
-        paymentRetryCount={subscriptionData.payment_retry_count}
-        gracePeriodEnds={subscriptionData.grace_period_ends}
-      />
+  isOpen={showPaymentRecoveryModal}
+  onClose={handleClosePaymentModal}
+          subscriptionStatus={subscriptionStatus || ''}
+          paymentRetryCount={subscriptionData.payment_retry_count}
+          gracePeriodEnds={subscriptionData.grace_period_ends}
+          paypalSubscriptionId={subscriptionData.paypal_subscription_id}
+        />
       <Modal isOpen={showModal} onClose={handleCloseModal}>
         <div className="text-center">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">

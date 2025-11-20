@@ -200,6 +200,7 @@ export default function BusquedaPage() {
         subscriptionStatus={subscriptionStatus || ''}
         paymentRetryCount={subscriptionData.payment_retry_count}
         gracePeriodEnds={subscriptionData.grace_period_ends}
+        paypalSubscriptionId={subscriptionData.paypal_subscription_id}
       />
 
       {/* Modal de protección */}
