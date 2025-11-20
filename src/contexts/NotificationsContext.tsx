@@ -86,10 +86,11 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     const subscription = supabase
       .channel(`notifications_context_${user.id}`)
       .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'notifications',
-      }, (payload) => {
+      event: '*',
+      schema: 'public',
+      table: 'notifications',
+      filter: `user_id=eq.${user.id}`
+    }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newNotification = payload.new as Notification
           
@@ -227,7 +228,22 @@ const markAsReadAndNavigate = async (notificationId: string, ctaUrl: string | nu
       return { success: false, error: result.error }
     }
 
-    // El estado se actualiza via Realtime
+    // ✅ Actualizar estado local inmediatamente (sin depender de Realtime)
+    const deletedNotification = notificationsRef.current.find(n => n.id === notificationId)
+    
+    if (deletedNotification) {
+      setNotifications(prev => {
+        const newList = prev.filter(notif => notif.id !== notificationId)
+        notificationsRef.current = newList
+        return newList
+      })
+      
+      // Si era no leída, decrementar contador
+      if (!deletedNotification.is_read) {
+        setUnreadCount(prev => Math.max(0, prev - 1))
+      }
+    }
+    
     return { success: true, error: null }
   } catch (error) {
     console.error('Error deleting notification:', error)
