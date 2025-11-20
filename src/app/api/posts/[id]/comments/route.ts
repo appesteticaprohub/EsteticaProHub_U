@@ -362,7 +362,7 @@ export async function POST(
         }
       } else {
         // Es una respuesta a un comentario
-        // Obtener el comentario padre para notificar a su autor
+        // Obtener el comentario padre
         const { data: parentComment } = await supabase
           .from('comments')
           .select('user_id')
@@ -370,27 +370,61 @@ export async function POST(
           .single()
 
         if (parentComment) {
-          // Notificación de respuesta al autor del comentario padre
-          await createSocialNotification({
-            recipientUserId: parentComment.user_id,
-            actorUserId: user.id,
-            actorName: commenterProfile.full_name || 'Un usuario',
-            type: 'reply',
-            postId: id,
-            postTitle: postData.title,
-            commentId: parent_id
-          })
-
-          // Enviar notificaciones de mención (si hay menciones)
-          if (mentionedUserIds.length > 0) {
-            await createMentionNotifications({
+          // SOLO enviar notificación de respuesta si NO hay menciones
+          // Si hay menciones, las menciones toman prioridad
+          // Verificar si las menciones corresponden a usuarios reales
+          if (mentionedNames.length === 0) {
+            // No hay menciones en el texto, es una respuesta normal
+            await createSocialNotification({
+              recipientUserId: parentComment.user_id,
+              actorUserId: user.id,
+              actorName: commenterProfile.full_name || 'Un usuario',
+              type: 'reply',
+              postId: id,
+              postTitle: postData.title,
+              commentId: parent_id
+            })
+          } else if (mentionedUserIds.length > 0) {
+            // Hay menciones válidas de usuarios reales
+            const mentionResults = await createMentionNotifications({
               mentionedUserIds,
-              parentCommentAuthorId: parentComment.user_id, // El autor del comentario padre
+              parentCommentAuthorId: parentComment.user_id,
               actorUserId: user.id,
               actorName: commenterProfile.full_name || 'Un usuario',
               postId: id,
               postTitle: postData.title,
               commentId: commentData.id
+            })
+            
+            // Si el usuario mencionado es el mismo que el autor del comentario padre
+            // y no recibió notificación de mención, enviar notificación de respuesta
+            const parentAuthorMentioned = mentionedUserIds.includes(parentComment.user_id)
+            const parentAuthorGotNotification = mentionResults.some((result, index) => 
+              mentionedUserIds[index] === parentComment.user_id && result.success && !result.skipped
+            )
+            
+            if (parentAuthorMentioned && !parentAuthorGotNotification) {
+              await createSocialNotification({
+                recipientUserId: parentComment.user_id,
+                actorUserId: user.id,
+                actorName: commenterProfile.full_name || 'Un usuario',
+                type: 'reply',
+                postId: id,
+                postTitle: postData.title,
+                commentId: parent_id
+              })
+            }
+          } else {
+            // Hay texto de menciones pero no corresponden a usuarios reales
+            // Tratar como respuesta normal
+            await createSocialNotification({
+              recipientUserId: parentComment.user_id,
+              actorUserId: user.id,
+              actorName: commenterProfile.full_name || 'Un usuario',
+              type: 'reply',
+              postId: id,
+              postTitle: postData.title,
+              commentId: parent_id
             })
           }
         }
