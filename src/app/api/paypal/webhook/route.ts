@@ -301,6 +301,71 @@ const webhookData = JSON.parse(rawBody);
       return NextResponse.json({ message: 'Subscription payment failure processed' });
     }
 
+    // Suscripción actualizada (pagos exitosos después de fallos)
+    if (webhookData.event_type === 'BILLING.SUBSCRIPTION.UPDATED') {
+      const subscriptionId = webhookData.resource?.id;
+      
+      if (!subscriptionId) {
+        console.error('❌ Missing subscription ID in subscription updated event');
+        return NextResponse.json({ error: 'Missing subscription ID' }, { status: 400 });
+      }
+
+      // Buscar el usuario asociado a esta suscripción
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, subscription_status, payment_retry_count')
+        .eq('paypal_subscription_id', subscriptionId)
+        .single();
+
+      if (profile) {
+        const userId = profile.id;
+
+        // Solo procesar si el usuario tenía problemas de pago
+        if (profile.subscription_status === 'Payment_Failed' || 
+            profile.subscription_status === 'Grace_Period' || 
+            profile.subscription_status === 'Suspended') {
+          
+          console.log(`🔄 Processing subscription update for user ${userId} - Previous status: ${profile.subscription_status}`);
+
+          // Actualizar a Active y resetear contadores
+          await supabase
+            .from('profiles')
+            .update({ 
+              subscription_status: 'Active',
+              payment_retry_count: 0,
+              grace_period_ends: null,
+              last_payment_date: new Date().toISOString()
+            })
+            .eq('id', userId);
+
+          console.log(`✅ Subscription ${subscriptionId} payment resolved for user ${userId}`);
+
+          // 🧹 LIMPIAR NOTIFICACIONES OBSOLETAS
+          console.log('🧹 Limpiando notificaciones obsoletas tras resolución de pago...');
+          await NotificationService.clearPaymentNotifications(userId);
+          await NotificationService.clearCancellationNotifications(userId);
+
+          // 📧 ENVIAR NOTIFICACIÓN DE BIENVENIDA DE VUELTA (opcional)
+          if (profile.subscription_status === 'Grace_Period' || profile.subscription_status === 'Suspended') {
+            const userName = profile.full_name || profile.email.split('@')[0];
+            console.log('📧 Enviando notificación de reactivación...');
+            await NotificationService.sendSubscriptionReactivatedNotification(
+              userId,
+              profile.email,
+              userName
+            );
+          }
+
+        } else {
+          console.log(`ℹ️ Subscription update received for user ${userId} with status ${profile.subscription_status} - No action needed`);
+        }
+      } else {
+        console.error('❌ Profile not found for subscription:', subscriptionId);
+      }
+
+      return NextResponse.json({ message: 'Subscription update processed' });
+    }
+
     // Suscripción suspendida por PayPal
     if (webhookData.event_type === 'BILLING.SUBSCRIPTION.SUSPENDED') {
       const subscriptionId = webhookData.resource?.id;
