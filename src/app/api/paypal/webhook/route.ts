@@ -342,8 +342,15 @@ const webhookData = JSON.parse(rawBody);
 
           // 🧹 LIMPIAR NOTIFICACIONES OBSOLETAS
           console.log('🧹 Limpiando notificaciones obsoletas tras resolución de pago...');
-          await NotificationService.clearPaymentNotifications(userId);
-          await NotificationService.clearCancellationNotifications(userId);
+          const paymentResult = await NotificationService.clearPaymentNotifications(userId);
+          const cancellationResult = await NotificationService.clearCancellationNotifications(userId);
+
+          console.log('🧹 Resultado limpieza de pagos:', paymentResult);
+          console.log('🧹 Resultado limpieza de cancelaciones:', cancellationResult);
+
+          // 🔄 DISPARAR ACTUALIZACIÓN DE SUSCRIPCIÓN EN FRONTEND
+          console.log('🔄 Disparando actualización de estado de suscripción...');
+          await NotificationService.triggerSubscriptionRefresh(userId);
 
           // 📧 ENVIAR NOTIFICACIÓN DE BIENVENIDA DE VUELTA (opcional)
           if (profile.subscription_status === 'Grace_Period' || profile.subscription_status === 'Suspended') {

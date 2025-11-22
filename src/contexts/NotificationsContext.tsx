@@ -92,15 +92,25 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       filter: `user_id=eq.${user.id}`
     }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          const newNotification = payload.new as Notification
-          
-          setNotifications(prev => {
-            const newList = [newNotification, ...prev]
-            notificationsRef.current = newList
-            return newList
-          })
-          setUnreadCount(prev => prev + 1)
+        const newNotification = payload.new as Notification
+        
+        // Detectar trigger de actualización de suscripción
+        if (newNotification.title === 'subscription_refresh_trigger') {
+          console.log('🔄 Trigger de actualización de suscripción detectado - refrescando estado');
+          console.log('🔄 Datos del trigger recibido:', newNotification);
+          console.log('🔄 Disparando evento subscription-updated...');
+          // Disparar evento personalizado para que otros hooks se actualicen
+          window.dispatchEvent(new CustomEvent('subscription-updated'));
+          return; // No agregar esta notificación a la lista
         }
+        
+        setNotifications(prev => {
+          const newList = [newNotification, ...prev]
+          notificationsRef.current = newList
+          return newList
+        })
+        setUnreadCount(prev => prev + 1)
+      }
 
         if (payload.eventType === 'UPDATE') {
           const updatedNotification = payload.new as Notification

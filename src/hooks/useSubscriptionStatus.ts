@@ -1,7 +1,7 @@
 //src/hooks/useSubscriptionStatus.ts
 
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/lib/api-client'
 
@@ -61,7 +61,7 @@ export function useSubscriptionStatus() {
   }
 
   // ✅ NUEVA FUNCIÓN: Solo para casos que necesitan datos adicionales
-  const fetchDetailedData = async () => {
+const fetchDetailedData = useCallback(async () => {
     try {
       console.log('🔄 Iniciando fetch de datos detallados...')
       const { data, error } = await apiClient.get('/subscription-status')
@@ -80,7 +80,7 @@ export function useSubscriptionStatus() {
         console.log('🔄 PayPal Subscription ID:', subscriptionData.paypal_subscription_id)
         
         setSubscriptionData({
-          subscription_status: subscriptionStatus, // Usar del AuthContext
+          subscription_status: subscriptionData.subscription_status || subscriptionStatus,
           subscription_expires_at: subscriptionData.subscription_expires_at || null,
           payment_retry_count: subscriptionData.payment_retry_count || 0,
           last_payment_attempt: subscriptionData.last_payment_attempt || null,
@@ -88,6 +88,11 @@ export function useSubscriptionStatus() {
           auto_renewal_enabled: subscriptionData.auto_renewal_enabled || false,
           paypal_subscription_id: subscriptionData.paypal_subscription_id || null
         })
+
+        // Forzar actualización inmediata si payment_retry_count cambió a 0
+        if (subscriptionData.payment_retry_count === 0) {
+          console.log('🔄 payment_retry_count es 0 - actualizando estado inmediatamente')
+        }
         
         console.log('✅ subscriptionData actualizado con paypal_subscription_id:', subscriptionData.paypal_subscription_id)
         setIsLoadingDetails(false)
@@ -99,7 +104,7 @@ export function useSubscriptionStatus() {
       console.log('❌ Error de red en fetchDetailedData:', error)
       setIsLoadingDetails(false)
     }
-  }
+  }, [subscriptionStatus])
 
   // ✅ CORREGIDO: Solo hacer fetch cuando realmente sea necesario
 useEffect(() => {
@@ -152,6 +157,28 @@ useEffect(() => {
       subscription_status: subscriptionStatus
     }))
   }, [subscriptionStatus])
+
+  // ✅ LISTENER PARA EVENTOS DE ACTUALIZACIÓN DE SUSCRIPCIÓN
+  useEffect(() => {
+    if (!user?.id) return
+
+    const handleSubscriptionRefresh = () => {
+      console.log('🎯 useSubscriptionStatus: Evento subscription-updated recibido - refrescando datos detallados')
+      
+      // Forzar refresh completo de los datos detallados
+      if (!isLoadingDetails) {
+        console.log('🎯 Ejecutando fetchDetailedData tras evento...')
+        setIsLoadingDetails(true)
+        fetchDetailedData()
+      }
+    }
+
+    window.addEventListener('subscription-updated', handleSubscriptionRefresh)
+
+    return () => {
+      window.removeEventListener('subscription-updated', handleSubscriptionRefresh)
+    }
+  }, [user?.id, isLoadingDetails, fetchDetailedData])
 
   // Funciones helper (sin cambios)
   const isInGracePeriod = () => {

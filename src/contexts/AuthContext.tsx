@@ -174,6 +174,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [data?.user?.id, mutateAuth, supabase])
 
+  // ✅ LISTENER PARA EVENTOS PERSONALIZADOS DE ACTUALIZACIÓN
+  React.useEffect(() => {
+    if (!data?.user?.id) return
+
+    console.log('🎯 Configurando listener para eventos de actualización de suscripción')
+
+    const handleSubscriptionUpdate = () => {
+      console.log('🎯 Evento subscription-updated recibido - refrescando datos del usuario')
+      console.log('🎯 Llamando mutateAuth() para revalidar datos...')
+      // Forzar revalidación completa de los datos del usuario
+      mutateAuth()
+    }
+
+    // Escuchar el evento personalizado
+    window.addEventListener('subscription-updated', handleSubscriptionUpdate)
+
+    return () => {
+      window.removeEventListener('subscription-updated', handleSubscriptionUpdate)
+    }
+  }, [data?.user?.id, mutateAuth])
+
   const user = data?.user || null
   const session = data?.session || null
   const userType = data?.userType || 'anonymous'

@@ -15,7 +15,7 @@ export class NotificationService {
   // Crear notificación in-app
   static async createInAppNotification(data: CreateNotificationRequest) {
     try {
-      const supabase = await createServerSupabaseClient()
+      const supabase = createServerSupabaseAdminClient()
       
       const { data: notification, error } = await supabase
         .from('notifications')
@@ -479,4 +479,50 @@ export class NotificationService {
       }
     }
   }
+
+  // Disparar actualización de estado de suscripción en el frontend
+static async triggerSubscriptionRefresh(userId: string) {
+  try {
+    const supabase = createServerSupabaseAdminClient()
+
+    // Crear notificación temporal que se auto-elimina para disparar Realtime
+    const { data: notification, error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        type: 'in_app',
+        category: 'normal',
+        title: 'subscription_refresh_trigger', // Título especial para identificarla
+        message: 'trigger',
+        expires_at: new Date(Date.now() + 1000).toISOString() // Expira en 1 segundo
+      })
+      .select()
+      .single()
+
+    if (!error && notification) {
+      // Eliminar inmediatamente la notificación trigger
+      setTimeout(async () => {
+        await supabase
+          .from('notifications')
+          .delete()
+          .eq('id', notification.id)
+      }, 100) // 100ms después
+    }
+
+    console.log('✅ Trigger de actualización de suscripción enviado - ID:', notification?.id)
+    console.log('✅ Datos del trigger:', {
+      user_id: userId,
+      title: notification?.title,
+      message: notification?.message
+    })
+    return { success: true, error: null }
+
+  } catch (error) {
+    console.error('❌ Error enviando trigger de actualización:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    }
+  }
+}
 }

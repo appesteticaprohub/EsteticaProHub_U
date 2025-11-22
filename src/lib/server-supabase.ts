@@ -66,3 +66,27 @@ export function createServerSupabaseAdminClient() {
     }
   )
 }
+
+// Cliente admin especial para operaciones que necesitan Realtime
+export function createServerSupabaseAdminClientWithRealtime() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      },
+      global: {
+        headers: {
+          'X-Supabase-Realtime': 'true'
+        }
+      }
+    }
+  )
+}
