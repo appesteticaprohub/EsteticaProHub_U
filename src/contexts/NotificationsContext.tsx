@@ -116,7 +116,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
           const updatedNotification = payload.new as Notification
           
           // Buscar la notificación en nuestro estado actual para comparar
-          const currentNotification = notifications.find(n => n.id === updatedNotification.id)
+          const currentNotification = notificationsRef.current.find(n => n.id === updatedNotification.id)
           
           if (currentNotification) {
             const wasUnread = currentNotification.is_read === false
@@ -167,7 +167,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         subscription.unsubscribe()
       }, 3000);
     }
-  }, [user?.id])
+  }, [user?.id, supabase])
 
   // ✅ Funciones de manejo
   const markAsRead = async (notificationId: string): Promise<boolean> => {
