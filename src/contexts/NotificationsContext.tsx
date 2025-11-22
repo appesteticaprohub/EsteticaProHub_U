@@ -151,9 +151,13 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       .subscribe();
 
     return () => {
-      subscription.unsubscribe()
+      console.log('🔔 [NotificationsContext] Desconectando Realtime para usuario:', user.id);
+      // Delay para evitar desconexiones innecesarias durante actualizaciones rápidas
+      setTimeout(() => {
+        subscription.unsubscribe()
+      }, 3000);
     }
-  }, [user?.id, supabase, notifications])
+  }, [user?.id])
 
   // ✅ Funciones de manejo
   const markAsRead = async (notificationId: string): Promise<boolean> => {
