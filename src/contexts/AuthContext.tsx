@@ -3,7 +3,7 @@
 import React, { createContext, useContext } from 'react'
 import useSWR, { mutate } from 'swr'
 import { apiClient } from '@/lib/api-client'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from '@/lib/supabase-client'
 
 interface User {
   id: string
@@ -60,10 +60,7 @@ const fetcher = async (url: string): Promise<AuthData> => {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getSupabaseClient()
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data, error, isLoading, mutate: mutateAuth } = useSWR<AuthData>(
     '/auth/session',
@@ -172,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔄 Desconectando Realtime para usuario:', data.user?.id)
       subscription.unsubscribe()
     }
-  }, [data?.user?.id, mutateAuth, supabase])
+  }, [data?.user?.id, mutateAuth])
 
   // ✅ LISTENER PARA EVENTOS PERSONALIZADOS DE ACTUALIZACIÓN
   React.useEffect(() => {

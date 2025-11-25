@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR from 'swr';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
@@ -17,12 +17,8 @@ interface UseNotificationsOptions {
 
 export function useNotifications(options: UseNotificationsOptions = {}) {
   const { limit = 5, onlyUnread = false, type, category, enabled = true } = options;
-
   const { user } = useAuth();
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getSupabaseClient()
 
   // ✅ Estado local para unread count (sin polling)
   const [unreadCount, setUnreadCount] = useState(0);
@@ -141,7 +137,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       console.log('🔔 Desconectando Realtime notificaciones para usuario:', user.id);
       subscription.unsubscribe();
     };
-  }, [enabled, user?.id, mutateNotifications, supabase]);
+  }, [enabled, user?.id, mutateNotifications]);
 
   // Marcar como leída
   const markAsRead = async (notificationId: string) => {

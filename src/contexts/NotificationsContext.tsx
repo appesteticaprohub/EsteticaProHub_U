@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from '@/lib/supabase-client'
 import { useAuth } from './AuthContext'
 import { apiClient } from '@/lib/api-client'
 import { UnreadCountResponse, NotificationsResponse } from '@/types/notifications'
@@ -38,11 +38,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const notificationsRef = useRef<Notification[]>([])
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getSupabaseClient()
 
   // ✅ Fetch inicial de notificaciones y unread count
   const fetchNotifications = useCallback(async () => {
@@ -162,12 +158,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
     return () => {
       console.log('🔔 [NotificationsContext] Desconectando Realtime para usuario:', user.id);
-      // Delay para evitar desconexiones innecesarias durante actualizaciones rápidas
-      setTimeout(() => {
-        subscription.unsubscribe()
-      }, 3000);
+      subscription.unsubscribe()
     }
-  }, [user?.id, supabase])
+  }, [user?.id])
 
   // ✅ Funciones de manejo
   const markAsRead = async (notificationId: string): Promise<boolean> => {
