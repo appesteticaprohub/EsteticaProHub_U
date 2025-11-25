@@ -165,35 +165,70 @@ const webhookData = JSON.parse(rawBody);
       // Buscar el usuario asociado a esta suscripción
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id, email, full_name, subscription_expires_at')
+        .select('id, email, full_name, subscription_status, subscription_expires_at, grace_period_ends')
         .eq('paypal_subscription_id', subscriptionId)
         .single();
 
       if (profile) {
         const userId = profile.id;
+        let finalStatus = 'Cancelled'; // Estado por defecto
+        
+        // 🧠 LÓGICA INTELIGENTE: Determinar el estado correcto según nuestras reglas de negocio
+        console.log('🔥 NUEVO WEBHOOK LOGIC - BILLING.SUBSCRIPTION.CANCELLED DETECTADO');
+        console.log(`🧠 Evaluating cancellation for user ${userId}:`);
+        console.log(`   Current status: ${profile.subscription_status}`);
+        console.log(`   Grace period ends: ${profile.grace_period_ends}`);
+        
+        // Regla 1: Si está en Grace_Period y ya venció → debe ser Expired
+        if (profile.subscription_status === 'Grace_Period' && profile.grace_period_ends) {
+          const now = new Date();
+          const gracePeriodEnd = new Date(profile.grace_period_ends);
+          
+          if (now > gracePeriodEnd) {
+            finalStatus = 'Expired';
+            console.log(`✅ Grace period expired (${profile.grace_period_ends}) - Setting status to Expired`);
+          } else {
+            finalStatus = 'Cancelled';
+            console.log(`⏰ Grace period still active until ${profile.grace_period_ends} - Setting status to Cancelled`);
+          }
+        }
+        // Regla 2: Si está Expired y PayPal cancela → mantener Expired
+        else if (profile.subscription_status === 'Expired') {
+          finalStatus = 'Expired';
+          console.log(`✅ User already Expired - Maintaining Expired status`);
+        }
+        // Regla 3: Cualquier otro caso → Cancelled normal
+        else {
+          finalStatus = 'Cancelled';
+          console.log(`✅ Normal cancellation - Setting status to Cancelled`);
+        }
 
-        // Actualizar estado a Cancelled (mantiene acceso hasta expiración)
+        // Actualizar con el estado determinado por nuestra lógica
         await supabase
           .from('profiles')
           .update({ 
-            subscription_status: 'Cancelled',
+            subscription_status: finalStatus,
             auto_renewal_enabled: false
           })
           .eq('id', userId);
 
-        console.log(`✅ Subscription ${subscriptionId} cancelled for user ${userId}`);
+        console.log(`✅ Subscription ${subscriptionId} processed - Final status: ${finalStatus} for user ${userId}`);
 
-        // ENVIAR NOTIFICACIONES
-        const userName = profile.full_name || profile.email.split('@')[0];
-        const expirationDate = profile.subscription_expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        // ENVIAR NOTIFICACIONES (solo si no es Expired, porque Expired no necesita notificación de cancelación)
+        if (finalStatus === 'Cancelled') {
+          const userName = profile.full_name || profile.email.split('@')[0];
+          const expirationDate = profile.subscription_expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-        console.log('📧 Enviando notificación de cancelación...');
-        await NotificationService.sendSubscriptionCancelledNotification(
-          userId,
-          profile.email,
-          userName,
-          expirationDate
-        );
+          console.log('📧 Enviando notificación de cancelación...');
+          await NotificationService.sendSubscriptionCancelledNotification(
+            userId,
+            profile.email,
+            userName,
+            expirationDate
+          );
+        } else {
+          console.log('ℹ️ No cancellation notification needed for Expired status');
+        }
       } else {
         console.error('❌ Profile not found for subscription:', subscriptionId);
         console.log('⏰ This might be a timing issue. PayPal webhook arrived before user registration completed.');
@@ -201,7 +236,7 @@ const webhookData = JSON.parse(rawBody);
         // TODO: En producción, considerar implementar queue/retry para webhook con delay
       }
 
-      return NextResponse.json({ message: 'Subscription cancelled' });
+      return NextResponse.json({ message: 'Subscription cancellation processed intelligently' });
     }
 
     // Pago de suscripción fallido

@@ -11,23 +11,23 @@ export function isSubscriptionExpired(expiresAt: string | null): boolean {
 }
 
 export async function updateExpiredSubscription(userId: string) {
-  const cookieStore = await cookies()
+  const { createServerSupabaseAdminClient } = await import('./server-supabase')
+  const supabase = createServerSupabaseAdminClient()
   
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  // Primero obtener el paypal_subscription_id antes de actualizar
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('paypal_subscription_id')
+    .eq('id', userId)
+    .single()
   
+  // Actualizar estado en BD
   const { error } = await supabase
     .from('profiles')
-    .update({ subscription_status: 'Expired' })
+    .update({ 
+      subscription_status: 'Expired',
+      auto_renewal_enabled: false
+    })
     .eq('id', userId)
   
   if (error) {
@@ -35,6 +35,27 @@ export async function updateExpiredSubscription(userId: string) {
     return false
   }
   
+  // Cancelar suscripción en PayPal si existe
+  if (profile?.paypal_subscription_id) {
+    try {
+      const { cancelPayPalSubscription } = await import('./paypal')
+      const response = await cancelPayPalSubscription(
+        profile.paypal_subscription_id, 
+        "Subscription expired - automatic cancellation"
+      )
+      
+      if (response.status === 204) {
+        console.log('✅ PayPal subscription cancelled for expired user:', profile.paypal_subscription_id)
+      } else {
+        console.log('⚠️ Could not cancel PayPal subscription. Status:', response.status)
+      }
+    } catch (error) {
+      console.error('⚠️ Error cancelling PayPal subscription (non-critical):', error)
+      // No retornamos false porque la actualización BD fue exitosa
+    }
+  }
+  
+  console.log('✅ Successfully updated subscription to Expired for user:', userId)
   return true
 }
 
@@ -112,19 +133,8 @@ export async function getUserProfileForMiddleware(userId: string) {
 // ==================== FUNCIONES PARA PAGOS RECURRENTES ====================
 
 export async function updatePaymentFailed(userId: string, retryCount: number = 0) {
-  const cookieStore = await cookies()
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const { createServerSupabaseAdminClient } = await import('./server-supabase')
+  const supabase = createServerSupabaseAdminClient()
   
   const now = new Date()
   
@@ -142,23 +152,13 @@ export async function updatePaymentFailed(userId: string, retryCount: number = 0
     return false
   }
   
+  console.log('✅ Successfully updated payment failed status for user:', userId)
   return true
 }
 
 export async function activateGracePeriod(userId: string, graceDays: number = 7) {
-  const cookieStore = await cookies()
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const { createServerSupabaseAdminClient } = await import('./server-supabase')
+  const supabase = createServerSupabaseAdminClient()
   
   const gracePeriodEnd = new Date()
   gracePeriodEnd.setDate(gracePeriodEnd.getDate() + graceDays)
@@ -176,6 +176,7 @@ export async function activateGracePeriod(userId: string, graceDays: number = 7)
     return false
   }
   
+  console.log('✅ Successfully activated grace period for user:', userId)
   return true
 }
 
@@ -218,19 +219,8 @@ export async function getPaymentRetryInfo(userId: string) {
 }
 
 export async function updateSuspendedStatus(userId: string) {
-  const cookieStore = await cookies()
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const { createServerSupabaseAdminClient } = await import('./server-supabase')
+  const supabase = createServerSupabaseAdminClient()
   
   const { error } = await supabase
     .from('profiles')
@@ -242,24 +232,13 @@ export async function updateSuspendedStatus(userId: string) {
     return false
   }
   
+  console.log('✅ Successfully updated suspended status for user:', userId)
   return true
-
 }
 
 export async function cancelSubscription(userId: string) {
-  const cookieStore = await cookies()
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const { createServerSupabaseAdminClient } = await import('./server-supabase')
+  const supabase = createServerSupabaseAdminClient()
   
   const { error } = await supabase
     .from('profiles')
@@ -275,23 +254,13 @@ export async function cancelSubscription(userId: string) {
     return false
   }
   
+  console.log('✅ Successfully cancelled subscription for user:', userId)
   return true
 }
 
 export async function reactivateSubscription(userId: string) {
-  const cookieStore = await cookies()
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const { createServerSupabaseAdminClient } = await import('./server-supabase')
+  const supabase = createServerSupabaseAdminClient()
   
   const { error } = await supabase
     .from('profiles')
@@ -317,6 +286,7 @@ export async function reactivateSubscription(userId: string) {
     // No retornamos false porque la reactivación fue exitosa
   }
   
+  console.log('✅ Successfully reactivated subscription for user:', userId)
   return true
 }
 

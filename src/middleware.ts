@@ -131,6 +131,7 @@ if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')
 
   // Definir rutas con lógica inteligente
   const publicRoutes = ['/', '/login', '/olvidaste-contrasena', '/restablecer-contrasena']
+  const postRoutes = ['/post'] // Rutas de posts - no son públicas para usuarios autenticados
   const authRoutes = ['/login']
   const registrationRoute = '/registro'
   const fullyProtectedRoutes = ['/perfil']  // Solo perfil requiere login obligatorio
@@ -139,6 +140,14 @@ if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')
   const isPublicRoute = publicRoutes.some(route => 
     request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route)
   )
+  
+// Los posts NO son públicos si hay usuario autenticado
+const isPostRoute = postRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  )
+  
+// Si es ruta de post y hay usuario, no es pública
+const isActuallyPublic = isPublicRoute && !(user && isPostRoute)
   
   const isAuthRoute = authRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
@@ -163,7 +172,7 @@ if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')
 
   // ✅ OPTIMIZACIÓN: Solo hacer validaciones complejas donde se necesitan
   // Para páginas públicas con usuario autenticado: NO consultar BD (AuthContext maneja los datos)
-  if (user && !isPublicRoute && (isFullyProtected || needsSubscriptionCheck)) {
+  if (user && (!isActuallyPublic || needsSubscriptionCheck) && (isFullyProtected || needsSubscriptionCheck)) {
     console.log('Verificando suscripción para usuario en página protegida:', user.email)
     
     try {
@@ -211,6 +220,7 @@ if (request.nextUrl.pathname === '/' && request.nextUrl.searchParams.has('code')
       console.error('Error en verificación de suscripción:', error)
     }
   } else if (user && isPublicRoute) {
+    console.log('Debug middleware - isPublicRoute:', isPublicRoute, 'needsSubscriptionCheck:', needsSubscriptionCheck, 'ruta:', request.nextUrl.pathname)
     console.log('✅ Usuario en página pública - sin validaciones BD (AuthContext maneja datos)')
   } else if (!user) {
     console.log('✅ Usuario anónimo - sin consultas BD innecesarias')
