@@ -41,19 +41,19 @@ export default function CancelSubscriptionModal({
     <Modal isOpen={isOpen} onClose={onClose}>
       <div className="p-6 rounded-lg border-2 border-red-200 bg-red-50">
         <h2 className="text-xl font-bold mb-4 text-gray-800">
-          ¿Cancelar suscripción?
+          ¿Pausar renovación automática?
         </h2>
         
         <div className="mb-6 space-y-3">
           <p className="text-gray-700">
-            Si cancelas tu suscripción:
+            Si pausas la renovación automática:
           </p>
-          
+                    
           <ul className="list-disc list-inside text-gray-600 space-y-1 ml-4">
-            <li>No se renovará automáticamente</li>
-            <li>Conservarás acceso premium hasta {subscriptionExpiresAt ? formatDate(subscriptionExpiresAt) : 'la fecha de expiración'}</li>
-            <li>Después de esa fecha perderás el acceso a funciones premium</li>
-            <li>Podrás reactivar antes de que expire</li>
+            <li>La renovación automática se pausará</li>
+              <li>Conservarás acceso premium hasta {subscriptionExpiresAt ? formatDate(subscriptionExpiresAt) : 'la fecha de expiración'}</li>
+              <li>Puedes reactivar la renovación cuando quieras</li>
+              <li>Si no reactivas, perderás acceso después de esa fecha</li>
           </ul>
           
           <div className="mt-4 p-3 bg-white rounded border border-red-300">

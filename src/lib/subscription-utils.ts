@@ -14,14 +14,37 @@ export async function updateExpiredSubscription(userId: string) {
   const { createServerSupabaseAdminClient } = await import('./server-supabase')
   const supabase = createServerSupabaseAdminClient()
   
-  // Primero obtener el paypal_subscription_id antes de actualizar
+  // Primero obtener el perfil completo para verificar si necesitamos cancelar en PayPal
   const { data: profile } = await supabase
     .from('profiles')
-    .select('paypal_subscription_id')
+    .select('paypal_subscription_id, subscription_status, auto_renewal_enabled')
     .eq('id', userId)
     .single()
   
-  // Actualizar estado en BD
+  // LÓGICA SIMPLIFICADA: Cualquier usuario que pase a Expired debe cancelarse en PayPal
+  if (profile?.paypal_subscription_id) {
+    
+    console.log('🔄 Usuario expirado - cancelando en PayPal para evitar cobros futuros:', profile.paypal_subscription_id)
+    
+    try {
+      const { cancelPayPalSubscription } = await import('./paypal')
+      const response = await cancelPayPalSubscription(
+        profile.paypal_subscription_id, 
+        "Subscription expired - automatic cleanup to prevent future charges"
+      )
+      
+      if (response.status === 204) {
+        console.log('✅ PayPal subscription cancelled for expired cancelled user:', profile.paypal_subscription_id)
+      } else {
+        console.log('⚠️ Could not cancel PayPal subscription. Status:', response.status)
+      }
+    } catch (error) {
+      console.error('⚠️ Error cancelling PayPal subscription (non-critical):', error)
+      // No retornamos false porque la actualización BD sigue siendo válida
+    }
+  }
+  
+  // Actualizar estado en BD (como antes)
   const { error } = await supabase
     .from('profiles')
     .update({ 
@@ -33,26 +56,6 @@ export async function updateExpiredSubscription(userId: string) {
   if (error) {
     console.error('Error updating expired subscription:', error)
     return false
-  }
-  
-  // Cancelar suscripción en PayPal si existe
-  if (profile?.paypal_subscription_id) {
-    try {
-      const { cancelPayPalSubscription } = await import('./paypal')
-      const response = await cancelPayPalSubscription(
-        profile.paypal_subscription_id, 
-        "Subscription expired - automatic cancellation"
-      )
-      
-      if (response.status === 204) {
-        console.log('✅ PayPal subscription cancelled for expired user:', profile.paypal_subscription_id)
-      } else {
-        console.log('⚠️ Could not cancel PayPal subscription. Status:', response.status)
-      }
-    } catch (error) {
-      console.error('⚠️ Error cancelling PayPal subscription (non-critical):', error)
-      // No retornamos false porque la actualización BD fue exitosa
-    }
   }
   
   console.log('✅ Successfully updated subscription to Expired for user:', userId)

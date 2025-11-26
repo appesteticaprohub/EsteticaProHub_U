@@ -361,6 +361,49 @@ export async function cancelPayPalSubscription(subscriptionId: string, reason: s
   return response;
 }
 
+// Reactivar suscripción cancelada
+export async function reactivatePayPalSubscription(subscriptionId: string) {
+  try {
+    const accessToken = await getPayPalAccessToken();
+    
+    console.log('🔄 Intentando reactivar suscripción en PayPal:', subscriptionId);
+    
+    const response = await fetch(`${PAYPAL_BASE_URL}/v1/billing/subscriptions/${subscriptionId}/activate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        reason: "Usuario reactivó suscripción desde perfil"
+      }),
+    });
+
+    console.log('🔄 Respuesta de PayPal para reactivación:', response.status);
+
+    if (response.status === 204) {
+      // 204 significa éxito sin contenido (típico para reactivaciones)
+      console.log('✅ Suscripción reactivada exitosamente en PayPal');
+      return { success: true };
+    } else {
+      const errorText = await response.text().catch(() => 'No response body');
+      console.error('❌ Error reactivando en PayPal:', response.status, errorText);
+      return { 
+        success: false, 
+        error: `PayPal error: ${response.status}`,
+        details: errorText 
+      };
+    }
+  } catch (error) {
+    console.error('💥 Excepción reactivando suscripción en PayPal:', error);
+    return { 
+      success: false, 
+      error: 'Exception calling PayPal',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
 // ==================== NUEVAS FUNCIONES PARA ACTUALIZACIÓN DE PRECIOS ====================
 
 // Actualizar precio de una suscripción específica

@@ -341,9 +341,9 @@ const handleReactivateSubscription = async () => {
                   {subscriptionStatus === 'Active' && (
                     <button
                       onClick={() => setShowCancelModal(true)}
-                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                      className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
                     >
-                      Cancelar Suscripción
+                      Pausar Renovación Automática
                     </button>
                   )}
 
@@ -351,6 +351,9 @@ const handleReactivateSubscription = async () => {
                     <div className="mt-2 space-y-2">
                       <div className="text-sm text-gray-600">
                         Acceso hasta: {formatDate(subscriptionData.subscription_expires_at)}
+                      </div>
+                      <div className="text-xs text-amber-600 mt-1 font-medium">
+                        ⏸️ Renovación automática pausada. Puedes reactivarla cuando quieras.
                       </div>
                       {(() => {
                         const now = new Date();
@@ -360,7 +363,7 @@ const handleReactivateSubscription = async () => {
                             onClick={handleReactivateSubscription}
                             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
                           >
-                            Reactivar Suscripción
+                            ▶️ Reactivar Renovación Automática
                           </button>
                         ) : null;
                       })()}

@@ -14,10 +14,10 @@ export async function POST() {
 
     const userId = sessionData.session.user.id;
 
-    // Verificar que el usuario tiene una suscripción activa o cancelable
+    // Obtener datos del usuario incluyendo paypal_subscription_id
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('subscription_status, auto_renewal_enabled')
+      .select('subscription_status, auto_renewal_enabled, paypal_subscription_id, email, full_name, subscription_expires_at')
       .eq('id', userId)
       .single();
 
@@ -25,6 +25,7 @@ export async function POST() {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 });
     }
 
+    // Validaciones de estado
     if (profile.subscription_status === 'Cancelled') {
       return NextResponse.json({ error: 'La suscripción ya está cancelada' }, { status: 400 });
     }
@@ -33,20 +34,27 @@ export async function POST() {
       return NextResponse.json({ error: 'No se puede cancelar suscripción en este estado' }, { status: 400 });
     }
 
-    // Cancelar suscripción (actualizar estado en BD)
+    // NUEVO ENFOQUE: Solo pausar renovación automática (NO cancelar en PayPal aún)
+    console.log('🔄 Pausando renovación automática para usuario:', userId);
+    console.log('💡 PayPal se mantendrá activo hasta la fecha de expiración');
+
+    // Solo actualizar estado local (pausar renovación)
     const success = await cancelSubscription(userId);
 
     if (!success) {
-      return NextResponse.json({ error: 'Error cancelando suscripción' }, { status: 500 });
+      return NextResponse.json({ error: 'Error pausando renovación automática' }, { status: 500 });
     }
+
+    console.log(`✅ Renovación automática pausada para usuario ${userId}`);
+    console.log(`📅 Usuario mantendrá acceso hasta ${profile.subscription_expires_at}`);
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Suscripción cancelada exitosamente. Conservarás acceso hasta la fecha de expiración.' 
+      message: 'Renovación automática pausada exitosamente. Conservarás acceso hasta la fecha de expiración y puedes reactivar cuando quieras.' 
     });
 
   } catch (error) {
-    console.error('Error cancelando suscripción:', error);
+    console.error('❌ Error cancelando suscripción:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

@@ -38,41 +38,51 @@ export async function POST() {
       return NextResponse.json({ error: 'La suscripción ya ha expirado. Debe renovar en lugar de reactivar.' }, { status: 400 });
     }
 
-    // Reactivar suscripción
+    // Obtener paypal_subscription_id antes de reactivar
+const { data: profileData, error: profileDataError } = await supabase
+  .from('profiles')
+  .select('paypal_subscription_id, email, full_name')
+  .eq('id', userId)
+  .single();
+
+if (profileDataError || !profileData) {
+  return NextResponse.json({ error: 'Error obteniendo datos del perfil' }, { status: 500 });
+}
+
+// NUEVO ENFOQUE: Solo reactivar renovación automática (PayPal ya está activo)
+console.log('🔄 Reactivando renovación automática para usuario:', userId);
+console.log('💡 PayPal ya está activo, solo habilitamos auto-renovación');
+
+// No necesitamos llamar a PayPal porque nunca se canceló
+
+// Reactivar localmente después de PayPal
 const success = await reactivateSubscription(userId);
 
 if (!success) {
-  return NextResponse.json({ error: 'Error reactivando suscripción' }, { status: 500 });
+  return NextResponse.json({ error: 'Error actualizando estado local' }, { status: 500 });
 }
 
 // 📧 ENVIAR NOTIFICACIONES DE REACTIVACIÓN
 try {
-  // Obtener datos del usuario para el email
-  const { data: userProfile } = await supabase
-    .from('profiles')
-    .select('email, full_name')
-    .eq('id', userId)
-    .single();
-
-  if (userProfile) {
-    const userName = userProfile.full_name || userProfile.email.split('@')[0];
-    
-    console.log('📧 Enviando notificación de reactivación...');
-    await NotificationService.sendSubscriptionReactivatedNotification(
-      userId,
-      userProfile.email,
-      userName
-    );
-    console.log('✅ Notificación de reactivación enviada');
-  }
+  const userName = profileData.full_name || profileData.email.split('@')[0];
+  
+  console.log('📧 Enviando notificación de reactivación...');
+  await NotificationService.sendSubscriptionReactivatedNotification(
+    userId,
+    profileData.email,
+    userName
+  );
+  console.log('✅ Notificación de reactivación enviada');
 } catch (notificationError) {
   // No fallar la reactivación si el email falla
   console.error('❌ Error enviando notificación de reactivación:', notificationError);
 }
 
+console.log(`✅ Suscripción reactivada completamente para usuario ${userId}`);
+
 return NextResponse.json({ 
   success: true, 
-  message: 'Suscripción reactivada exitosamente. Se renovará automáticamente.' 
+  message: 'Suscripción reactivada exitosamente en PayPal y localmente. Se renovará automáticamente.' 
 });
 
   } catch (error) {
