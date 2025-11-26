@@ -169,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔄 Desconectando Realtime para usuario:', data.user?.id)
       subscription.unsubscribe()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.user?.id, mutateAuth])
 
   // ✅ LISTENER PARA EVENTOS PERSONALIZADOS DE ACTUALIZACIÓN

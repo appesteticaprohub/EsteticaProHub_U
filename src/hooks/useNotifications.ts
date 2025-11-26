@@ -137,6 +137,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       console.log('🔔 Desconectando Realtime notificaciones para usuario:', user.id);
       subscription.unsubscribe();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, user?.id, mutateNotifications]);
 
   // Marcar como leída

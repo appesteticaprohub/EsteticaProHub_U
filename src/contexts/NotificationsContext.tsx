@@ -160,6 +160,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       console.log('🔔 [NotificationsContext] Desconectando Realtime para usuario:', user.id);
       subscription.unsubscribe()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
   // ✅ Funciones de manejo
