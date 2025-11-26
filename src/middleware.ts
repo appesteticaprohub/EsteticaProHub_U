@@ -209,6 +209,12 @@ const isActuallyPublic = isPublicRoute && !(user && isPostRoute)
         // ✅ Estados como Payment_Failed y Suspended solo se registran, UI los maneja
         if (profile.subscription_status === 'Payment_Failed') {
           console.log('Usuario con pago fallido detectado - UI manejará recovery')
+        } else if (profile.subscription_status === 'Suspended' && 
+           isSubscriptionExpired(profile.subscription_expires_at)) {
+  
+          console.log('Suscripción Suspended expirada, actualizando a Expired...')
+          await updateExpiredSubscription(user.id)
+          
         } else if (profile.subscription_status === 'Suspended') {
           console.log('Usuario con suscripción suspendida - UI manejará recovery')  
         }

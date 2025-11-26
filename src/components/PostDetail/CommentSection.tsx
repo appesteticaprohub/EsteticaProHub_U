@@ -23,6 +23,7 @@ interface CommentSectionProps {
     email: string;
   } | null;
   subscriptionStatus: string | null;
+  hasValidAccess: () => boolean;
   onShowSnackBar: (message: string) => void;
 }
 
@@ -41,6 +42,7 @@ export default function CommentSection({
   currentUserId,
   user,
   subscriptionStatus,
+  hasValidAccess,
   onShowSnackBar
 }: CommentSectionProps) {
   const [commentText, setCommentText] = useState('');
@@ -57,7 +59,7 @@ export default function CommentSection({
     }
 
     // Situación 1: Usuario anónimo o sin suscripción activa
-    if (!user || subscriptionStatus !== 'Active') {
+    if (!user || !hasValidAccess()) {
       onShowSnackBar('Necesitas una suscripción');
       return;
     }
@@ -188,6 +190,7 @@ export default function CommentSection({
                   currentUserId={currentUserId}
                   user={user}
                   subscriptionStatus={subscriptionStatus}
+                  hasValidAccess={hasValidAccess}
                   isReply={false}
                 />
                 
@@ -229,6 +232,7 @@ export default function CommentSection({
                             currentUserId={currentUserId}
                             user={user}
                             subscriptionStatus={subscriptionStatus}
+                            hasValidAccess={hasValidAccess}
                             isReply={true}
                             mainCommentId={comment.id}
                           />

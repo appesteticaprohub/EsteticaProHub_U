@@ -149,18 +149,25 @@ useEffect(() => {
   };
 
   const hasValidAccess = () => {
-    if (!user) return false;
-    
-    if (subscriptionStatus === 'Active') return true;
-    
-    if (subscriptionStatus === 'Cancelled' && subscriptionData?.subscription_expires_at) {
-      const now = new Date();
-      const expirationDate = new Date(subscriptionData.subscription_expires_at);
-      return now <= expirationDate;
-    }
-    
-    return false;
-  };
+  if (!user) return false;
+  
+  if (subscriptionStatus === 'Active') return true;
+  
+  if (subscriptionStatus === 'Cancelled' && subscriptionData?.subscription_expires_at) {
+    const now = new Date();
+    const expirationDate = new Date(subscriptionData.subscription_expires_at);
+    return now <= expirationDate;
+  }
+  
+  // Usuario suspendido pero con fecha válida
+  if (subscriptionStatus === 'Suspended' && subscriptionData?.subscription_expires_at) {
+    const now = new Date();
+    const expirationDate = new Date(subscriptionData.subscription_expires_at);
+    return now <= expirationDate;
+  }
+  
+  return false;
+};
 
   if (loading) {
     return (
@@ -397,7 +404,8 @@ useEffect(() => {
           }}
           currentUserId={user?.id || null}
           user={user}
-          subscriptionStatus={hasValidAccess() ? 'Active' : subscriptionStatus}
+          subscriptionStatus={subscriptionStatus}
+          hasValidAccess={hasValidAccess}
           onShowSnackBar={(message: string) => {
             setSnackBarMessage(message);
             setShowSnackBar(true);

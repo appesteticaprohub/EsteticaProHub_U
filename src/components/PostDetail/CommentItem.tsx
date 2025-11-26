@@ -29,6 +29,7 @@ interface CommentItemProps {
     email: string;
   } | null;
   subscriptionStatus: string | null;
+  hasValidAccess: () => boolean;
   isReply?: boolean;
   mainCommentId?: string;
 }
@@ -41,6 +42,7 @@ export default function CommentItem({
   currentUserId, 
   user, 
   subscriptionStatus,
+  hasValidAccess,
   isReply = false,
   mainCommentId
 }: CommentItemProps) {
@@ -54,9 +56,9 @@ export default function CommentItem({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   const userName = comment.profiles?.full_name || comment.profiles?.email || 'Usuario anónimo';
-  const canReply = user && subscriptionStatus === 'Active' && !comment.is_deleted; // Todos los comentarios pueden recibir respuestas
-  const canEdit = currentUserId === comment.user_id && subscriptionStatus === 'Active' && !comment.is_deleted;
-  const canDelete = currentUserId === comment.user_id && subscriptionStatus === 'Active' && !comment.is_deleted;
+  const canReply = user && hasValidAccess() && !comment.is_deleted; // Todos los comentarios pueden recibir respuestas
+  const canEdit = currentUserId === comment.user_id && hasValidAccess() && !comment.is_deleted;
+  const canDelete = currentUserId === comment.user_id && hasValidAccess() && !comment.is_deleted;
 
   const handleReplyClick = () => {
     // Siempre mostrar formulario inline, sin importar el nivel
