@@ -59,6 +59,55 @@ const webhookData = JSON.parse(rawBody);
       // Si es pago de suscripción, dejarlo pasar al bloque de suscripciones
       if (billingAgreementId) {
         console.log('🔄 Subscription payment detected, processing below...');
+
+       // PROCESAR PAGO DE SUSCRIPCIÓN - DETECCIÓN DE CAMBIOS DE PRECIO
+        console.log('💰 Processing subscription payment for price change detection...');
+        
+        // Buscar el usuario asociado a esta suscripción
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, email, last_payment_amount')
+          .eq('paypal_subscription_id', billingAgreementId)
+          .single();
+
+        if (profile) {
+          const userId = profile.id;
+          const newPaymentAmount = parseFloat(webhookData.resource?.amount?.total || '0');
+          const lastPaymentAmount = profile.last_payment_amount || 0;
+
+          console.log(`💰 Payment comparison for user ${userId}:`);
+          console.log(`   Previous amount: $${lastPaymentAmount}`);
+          console.log(`   New amount: $${newPaymentAmount}`);
+
+          // Si el monto es diferente, el usuario pagó con nuevo precio
+          if (newPaymentAmount !== lastPaymentAmount && newPaymentAmount > 0) {
+            console.log('🔄 Price change detected! Updating payment info and clearing notifications...');
+            
+            // Actualizar el monto del último pago
+            await supabase
+              .from('profiles')
+              .update({
+                last_payment_amount: newPaymentAmount,
+                last_payment_date: new Date().toISOString()
+              })
+              .eq('id', userId);
+
+            // 🧹 LIMPIAR NOTIFICACIONES DE CAMBIO DE PRECIO
+            console.log('🧹 Clearing price change notifications...');
+            await NotificationService.clearPriceChangeNotifications(userId);
+
+            console.log(`✅ Price change processed successfully for user ${userId}`);
+            console.log(`💰 Payment amount updated: $${lastPaymentAmount} → $${newPaymentAmount}`);
+          } else {
+            console.log('ℹ️ No price change detected - amounts are the same');
+          }
+
+          return NextResponse.json({ message: 'Subscription payment processed' });
+        } else {
+          console.error('❌ Profile not found for subscription:', billingAgreementId);
+          return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        }   
+
       } else if (!paymentId || !customField) {
         console.error('Missing payment ID or custom field for one-time payment');
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
