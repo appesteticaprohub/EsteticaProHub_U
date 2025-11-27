@@ -16,12 +16,6 @@ export default function BusquedaPage() {
   const router = useRouter();
   const { results, loading: searchLoading, error: searchError, search, clearResults } = useSearch();
 
-  // Estados para modales
-  const [showModal, setShowModal] = useState(false);
-  const [modalMessage, setModalMessage] = useState('');
-  const [modalButtons, setModalButtons] = useState<'subscription' | 'login' | 'renew'>('subscription');
-  const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false);
-
   // Estados para filtros
   const [filters, setFilters] = useState({
     title: '',
@@ -34,6 +28,49 @@ export default function BusquedaPage() {
     sort_order: 'desc' as 'asc' | 'desc',
     page: 1
   });
+
+  // 🆕 FUNCIÓN PARA DETECTAR CAMBIO DE PRECIO (MOVIDA AQUÍ)
+  const checkPriceChangeAndSetMessage = async () => {
+    try {
+      // Obtener precio actual
+      const priceResponse = await fetch('/api/subscription-price');
+      const priceData = await priceResponse.json();
+      const currentPrice = priceData.price;
+      
+      // Obtener último pago del usuario
+      const statusResponse = await fetch('/api/subscription-status');
+      const statusData = await statusResponse.json();
+      const lastPayment = statusData.data.last_payment_amount || 0;
+      
+      // Determinar mensaje según cambio de precio
+      if (lastPayment === null || lastPayment === 0) {
+        // Usuario sin historial de pagos
+        setModalMessage('Necesitas renovar tu suscripción para buscar');
+      } else if (currentPrice !== lastPayment) {
+        // Usuario con historial diferente al precio actual
+        setModalMessage(`El precio ha cambiado de $${lastPayment} a $${currentPrice}. Renueva con el nuevo precio para buscar.`);
+      } else {
+        // Mismo precio
+        setModalMessage('Necesitas renovar tu suscripción para buscar');
+      }
+      
+      setModalButtons('renew');
+      setShowModal(true);
+      
+    } catch (error) {
+      console.error('Error detectando cambio de precio:', error);
+      // Fallback al mensaje original
+      setModalMessage('Necesitas renovar tu suscripción para buscar');
+      setModalButtons('renew');
+      setShowModal(true);
+    }
+  };
+
+  // Estados para modales
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalButtons, setModalButtons] = useState<'subscription' | 'login' | 'renew'>('subscription');
+  const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false);
 
   // Categorías (las mismas de crear-post)
   const categorias = [
@@ -64,11 +101,10 @@ export default function BusquedaPage() {
         return;
       }
 
-      // Usuario con estado Expired
+      // Usuario con estado Expired - detectar cambio de precio
       if (session && userType === 'premium' && subscriptionStatus === 'Expired') {
-        setModalMessage('Necesitas renovar tu suscripción para buscar');
-        setModalButtons('renew');
-        setShowModal(true);
+        // Verificar si hubo cambio de precio
+        checkPriceChangeAndSetMessage();
         return;
       }
 

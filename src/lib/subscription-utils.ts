@@ -293,6 +293,60 @@ export async function reactivateSubscription(userId: string) {
   return true
 }
 
+// Función helper para detectar si hubo cambio de precio desde el último pago
+export async function hasPriceChangedSinceLastPayment(userId: string): Promise<boolean> {
+  const cookieStore = await cookies()
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    }
+  )
+  
+  try {
+    // Obtener el precio actual del sistema
+    const { data: settings } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'SUBSCRIPTION_PRICE')
+      .single()
+    
+    // Obtener el último precio que pagó el usuario
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('last_payment_amount')
+      .eq('id', userId)
+      .single()
+    
+    if (!settings || !profile) {
+      console.log('⚠️ No se pudo obtener precio actual o último pago del usuario')
+      return false
+    }
+    
+    const currentPrice = parseFloat(settings.value)
+    const lastPaymentAmount = profile.last_payment_amount || 0
+    
+    const hasChanged = currentPrice !== lastPaymentAmount && lastPaymentAmount > 0
+    
+    console.log(`💰 Detección cambio de precio para usuario ${userId}:`)
+    console.log(`   Precio actual: $${currentPrice}`)
+    console.log(`   Último pago: $${lastPaymentAmount}`)
+    console.log(`   ¿Cambió?: ${hasChanged}`)
+    
+    return hasChanged
+    
+  } catch (error) {
+    console.error('Error detectando cambio de precio:', error)
+    return false
+  }
+}
+
 // Función helper para validar acceso válido (backend)
 export async function hasValidSubscriptionAccess(userId: string): Promise<boolean> {
   const cookieStore = await cookies()

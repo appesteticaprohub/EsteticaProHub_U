@@ -40,6 +40,41 @@ const handleClosePaymentModal = () => {
   setPaymentModalDismissed(true);
 };
 
+// 🆕 FUNCIÓN PARA DETECTAR CAMBIO DE PRECIO
+  const checkPriceChangeAndSetMessage = async () => {
+    try {
+      // Obtener precio actual
+      const priceResponse = await fetch('/api/subscription-price');
+      const priceData = await priceResponse.json();
+      const currentPrice = priceData.price;
+      
+      // Obtener último pago del usuario
+      const statusResponse = await fetch('/api/subscription-status');
+      const statusData = await statusResponse.json();
+      const lastPayment = statusData.data.last_payment_amount || 0;
+      
+      // Determinar mensaje según cambio de precio
+      if (lastPayment === null || lastPayment === 0) {
+        // Usuario sin historial de pagos
+        setModalMessage('Tu suscripción ha expirado. Necesitas renovar para continuar.');
+      } else if (currentPrice !== lastPayment) {
+        // Usuario con historial diferente al precio actual
+        setModalMessage(`El precio ha cambiado de $${lastPayment} a $${currentPrice}. Renueva con el nuevo precio para continuar.`);
+      } else {
+        // Mismo precio
+        setModalMessage('Tu suscripción ha expirado. Necesitas renovar para continuar.');
+      }
+      
+      setShowModal(true);
+      
+    } catch (error) {
+      console.error('Error detectando cambio de precio:', error);
+      // Fallback al mensaje original
+      setModalMessage('Tu suscripción ha expirado. Necesitas renovar para continuar.');
+      setShowModal(true);
+    }
+  };
+
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   
@@ -82,12 +117,11 @@ const handleClosePaymentModal = () => {
 
   useEffect(() => {
     if (!loading && !statusLoading && post) {
-      // Usuario con estado Expired
+      // Usuario con estado Expired - detectar cambio de precio
       if (user && subscriptionStatus === 'Expired') {
-        setModalMessage('Tu suscripción ha expirado. Necesitas renovar para continuar.');
-        setShowModal(true);
+        // Verificar si hubo cambio de precio
+        checkPriceChangeAndSetMessage();
         return;
-        
       }
 
       // Usuario con estado Cancelled - verificar si aún tiene acceso

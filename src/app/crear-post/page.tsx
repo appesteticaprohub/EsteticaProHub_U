@@ -38,6 +38,42 @@ export default function CrearPost() {
   const [modalMessage, setModalMessage] = useState('');
   const [modalButtons, setModalButtons] = useState<'subscription' | 'login' | 'renew' | 'cancelled'>('subscription');
   const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false);
+  // 🆕 FUNCIÓN PARA DETECTAR CAMBIO DE PRECIO (MOVIDA AQUÍ)
+  const checkPriceChangeAndSetMessage = async () => {
+    try {
+      // Obtener precio actual
+      const priceResponse = await fetch('/api/subscription-price');
+      const priceData = await priceResponse.json();
+      const currentPrice = priceData.price;
+      
+      // Obtener último pago del usuario
+      const statusResponse = await fetch('/api/subscription-status');
+      const statusData = await statusResponse.json();
+      const lastPayment = statusData.data.last_payment_amount || 0;
+      
+      // Determinar mensaje según cambio de precio
+      if (lastPayment === null || lastPayment === 0) {
+        // Usuario sin historial de pagos
+        setModalMessage('Necesitas renovar tu suscripción');
+      } else if (currentPrice !== lastPayment) {
+        // Usuario con historial diferente al precio actual
+        setModalMessage(`El precio ha cambiado de $${lastPayment} a $${currentPrice}. Renueva con el nuevo precio.`);
+      } else {
+        // Mismo precio
+        setModalMessage('Necesitas renovar tu suscripción');
+      }
+      
+      setModalButtons('renew');
+      setShowModal(true);
+      
+    } catch (error) {
+      console.error('Error detectando cambio de precio:', error);
+      // Fallback al mensaje original
+      setModalMessage('Necesitas renovar tu suscripción');
+      setModalButtons('renew');
+      setShowModal(true);
+    }
+  };
   const [categoria, setCategoria] = useState('');
   const [titulo, setTitulo] = useState('');
   const [contenido, setContenido] = useState('');
@@ -131,11 +167,10 @@ useEffect(() => {
         return;
       }
 
-      // Situación 3: Usuario premium con estado Expired (middleware ya actualizó si era necesario)
+      // Situación 3: Usuario premium con estado Expired - detectar cambio de precio
       if (session && userType === 'premium' && subscriptionStatus === 'Expired') {
-        setModalMessage('Necesitas renovar tu suscripción');
-        setModalButtons('renew');
-        setShowModal(true);
+        // Verificar si hubo cambio de precio
+        checkPriceChangeAndSetMessage();
         return;
       }
 

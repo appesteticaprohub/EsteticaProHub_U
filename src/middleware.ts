@@ -5,7 +5,8 @@ import {
   getUserProfileForMiddleware, 
   isSubscriptionExpired, 
   updateExpiredSubscription,
-  isInGracePeriod 
+  isInGracePeriod,
+  hasPriceChangedSinceLastPayment
 } from '@/lib/subscription-utils'
 
 export async function middleware(request: NextRequest) {
@@ -178,6 +179,7 @@ const isActuallyPublic = isPublicRoute && !(user && isPostRoute)
     try {
       // ✅ UNA SOLA consulta consolidada con campos específicos
       const profile = await getUserProfileForMiddleware(user.id)
+      let priceChangedFlag = false
       
       if (profile) {
         console.log('Perfil encontrado:', {
@@ -192,6 +194,9 @@ const isActuallyPublic = isPublicRoute && !(user && isPostRoute)
           console.log('Suscripción Active expirada, actualizando a Expired...')
           await updateExpiredSubscription(user.id)
           
+          // 🆕 DETECTAR SI HUBO CAMBIO DE PRECIO
+          priceChangedFlag = await hasPriceChangedSinceLastPayment(user.id)
+          
         } else if (profile.subscription_status === 'Grace_Period' && 
                    profile.grace_period_ends && 
                    !isInGracePeriod(profile.grace_period_ends)) {
@@ -199,11 +204,23 @@ const isActuallyPublic = isPublicRoute && !(user && isPostRoute)
           console.log('Período de gracia expirado, actualizando a Expired...')
           await updateExpiredSubscription(user.id)
           
+          // 🆕 DETECTAR SI HUBO CAMBIO DE PRECIO
+          priceChangedFlag = await hasPriceChangedSinceLastPayment(user.id)
+          
         } else if (profile.subscription_status === 'Cancelled' && 
            isSubscriptionExpired(profile.subscription_expires_at)) {
           
           console.log('Suscripción Cancelled expirada, actualizando a Expired...')
           await updateExpiredSubscription(user.id)
+          
+          // 🆕 DETECTAR SI HUBO CAMBIO DE PRECIO
+          priceChangedFlag = await hasPriceChangedSinceLastPayment(user.id)
+        }
+        
+        // 🆕 AGREGAR FLAG EN HEADERS PARA QUE FRONTEND LO DETECTE
+        if (priceChangedFlag) {
+          console.log('🔄 Flag de cambio de precio detectado - agregando a headers')
+          response.headers.set('x-price-changed', 'true')
         }
         
         // ✅ Estados como Payment_Failed y Suspended solo se registran, UI los maneja
