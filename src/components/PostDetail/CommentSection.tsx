@@ -22,7 +22,6 @@ interface CommentSectionProps {
     id: string;
     email: string;
   } | null;
-  subscriptionStatus: string | null;
   hasValidAccess: () => boolean;
   onShowSnackBar: (message: string) => void;
 }
@@ -41,7 +40,6 @@ export default function CommentSection({
   onDelete,
   currentUserId,
   user,
-  subscriptionStatus,
   hasValidAccess,
   onShowSnackBar
 }: CommentSectionProps) {
@@ -189,7 +187,6 @@ export default function CommentSection({
                   onDelete={onDelete}
                   currentUserId={currentUserId}
                   user={user}
-                  subscriptionStatus={subscriptionStatus}
                   hasValidAccess={hasValidAccess}
                   isReply={false}
                 />
@@ -231,7 +228,6 @@ export default function CommentSection({
                             onDelete={onDelete}
                             currentUserId={currentUserId}
                             user={user}
-                            subscriptionStatus={subscriptionStatus}
                             hasValidAccess={hasValidAccess}
                             isReply={true}
                             mainCommentId={comment.id}

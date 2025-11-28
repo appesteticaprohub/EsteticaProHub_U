@@ -444,7 +444,6 @@ useEffect(() => {
           }}
           currentUserId={user?.id || null}
           user={user}
-          subscriptionStatus={subscriptionStatus}
           hasValidAccess={hasValidAccess}
           onShowSnackBar={(message: string) => {
             setSnackBarMessage(message);

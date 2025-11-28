@@ -28,7 +28,6 @@ interface CommentItemProps {
     id: string;
     email: string;
   } | null;
-  subscriptionStatus: string | null;
   hasValidAccess: () => boolean;
   isReply?: boolean;
   mainCommentId?: string;
@@ -41,7 +40,6 @@ export default function CommentItem({
   onDelete,
   currentUserId, 
   user, 
-  subscriptionStatus,
   hasValidAccess,
   isReply = false,
   mainCommentId
