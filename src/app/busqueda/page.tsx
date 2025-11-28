@@ -140,6 +140,38 @@ export default function BusquedaPage() {
         }
       }
 
+      // Usuario con estado Price_Change_Cancelled - verificar si aún tiene acceso
+      if (session && userType === 'premium' && subscriptionStatus === 'Price_Change_Cancelled') {
+        // ✅ Esperar a que subscriptionData esté completamente cargado
+        if (!subscriptionData?.subscription_expires_at) {
+          console.log('⏳ [BUSQUEDA] Esperando datos completos de suscripción Price_Change_Cancelled...');
+          return; // No hacer nada hasta que los datos estén listos
+        }
+        
+        const now = new Date();
+        const expirationDate = new Date(subscriptionData.subscription_expires_at);
+        
+        console.log('🔍 [BUSQUEDA] Usuario Price_Change_Cancelled - verificando acceso:', {
+          ahora: now.toISOString(),
+          expira: expirationDate.toISOString(),
+          tieneAcceso: now <= expirationDate
+        });
+        
+        if (now <= expirationDate) {
+          // Aún tiene acceso hasta la fecha de expiración
+          console.log('✅ [BUSQUEDA] Usuario Price_Change_Cancelled con acceso válido hasta:', expirationDate);
+          setShowModal(false);
+          return;
+        } else {
+          // Ya expiró el acceso
+          console.log('❌ [BUSQUEDA] Usuario Price_Change_Cancelled sin acceso válido');
+          setModalMessage('Tu suscripción cancelada por cambio de precio ha expirado. Necesitas suscribirte con el nuevo precio para continuar.');
+          setModalButtons('renew');
+          setShowModal(true);
+          return;
+        }
+      }
+
       // Usuario con problemas de pago
       if (session && userType === 'premium' && 
           (subscriptionStatus === 'Payment_Failed' || 
