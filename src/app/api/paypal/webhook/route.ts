@@ -204,8 +204,6 @@ const webhookData = JSON.parse(rawBody);
 
     // Suscripción cancelada
     if (webhookData.event_type === 'BILLING.SUBSCRIPTION.CANCELLED') {
-      console.log('🔍 WEBHOOK DATA COMPLETO:', JSON.stringify(webhookData, null, 2));
-      console.log('🔍 RESOURCE DATA:', JSON.stringify(webhookData.resource, null, 2));
       const subscriptionId = webhookData.resource?.id;
 
       if (!subscriptionId) {
@@ -265,16 +263,12 @@ const webhookData = JSON.parse(rawBody);
 
         console.log(`✅ Subscription ${subscriptionId} processed - Final status: ${finalStatus} for user ${userId}`);
 
-         // 🆕 VERIFICAR SI ES CANCELACIÓN POR CAMBIO DE PRECIO
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('price_change_in_progress')
-          .eq('id', userId)
-          .single();
-
-        const isPriceChangeCancellation = userProfile?.price_change_in_progress || false;
+         // 🆕 DETECTAR CANCELACIÓN POR CAMBIO DE PRECIO USANDO PAYPAL DATA
+        const statusChangeNote = webhookData.resource?.status_change_note || '';
+        const isPriceChangeCancellation = statusChangeNote.includes('price change');
         
-        console.log(`🏷️ Price change flag status: ${isPriceChangeCancellation}`);
+        console.log(`🔍 Status change note: "${statusChangeNote}"`);
+        console.log(`🏷️ Es cancelación por cambio de precio: ${isPriceChangeCancellation}`);
 
         // ENVIAR NOTIFICACIONES (solo si no es Expired y NO es por cambio de precio)
         if (finalStatus === 'Cancelled' && !isPriceChangeCancellation) {
@@ -291,15 +285,6 @@ const webhookData = JSON.parse(rawBody);
         } else if (finalStatus === 'Cancelled' && isPriceChangeCancellation) {
           console.log('🏷️ Cancelación por cambio de precio detectada - NO enviando email de cancelación');
           console.log('💡 El usuario ya recibió notificación de cambio de precio');
-          
-          // 🧹 LIMPIAR FLAG DE CAMBIO DE PRECIO
-          console.log('🧹 Limpiando flag price_change_in_progress...');
-          await supabase
-            .from('profiles')
-            .update({ price_change_in_progress: false })
-            .eq('id', userId);
-          
-          console.log('✅ Flag price_change_in_progress limpiado exitosamente');
         } else {
           console.log('ℹ️ No cancellation notification needed for Expired status');
         }
