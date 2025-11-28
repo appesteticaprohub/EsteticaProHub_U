@@ -81,6 +81,7 @@ export default function PostHero({
             subscriptionStatus === 'Suspended' ? 'bg-red-100 text-red-800' :
             subscriptionStatus === 'Expired' ? 'bg-gray-100 text-gray-800' :
             subscriptionStatus === 'Cancelled' ? 'bg-red-100 text-red-800' :
+            subscriptionStatus === 'Price_Change_Cancelled' ? 'bg-red-100 text-red-800' :
             'bg-gray-50 text-gray-600'
           }`}>
             <div className={`w-2 h-2 rounded-full mr-2 ${
@@ -90,6 +91,7 @@ export default function PostHero({
               subscriptionStatus === 'Suspended' ? 'bg-red-400' :
               subscriptionStatus === 'Expired' ? 'bg-gray-400' :
               subscriptionStatus === 'Cancelled' ? 'bg-red-400' :
+              subscriptionStatus === 'Price_Change_Cancelled' ? 'bg-red-400' :
               'bg-gray-300'
             }`}></div>
             Suscripción: {
@@ -99,6 +101,7 @@ export default function PostHero({
               subscriptionStatus === 'Suspended' ? 'Suspendida' :
               subscriptionStatus === 'Expired' ? 'Expirada' :
               subscriptionStatus === 'Cancelled' ? 'Cancelada' :
+              subscriptionStatus === 'Price_Change_Cancelled' ? 'Cancelada por Cambio de Precio' :
               subscriptionStatus
             }
             {(subscriptionStatus === 'Payment_Failed' || 
