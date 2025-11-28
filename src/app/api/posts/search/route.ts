@@ -92,15 +92,9 @@ export async function GET(request: NextRequest) {
     const hasAuthorSearch = author
 
     if (hasTextSearch) {
-      // ⚡ USAR FULL-TEXT SEARCH simplificado
-      console.log('🔍 Usando Full-Text Search')
+      // ⚡ USAR BÚSQUEDA MEJORADA
+      console.log('🔍 Usando búsqueda de texto mejorada')
       
-      // Construir query de texto
-      const searchTerms = []
-      if (title) searchTerms.push(title)
-      if (content) searchTerms.push(content)
-      const fullTextQuery = searchTerms.join(' ')
-
       query = supabase
         .from('posts')
         .select(`
@@ -108,10 +102,15 @@ export async function GET(request: NextRequest) {
           author:profiles!posts_author_id_fkey(id, full_name, email)
         `, { count: 'exact' })
         .eq('is_deleted', false)
-        .textSearch('title,content', fullTextQuery, {
-          type: 'websearch',
-          config: 'spanish'
-        })
+
+      // Aplicar filtros de texto por separado
+      if (title) {
+        query = query.ilike('title', `%${title}%`)
+      }
+      
+      if (content) {
+        query = query.ilike('content', `%${content}%`)
+      }
 
     } else {
       // 🔍 Búsqueda tradicional para filtros sin texto
