@@ -5,6 +5,7 @@ export default function Suscripcion() {
   const [isAutoRenewal, setIsAutoRenewal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [subscriptionPrice, setSubscriptionPrice] = useState(10.00);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
   // Simplemente usar una variable de entorno del cliente o asumir configuración
@@ -38,6 +39,10 @@ export default function Suscripcion() {
 }, []);
 
   const handleSuscripcion = async () => {
+    if (isProcessing) return; // Prevenir doble clic
+    
+    setIsProcessing(true);
+    
     try {
       const response = await fetch('/api/paypal/create-payment', {
         method: 'POST',
@@ -49,11 +54,14 @@ export default function Suscripcion() {
       const data = await response.json();
 
       if (data.success && data.approval_url) {
+        // Mantener el spinner visible hasta la redirección
         window.location.href = data.approval_url;
       } else {
+        setIsProcessing(false);
         alert('Error al crear el pago. Por favor intenta de nuevo.');
       }
     } catch (error) {
+      setIsProcessing(false);
       console.error('Error:', error);
       alert('Error inesperado. Por favor intenta de nuevo.');
     }
@@ -193,9 +201,19 @@ export default function Suscripcion() {
           {/* Botón dinámico */}
           <button 
             onClick={handleSuscripcion}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-8 rounded-xl text-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+            disabled={isProcessing}
+            className={`w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-8 rounded-xl text-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 ${
+              isProcessing ? 'opacity-75 cursor-not-allowed transform-none' : ''
+            }`}
           >
-            {isAutoRenewal ? '🚀 Iniciar Suscripción' : '💎 Obtener Acceso Premium'}
+            {isProcessing ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>Procesando...</span>
+              </>
+            ) : (
+              <span>{isAutoRenewal ? '🚀 Iniciar Suscripción' : '💎 Obtener Acceso Premium'}</span>
+            )}
           </button>
           
           <div className="text-center mt-4">
