@@ -387,6 +387,12 @@ export async function hasValidSubscriptionAccess(userId: string): Promise<boolea
     const expirationDate = new Date(profile.subscription_expires_at)
     return now <= expirationDate
   }
+  // Usuario cancelado por cambio de precio pero con fecha válida
+  if (profile.subscription_status === 'Price_Change_Cancelled' && profile.subscription_expires_at) {
+    const now = new Date()
+    const expirationDate = new Date(profile.subscription_expires_at)
+    return now <= expirationDate
+  }
   
   return false
 }

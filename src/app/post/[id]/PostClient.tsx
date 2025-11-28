@@ -192,6 +192,12 @@ useEffect(() => {
     const expirationDate = new Date(subscriptionData.subscription_expires_at);
     return now <= expirationDate;
   }
+
+  if (subscriptionStatus === 'Price_Change_Cancelled' && subscriptionData?.subscription_expires_at) {
+    const now = new Date();
+    const expirationDate = new Date(subscriptionData.subscription_expires_at);
+    return now <= expirationDate;
+  }
   
   // Usuario suspendido pero con fecha válida
   if (subscriptionStatus === 'Suspended' && subscriptionData?.subscription_expires_at) {
