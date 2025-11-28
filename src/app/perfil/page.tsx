@@ -313,7 +313,7 @@ const handleReactivateSubscription = async () => {
                   Estado de Suscripción
                 </label>
                 <div className="flex items-center gap-3">
-                  <div className={`text-lg font-medium px-4 py-3 rounded-md ${
+                  <div className={`text-sm font-medium px-4 py-3 rounded-md ${
                     subscriptionStatus === 'Active' ? 'bg-green-100 text-green-800' :
                     subscriptionStatus === 'Grace_Period' ? 'bg-yellow-100 text-yellow-800' :
                     subscriptionStatus === 'Payment_Failed' ? 'bg-orange-100 text-orange-800' :
@@ -353,8 +353,21 @@ const handleReactivateSubscription = async () => {
                       Pausar Renovación Automática
                     </button>
                   )}
+                </div>
+              </div>
 
-                  {(subscriptionStatus === 'Cancelled' || subscriptionStatus === 'Price_Change_Cancelled') && subscriptionData.subscription_expires_at && (
+              {subscriptionData.subscription_expires_at && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Fecha de Expiración
+                  </label>
+                  <div className="text-lg text-gray-900 bg-gray-50 px-4 py-3 rounded-md">
+                    {formatDate(subscriptionData.subscription_expires_at)}
+                  </div>
+                </div>
+
+                 )}
+                {(subscriptionStatus === 'Cancelled' || subscriptionStatus === 'Price_Change_Cancelled') && subscriptionData.subscription_expires_at && (
                     <div className="mt-2 space-y-2">
                       <div className="text-sm text-gray-600">
                         Acceso hasta: {formatDate(subscriptionData.subscription_expires_at)}
@@ -395,20 +408,7 @@ const handleReactivateSubscription = async () => {
                       })()}
                     </div>
                   )}
-                </div>
-              </div>
-
-              {subscriptionData.subscription_expires_at && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Fecha de Expiración
-                  </label>
-                  <div className="text-lg text-gray-900 bg-gray-50 px-4 py-3 rounded-md">
-                    {formatDate(subscriptionData.subscription_expires_at)}
-                  </div>
-                </div>
-              )}
-
+                  
               {/* Sección de Soporte */}
               <div className="pt-6 border-t border-gray-200">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
