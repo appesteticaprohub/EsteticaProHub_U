@@ -263,12 +263,27 @@ const webhookData = JSON.parse(rawBody);
 
         console.log(`✅ Subscription ${subscriptionId} processed - Final status: ${finalStatus} for user ${userId}`);
 
-         // 🆕 DETECTAR CANCELACIÓN POR CAMBIO DE PRECIO USANDO PAYPAL DATA
+        // 🆕 DETECTAR CANCELACIÓN POR CAMBIO DE PRECIO USANDO PAYPAL DATA
         const statusChangeNote = webhookData.resource?.status_change_note || '';
         const isPriceChangeCancellation = statusChangeNote.includes('price change');
         
         console.log(`🔍 Status change note: "${statusChangeNote}"`);
         console.log(`🏷️ Es cancelación por cambio de precio: ${isPriceChangeCancellation}`);
+
+        // 🆕 AJUSTAR STATUS FINAL SEGÚN TIPO DE CANCELACIÓN
+        if (isPriceChangeCancellation) {
+          finalStatus = 'Price_Change_Cancelled';
+          console.log(`🏷️ Cambiando status a Price_Change_Cancelled para user ${userId}`);
+          
+          // Actualizar con el nuevo estado
+          await supabase
+            .from('profiles')
+            .update({ 
+              subscription_status: 'Price_Change_Cancelled',
+              auto_renewal_enabled: false
+            })
+            .eq('id', userId);
+        }
 
         // ENVIAR NOTIFICACIONES (solo si no es Expired y NO es por cambio de precio)
         if (finalStatus === 'Cancelled' && !isPriceChangeCancellation) {
@@ -282,7 +297,7 @@ const webhookData = JSON.parse(rawBody);
             userName,
             expirationDate
           );
-        } else if (finalStatus === 'Cancelled' && isPriceChangeCancellation) {
+        } else if (finalStatus === 'Price_Change_Cancelled') {
           console.log('🏷️ Cancelación por cambio de precio detectada - NO enviando email de cancelación');
           console.log('💡 El usuario ya recibió notificación de cambio de precio');
         } else {

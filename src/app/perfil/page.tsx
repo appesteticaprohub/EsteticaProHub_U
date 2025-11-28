@@ -324,6 +324,7 @@ const handleReactivateSubscription = async () => {
                      subscriptionStatus === 'Suspended' ? 'Suspendida' :
                      subscriptionStatus === 'Expired' ? 'Expirada' :
                      subscriptionStatus === 'Cancelled' ? 'Cancelada' :
+                     subscriptionStatus === 'Price_Change_Cancelled' ? 'Cancelada por Cambio de Precio' :
                      subscriptionStatus || 'No disponible'}
                   </div>
                   
@@ -347,7 +348,7 @@ const handleReactivateSubscription = async () => {
                     </button>
                   )}
 
-                  {subscriptionStatus === 'Cancelled' && subscriptionData.subscription_expires_at && (
+                  {(subscriptionStatus === 'Cancelled' || subscriptionStatus === 'Price_Change_Cancelled') && subscriptionData.subscription_expires_at && (
                     <div className="mt-2 space-y-2">
                       <div className="text-sm text-gray-600">
                         Acceso hasta: {formatDate(subscriptionData.subscription_expires_at)}
@@ -358,6 +359,25 @@ const handleReactivateSubscription = async () => {
                       {(() => {
                         const now = new Date();
                         const expirationDate = new Date(subscriptionData.subscription_expires_at);
+                        
+                        // 🆕 NO permitir reactivación para cancelaciones por cambio de precio
+                        if (subscriptionStatus === 'Price_Change_Cancelled') {
+                          return (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                              <p className="text-sm text-yellow-800 mb-2">
+                                💰 El precio de suscripción ha cambiado. Para reactivar debes pagar con el nuevo precio.
+                              </p>
+                              <button
+                                onClick={() => window.location.href = '/suscripcion'}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                              >
+                                💳 Suscribirse con Nuevo Precio
+                              </button>
+                            </div>
+                          );
+                        }
+                        
+                        // Para cancelación voluntaria normal
                         return now <= expirationDate ? (
                           <button
                             onClick={handleReactivateSubscription}
