@@ -204,6 +204,8 @@ const webhookData = JSON.parse(rawBody);
 
     // Suscripción cancelada
     if (webhookData.event_type === 'BILLING.SUBSCRIPTION.CANCELLED') {
+      console.log('🔍 WEBHOOK DATA COMPLETO:', JSON.stringify(webhookData, null, 2));
+      console.log('🔍 RESOURCE DATA:', JSON.stringify(webhookData.resource, null, 2));
       const subscriptionId = webhookData.resource?.id;
 
       if (!subscriptionId) {
