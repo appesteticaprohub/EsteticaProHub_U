@@ -22,6 +22,10 @@ export default function MiPerfil() {
   const { user, signOut, loading, avatarUrl, fullName, specialty, country, updateAvatar } = useAuth()
   const { subscriptionStatus, subscriptionData, loading: statusLoading } = useSubscriptionStatus()
   const router = useRouter()
+  // 🔍 DEBUG TEMPORAL
+  console.log('Debug - subscriptionData:', subscriptionData)
+  console.log('Debug - subscriptionStatus:', subscriptionStatus)
+  console.log('Debug - statusLoading:', statusLoading)
   const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'perfil' | 'notificaciones'>('perfil')
@@ -316,6 +320,8 @@ const handleReactivateSubscription = async () => {
                     subscriptionStatus === 'Suspended' ? 'bg-red-100 text-red-800' :
                     subscriptionStatus === 'Expired' ? 'bg-gray-100 text-gray-800' :
                     subscriptionStatus === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                    subscriptionStatus === 'Price_Change_Cancelled' ? 'bg-red-100 text-red-800' :
+                    subscriptionStatus === 'Cancelled' ? 'bg-red-100 text-red-800' :
                     'bg-gray-50 text-gray-900'
                   }`}>
                     {subscriptionStatus === 'Active' ? 'Activa' :
@@ -323,8 +329,8 @@ const handleReactivateSubscription = async () => {
                      subscriptionStatus === 'Payment_Failed' ? 'Problema de Pago' :
                      subscriptionStatus === 'Suspended' ? 'Suspendida' :
                      subscriptionStatus === 'Expired' ? 'Expirada' :
-                     subscriptionStatus === 'Cancelled' ? 'Cancelada' :
                      subscriptionStatus === 'Price_Change_Cancelled' ? 'Cancelada por Cambio de Precio' :
+                     subscriptionStatus === 'Cancelled' ? 'Cancelada' :
                      subscriptionStatus || 'No disponible'}
                   </div>
                   

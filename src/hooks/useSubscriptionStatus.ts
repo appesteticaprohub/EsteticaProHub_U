@@ -125,7 +125,8 @@ useEffect(() => {
       const needsDetailedData = subscriptionStatus === 'Payment_Failed' || 
                                subscriptionStatus === 'Grace_Period' || 
                                subscriptionStatus === 'Suspended' ||
-                               subscriptionStatus === 'Cancelled'
+                               subscriptionStatus === 'Cancelled' ||
+                               subscriptionStatus === 'Price_Change_Cancelled'
       
       // Solo hacer fetch si necesita datos detallados Y no los tiene aún
       if (needsDetailedData && !subscriptionData.paypal_subscription_id) {
