@@ -80,6 +80,7 @@ export default function CrearPost() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [imageSettings, setImageSettings] = useState<ImageSettings | null>(null);
+  const [showEmptyContentModal, setShowEmptyContentModal] = useState(false);
 
   // Estado para evitar múltiples cargas
 const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -222,7 +223,7 @@ useEffect(() => {
   
   // Validar que el contenido no esté vacío
   if (!contenido.trim() || contenido === '<br>' || contenido === '<p><br></p>') {
-    alert('Por favor ingresa contenido para tu post');
+    setShowEmptyContentModal(true);
     return;
   }
   
@@ -329,6 +330,28 @@ useEffect(() => {
   // Mostrar contenido directamente, el modal se maneja por estado
   return (
     <main className="p-6 max-w-4xl mx-auto">
+      {/* Modal de contenido vacío */}
+      <Modal isOpen={showEmptyContentModal} onClose={() => setShowEmptyContentModal(false)} showLockIcon={false}>
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Contenido Requerido
+          </h3>
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
+            <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <p className="text-gray-600 mb-6">
+            Por favor ingresa contenido para tu post antes de continuar. El contenido es obligatorio para crear una publicación.
+          </p>
+          <button
+            onClick={() => setShowEmptyContentModal(false)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors"
+          >
+            Entendido
+          </button>
+        </div>
+      </Modal>
       {/* Modal de Recovery de Pagos */}
       <PaymentRecoveryModal 
         isOpen={showPaymentRecoveryModal}
