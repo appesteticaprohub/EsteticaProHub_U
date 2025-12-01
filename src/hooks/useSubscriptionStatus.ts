@@ -122,23 +122,23 @@ useEffect(() => {
     }
 
     if (subscriptionStatus && !isLoadingDetails) {
-      const needsDetailedData = subscriptionStatus === 'Payment_Failed' || 
-                               subscriptionStatus === 'Grace_Period' || 
-                               subscriptionStatus === 'Suspended' ||
-                               subscriptionStatus === 'Cancelled' ||
-                               subscriptionStatus === 'Price_Change_Cancelled'
+      // ✅ MODIFICADO: Siempre obtener datos completos para mostrar fecha de expiración
+      // Solo omitir fetch si ya tenemos subscription_expires_at (excepto para casos especiales)
+      const hasBasicData = subscriptionData.subscription_expires_at !== null
+      const needsSpecialData = subscriptionStatus === 'Payment_Failed' || 
+                              subscriptionStatus === 'Grace_Period' || 
+                              subscriptionStatus === 'Suspended' ||
+                              subscriptionStatus === 'Cancelled' ||
+                              subscriptionStatus === 'Price_Change_Cancelled'
       
-      // Solo hacer fetch si necesita datos detallados Y no los tiene aún
-      if (needsDetailedData && !subscriptionData.paypal_subscription_id) {
-        console.log('🔄 Fetching detailed data for status:', subscriptionStatus)
+      // Fetch si no tenemos datos básicos O si necesitamos datos especiales y no los tenemos
+      const shouldFetch = !hasBasicData || (needsSpecialData && !subscriptionData.paypal_subscription_id)
+      
+      if (shouldFetch) {
+        console.log('🔄 Fetching subscription data for status:', subscriptionStatus, 
+                   'hasBasicData:', hasBasicData, 'needsSpecial:', needsSpecialData)
         setIsLoadingDetails(true)
         fetchDetailedData()
-      } else if (!needsDetailedData) {
-        // Para estados simples, usar solo datos del AuthContext
-        setSubscriptionData(current => ({
-          ...current,
-          subscription_status: subscriptionStatus
-        }))
       }
       return
     }
