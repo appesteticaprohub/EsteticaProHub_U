@@ -350,7 +350,7 @@ const handleReactivateSubscription = async () => {
                       onClick={() => setShowCancelModal(true)}
                       className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
                     >
-                      Pausar Renovación Automática
+                      Cancelar Renovación Automática
                     </button>
                   )}
                 </div>
@@ -368,46 +368,55 @@ const handleReactivateSubscription = async () => {
 
                  )}
                 {(subscriptionStatus === 'Cancelled' || subscriptionStatus === 'Price_Change_Cancelled') && subscriptionData.subscription_expires_at && (
-                    <div className="mt-2 space-y-2">
-                      <div className="text-sm text-gray-600">
-                        Acceso hasta: {formatDate(subscriptionData.subscription_expires_at)}
-                      </div>
-                      <div className="text-xs text-amber-600 mt-1 font-medium">
-                        ⏸️ Renovación automática pausada. Puedes reactivarla cuando quieras.
-                      </div>
-                      {(() => {
-                        const now = new Date();
-                        const expirationDate = new Date(subscriptionData.subscription_expires_at);
-                        
-                        // 🆕 NO permitir reactivación para cancelaciones por cambio de precio
-                        if (subscriptionStatus === 'Price_Change_Cancelled') {
-                          return (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-                              <p className="text-sm text-yellow-800 mb-2">
-                                💰 El precio de suscripción ha cambiado. Para reactivar debes pagar con el nuevo precio.
+                  <div className="mt-2 space-y-2">
+                    <div className="text-sm text-gray-600">
+                      Acceso hasta: {formatDate(subscriptionData.subscription_expires_at)}
+                    </div>
+                    
+                    {(() => {
+                      const now = new Date();
+                      const expirationDate = new Date(subscriptionData.subscription_expires_at);
+                      
+                      if (subscriptionStatus === 'Price_Change_Cancelled') {
+                        return (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                            <p className="text-sm text-yellow-800 mb-2">
+                              💰 El precio de suscripción ha cambiado. Para reactivar debes pagar con el nuevo precio.
+                            </p>
+                            <button
+                              onClick={() => window.location.href = '/suscripcion'}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                            >
+                              💳 Suscribirse con Nuevo Precio
+                            </button>
+                          </div>
+                        );
+                      }
+                      
+                      // Para cancelación voluntaria - NO mostrar reactivación porque PayPal ya está cancelado
+                      return (
+                        <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                          <div className="text-xs text-red-600 mt-1 font-medium">
+                            🚫 Suscripción cancelada definitivamente. PayPal ya no realizará cobros automáticos.
+                          </div>
+                          {now <= expirationDate && (
+                            <div className="mt-2">
+                              <p className="text-sm text-red-800 mb-2">
+                                Para reactivar necesitas crear una nueva suscripción.
                               </p>
                               <button
                                 onClick={() => window.location.href = '/suscripcion'}
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
                               >
-                                💳 Suscribirse con Nuevo Precio
+                                🔄 Nueva Suscripción
                               </button>
                             </div>
-                          );
-                        }
-                        
-                        // Para cancelación voluntaria normal
-                        return now <= expirationDate ? (
-                          <button
-                            onClick={handleReactivateSubscription}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
-                          >
-                            ▶️ Reactivar Renovación Automática
-                          </button>
-                        ) : null;
-                      })()}
-                    </div>
-                  )}
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
                   
               {/* Sección de Soporte */}
               <div className="pt-6 border-t border-gray-200">

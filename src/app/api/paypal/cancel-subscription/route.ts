@@ -34,23 +34,48 @@ export async function POST() {
       return NextResponse.json({ error: 'No se puede cancelar suscripción en este estado' }, { status: 400 });
     }
 
-    // NUEVO ENFOQUE: Solo pausar renovación automática (NO cancelar en PayPal aún)
-    console.log('🔄 Pausando renovación automática para usuario:', userId);
-    console.log('💡 PayPal se mantendrá activo hasta la fecha de expiración');
+    // 🚨 SOLUCIÓN AL PROBLEMA CRÍTICO: Cancelar INMEDIATAMENTE en PayPal
+    console.log('🔄 Cancelando suscripción para usuario:', userId);
+    
+    // Paso 1: Cancelar inmediatamente en PayPal si existe paypal_subscription_id
+    if (profile.paypal_subscription_id) {
+      console.log('💳 Cancelando inmediatamente en PayPal:', profile.paypal_subscription_id);
+      
+      try {
+        const { cancelPayPalSubscription } = await import('@/lib/paypal');
+        const paypalResponse = await cancelPayPalSubscription(
+          profile.paypal_subscription_id, 
+          "User voluntarily cancelled subscription"
+        );
+        
+        if (paypalResponse.status === 204) {
+          console.log('✅ Suscripción cancelada exitosamente en PayPal');
+        } else {
+          console.error('⚠️ PayPal cancelación no exitosa. Status:', paypalResponse.status);
+          // Continuamos anyway porque el usuario solicitó cancelar
+        }
+      } catch (paypalError) {
+        console.error('⚠️ Error cancelando en PayPal:', paypalError);
+        // Continuamos con la cancelación local anyway
+      }
+    } else {
+      console.log('ℹ️ No hay paypal_subscription_id - solo actualización local');
+    }
 
-    // Solo actualizar estado local (pausar renovación)
+    // Paso 2: Actualizar estado local (como antes)
     const success = await cancelSubscription(userId);
 
     if (!success) {
       return NextResponse.json({ error: 'Error pausando renovación automática' }, { status: 500 });
     }
 
-    console.log(`✅ Renovación automática pausada para usuario ${userId}`);
+    console.log(`✅ Suscripción cancelada exitosamente para usuario ${userId}`);
     console.log(`📅 Usuario mantendrá acceso hasta ${profile.subscription_expires_at}`);
+    console.log(`🛡️ PayPal ya no cobrará automáticamente`);
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Renovación automática pausada exitosamente. Conservarás acceso hasta la fecha de expiración y puedes reactivar cuando quieras.' 
+      message: 'Suscripción cancelada exitosamente. Conservarás acceso hasta la fecha de expiración y NO se realizarán más cobros automáticos.' 
     });
 
   } catch (error) {

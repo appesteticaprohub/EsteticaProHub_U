@@ -41,28 +41,28 @@ export default function CancelSubscriptionModal({
     <Modal isOpen={isOpen} onClose={onClose}>
       <div className="p-6 rounded-lg border-2 border-red-200 bg-red-50">
         <h2 className="text-xl font-bold mb-4 text-gray-800">
-          ¿Pausar renovación automática?
+          ¿Cancelar suscripción definitivamente?
         </h2>
-        
+
         <div className="mb-6 space-y-3">
           <p className="text-gray-700">
-            Si pausas la renovación automática:
+            Si cancelas tu suscripción:
           </p>
-                    
+                  
           <ul className="list-disc list-inside text-gray-600 space-y-1 ml-4">
-            <li>La renovación automática se pausará</li>
-              <li>Conservarás acceso premium hasta {subscriptionExpiresAt ? formatDate(subscriptionExpiresAt) : 'la fecha de expiración'}</li>
-              <li>Puedes reactivar la renovación cuando quieras</li>
-              <li>Si no reactivas, perderás acceso después de esa fecha</li>
+            <li>La suscripción se cancelará definitivamente en PayPal</li>
+            <li>No se realizarán más cobros automáticos</li>
+            <li>Conservarás acceso premium hasta {subscriptionExpiresAt ? formatDate(subscriptionExpiresAt) : 'la fecha de expiración'}</li>
+            <li>Para volver necesitarás crear una nueva suscripción</li>
           </ul>
           
           <div className="mt-4 p-3 bg-white rounded border border-red-300">
             <p className="text-sm text-red-700">
-              <strong>Importante:</strong> Esta acción cancelará la renovación automática, pero mantendrás acceso hasta {subscriptionExpiresAt ? formatDate(subscriptionExpiresAt) : 'tu fecha de expiración'}.
+              <strong>⚠️ Importante:</strong> Esta acción cancelará completamente tu suscripción en PayPal. Para reactivar después tendrás que crear una nueva suscripción desde cero.
             </p>
           </div>
         </div>
-        
+
         <div className="flex gap-3">
           <button
             onClick={handleConfirm}
@@ -71,7 +71,7 @@ export default function CancelSubscriptionModal({
               isLoading ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-            {isLoading ? 'Cancelando...' : 'Sí, cancelar suscripción'}
+            {isLoading ? 'Cancelando...' : 'Sí, cancelar definitivamente'}
           </button>
           
           <button
