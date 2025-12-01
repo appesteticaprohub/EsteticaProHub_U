@@ -215,6 +215,15 @@ const isActuallyPublic = isPublicRoute && !(user && isPostRoute)
           
           // 🆕 DETECTAR SI HUBO CAMBIO DE PRECIO
           priceChangedFlag = await hasPriceChangedSinceLastPayment(user.id)
+          
+        } else if (profile.subscription_status === 'Price_Change_Cancelled' && 
+           isSubscriptionExpired(profile.subscription_expires_at)) {
+          
+          console.log('Suscripción Price_Change_Cancelled expirada, actualizando a Expired...')
+          await updateExpiredSubscription(user.id)
+          
+          // 🆕 DETECTAR SI HUBO CAMBIO DE PRECIO
+          priceChangedFlag = await hasPriceChangedSinceLastPayment(user.id)
         }
         
         // 🆕 AGREGAR FLAG EN HEADERS PARA QUE FRONTEND LO DETECTE
