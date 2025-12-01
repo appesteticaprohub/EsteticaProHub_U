@@ -124,30 +124,6 @@ const savePreferences = async () => {
   }
 }
 
-const handleReactivateSubscription = async () => {
-  try {
-    const response = await fetch('/api/paypal/reactivate-subscription', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    const data = await response.json()
-
-    if (response.ok) {
-      // Recargar la página para mostrar el nuevo estado
-      window.location.reload()
-    } else {
-      console.error('Error:', data.error)
-      alert('Error reactivando suscripción: ' + data.error)
-    }
-  } catch (error) {
-    console.error('Error:', error)
-    alert('Error reactivando suscripción')
-  }
-}
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
       year: 'numeric',
