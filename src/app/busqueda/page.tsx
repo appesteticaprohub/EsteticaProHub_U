@@ -172,13 +172,42 @@ export default function BusquedaPage() {
         }
       }
 
-      // Usuario con problemas de pago
+      // Usuario con problemas de pago - Payment_Failed y Grace_Period (sin verificar fecha)
       if (session && userType === 'premium' && 
           (subscriptionStatus === 'Payment_Failed' || 
-           subscriptionStatus === 'Grace_Period' || 
-           subscriptionStatus === 'Suspended')) {
+          subscriptionStatus === 'Grace_Period')) {
         setShowPaymentRecoveryModal(true);
         return;
+      }
+
+      // Usuario con estado Suspended - verificar si aún tiene acceso
+      if (session && userType === 'premium' && subscriptionStatus === 'Suspended') {
+        // ✅ Esperar a que subscriptionData esté completamente cargado
+        if (!subscriptionData?.subscription_expires_at) {
+          console.log('⏳ [BUSQUEDA] Esperando datos completos de suscripción Suspended...');
+          return; // No hacer nada hasta que los datos estén listos
+        }
+        
+        const now = new Date();
+        const expirationDate = new Date(subscriptionData.subscription_expires_at);
+        
+        console.log('🔍 [BUSQUEDA] Usuario Suspended - verificando acceso:', {
+          ahora: now.toISOString(),
+          expira: expirationDate.toISOString(),
+          tieneAcceso: now <= expirationDate
+        });
+        
+        if (now <= expirationDate) {
+          // Aún tiene acceso hasta la fecha de expiración
+          console.log('✅ [BUSQUEDA] Usuario Suspended con acceso válido hasta:', expirationDate);
+          setShowModal(false);
+          return;
+        } else {
+          // Ya expiró el acceso
+          console.log('❌ [BUSQUEDA] Usuario Suspended sin acceso válido');
+          setShowPaymentRecoveryModal(true);
+          return;
+        }
       }
     }
   }, [session, userType, subscriptionStatus, loading, statusLoading, subscriptionData?.subscription_expires_at]);

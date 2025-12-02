@@ -38,7 +38,8 @@ export async function GET(request: NextRequest) {
     const isAllowed = 
       allowedStatuses.includes(profile.subscription_status) ||
       (profile.subscription_status === 'Cancelled' && expiresAt && expiresAt > now) ||
-      (profile.subscription_status === 'Price_Change_Cancelled' && expiresAt && expiresAt > now)
+      (profile.subscription_status === 'Price_Change_Cancelled' && expiresAt && expiresAt > now) ||
+      (profile.subscription_status === 'Suspended' && expiresAt && expiresAt > now)
 
     if (!isAllowed) {
       return NextResponse.json(
