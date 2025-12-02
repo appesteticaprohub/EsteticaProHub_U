@@ -146,9 +146,31 @@ const handleClosePaymentModal = () => {
         }
       }
 
-      // Usuario con problemas de pago
-      if (user && (subscriptionStatus === 'Payment_Failed' || 
-                  subscriptionStatus === 'Grace_Period' || 
+      // Usuario con problemas de pago - VERIFICAR FECHA PARA Payment_Failed
+      if (user && subscriptionStatus === 'Payment_Failed' && !paymentModalDismissed) {
+        // ✅ Esperar a que subscriptionData esté completamente cargado
+        if (!subscriptionData?.subscription_expires_at) {
+          return; // No hacer nada hasta que los datos estén listos
+        }
+        
+        const now = new Date();
+        const expirationDate = new Date(subscriptionData.subscription_expires_at);
+        
+        if (now <= expirationDate) {
+          // Aún tiene acceso hasta la fecha de expiración - NO mostrar modal
+          console.log('✅ [POST] Usuario Payment_Failed con acceso válido hasta:', expirationDate);
+          setShowPaymentRecoveryModal(false);
+          return;
+        } else {
+          // Ya expiró el acceso - mostrar modal
+          console.log('❌ [POST] Usuario Payment_Failed sin acceso válido');
+          setShowPaymentRecoveryModal(true);
+          return;
+        }
+      }
+
+      // Usuario con otros problemas de pago (Grace_Period, Suspended)
+      if (user && (subscriptionStatus === 'Grace_Period' || 
                   subscriptionStatus === 'Suspended') && 
                   !paymentModalDismissed) {
         setShowPaymentRecoveryModal(true);
@@ -198,6 +220,13 @@ useEffect(() => {
     const expirationDate = new Date(subscriptionData.subscription_expires_at);
     return now <= expirationDate;
   }
+
+  // Usuario con pago fallido pero con fecha válida
+if (subscriptionStatus === 'Payment_Failed' && subscriptionData?.subscription_expires_at) {
+  const now = new Date();
+  const expirationDate = new Date(subscriptionData.subscription_expires_at);
+  return now <= expirationDate;
+}
   
   // Usuario suspendido pero con fecha válida
   if (subscriptionStatus === 'Suspended' && subscriptionData?.subscription_expires_at) {
