@@ -387,6 +387,13 @@ if (profile.subscription_status === 'Payment_Failed' && profile.subscription_exp
   const expirationDate = new Date(profile.subscription_expires_at)
   return now <= expirationDate
 }
+
+// Usuario en período de gracia pero con fecha válida
+if (profile.subscription_status === 'Grace_Period' && profile.subscription_expires_at) {
+  const now = new Date()
+  const expirationDate = new Date(profile.subscription_expires_at)
+  return now <= expirationDate
+}
   
   // Usuario suspendido pero con fecha válida
   if (profile.subscription_status === 'Suspended' && profile.subscription_expires_at) {

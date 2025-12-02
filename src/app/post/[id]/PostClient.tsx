@@ -227,6 +227,13 @@ if (subscriptionStatus === 'Payment_Failed' && subscriptionData?.subscription_ex
   const expirationDate = new Date(subscriptionData.subscription_expires_at);
   return now <= expirationDate;
 }
+
+// Usuario en período de gracia pero con fecha válida
+if (subscriptionStatus === 'Grace_Period' && subscriptionData?.subscription_expires_at) {
+  const now = new Date();
+  const expirationDate = new Date(subscriptionData.subscription_expires_at);
+  return now <= expirationDate;
+}
   
   // Usuario suspendido pero con fecha válida
   if (subscriptionStatus === 'Suspended' && subscriptionData?.subscription_expires_at) {
