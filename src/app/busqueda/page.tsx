@@ -2,19 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useSearch } from '@/hooks/useSearch';
 import Modal from '@/components/Modal';
 import PaymentRecoveryModal from '@/components/PaymentRecoveryModal';
+import SearchParamsWrapper from '@/components/SearchParamsWrapper';
 
-export default function BusquedaPage() {
+function BusquedaPageContent({ searchParams }: { searchParams: URLSearchParams | null }) {
   const { session, userType, loading: authLoading } = useAuth();
   const { subscriptionStatus, subscriptionData, loading: statusLoading } = useSubscriptionStatus();
   const loading = authLoading || statusLoading;
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { results, loading: searchLoading, error: searchError, search, clearResults } = useSearch();
   
   
@@ -217,6 +217,8 @@ export default function BusquedaPage() {
 
   // ✅ NUEVO: Detectar query parameters al cargar la página
   useEffect(() => {
+    if (!searchParams) return;
+    
     const categoryParam = searchParams.get('category');
     
     if (categoryParam && categoryParam !== filters.category) {
@@ -684,5 +686,13 @@ export default function BusquedaPage() {
         </form>
       </div>
     </main>
+  );
+}
+
+export default function BusquedaPage() {
+  return (
+    <SearchParamsWrapper>
+      {(searchParams) => <BusquedaPageContent searchParams={searchParams} />}
+    </SearchParamsWrapper>
   );
 }
