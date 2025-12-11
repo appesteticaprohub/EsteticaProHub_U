@@ -156,7 +156,7 @@ export default function Suscripcion() {
                 </div>
                 <div>
                   <p className="text-gray-900 font-medium">Contenido exclusivo premium</p>
-                  <p className="text-gray-600 text-sm">Acceso a artículos, tutoriales y recursos solo para miembros</p>
+                  <p className="text-gray-600 text-sm">Acceso a publicaciones, tutoriales y recursos solo para miembros</p>
                 </div>
               </li>
               

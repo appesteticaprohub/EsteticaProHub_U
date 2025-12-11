@@ -218,6 +218,13 @@ function BusquedaPageContent({ searchParams }: { searchParams: URLSearchParams |
   // ✅ NUEVO: Detectar query parameters al cargar la página
   useEffect(() => {
     if (!searchParams) return;
+
+    // ✅ NUEVO: Esperar a que los datos de suscripción estén cargados
+    if (loading || statusLoading) return;
+    if (session && userType === 'premium' && !subscriptionData?.subscription_expires_at && 
+        (subscriptionStatus === 'Cancelled' || subscriptionStatus === 'Price_Change_Cancelled' || subscriptionStatus === 'Suspended')) {
+      return; // Esperar a que subscriptionData esté completamente cargado
+    }
     
     const categoryParam = searchParams.get('category');
     
@@ -226,19 +233,38 @@ function BusquedaPageContent({ searchParams }: { searchParams: URLSearchParams |
       setFilters(prev => ({ ...prev, category: categoryParam }));
       
       // Ejecutar búsqueda automáticamente si el usuario tiene acceso
-      if (session && userType === 'premium' && subscriptionStatus === 'Active') {
-        const searchFilters: Record<string, string | number> = {
-          category: categoryParam,
-          sort_by: 'created_at',
-          sort_order: 'desc',
-          page: 1,
-          limit: 20
-        };
+      if (session && userType === 'premium') {
+        // Verificar si tiene acceso actualmente
+        let hasAccess = false;
         
-        search(searchFilters);
+        if (subscriptionStatus === 'Active') {
+          hasAccess = true;
+        } else if (subscriptionStatus === 'Payment_Failed' || subscriptionStatus === 'Grace_Period') {
+          // Payment_Failed y Grace_Period siempre tienen acceso (el modal se maneja aparte)
+          hasAccess = true;
+        } else if (subscriptionData?.subscription_expires_at && 
+                  (subscriptionStatus === 'Cancelled' || 
+                   subscriptionStatus === 'Price_Change_Cancelled' || 
+                   subscriptionStatus === 'Suspended')) {
+          const now = new Date();
+          const expirationDate = new Date(subscriptionData.subscription_expires_at);
+          hasAccess = now <= expirationDate;
+        }
+        
+        if (hasAccess) {
+          const searchFilters: Record<string, string | number> = {
+            category: categoryParam,
+            sort_by: 'created_at',
+            sort_order: 'desc',
+            page: 1,
+            limit: 20
+          };
+          
+          search(searchFilters);
+        }
       }
     }
-  }, [searchParams, session, userType, subscriptionStatus, search, filters.category]);
+  }, [searchParams, session, userType, subscriptionStatus, subscriptionData?.subscription_expires_at, search, filters.category]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -385,7 +411,7 @@ function BusquedaPageContent({ searchParams }: { searchParams: URLSearchParams |
             ← Volver al inicio
           </Link>
         </div>
-        <h1 className="text-3xl font-bold text-gray-800">Buscar Artículos</h1>
+        <h1 className="text-3xl font-bold text-gray-800">Buscar Publicaciones</h1>
         <p className="text-gray-600 mt-2">
           Encuentra contenido especializado en estética profesional
         </p>
