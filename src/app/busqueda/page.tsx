@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useSearch } from '@/hooks/useSearch';
@@ -14,7 +14,10 @@ export default function BusquedaPage() {
   const { subscriptionStatus, subscriptionData, loading: statusLoading } = useSubscriptionStatus();
   const loading = authLoading || statusLoading;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { results, loading: searchLoading, error: searchError, search, clearResults } = useSearch();
+  
+  
 
   // Estados para filtros
   const [filters, setFilters] = useState({
@@ -211,6 +214,29 @@ export default function BusquedaPage() {
       }
     }
   }, [session, userType, subscriptionStatus, loading, statusLoading, subscriptionData?.subscription_expires_at]);
+
+  // ✅ NUEVO: Detectar query parameters al cargar la página
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    
+    if (categoryParam && categoryParam !== filters.category) {
+      // Actualizar el filtro de categoría
+      setFilters(prev => ({ ...prev, category: categoryParam }));
+      
+      // Ejecutar búsqueda automáticamente si el usuario tiene acceso
+      if (session && userType === 'premium' && subscriptionStatus === 'Active') {
+        const searchFilters: Record<string, string | number> = {
+          category: categoryParam,
+          sort_by: 'created_at',
+          sort_order: 'desc',
+          page: 1,
+          limit: 20
+        };
+        
+        search(searchFilters);
+      }
+    }
+  }, [searchParams, session, userType, subscriptionStatus, search, filters.category]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

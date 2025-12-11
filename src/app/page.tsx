@@ -6,6 +6,7 @@ import Link from 'next/link';
 import WelcomeHero from '@/components/WelcomeHero';
 import SearchHero from '@/components/SearchHero';
 import CategoryCard from '@/components/CategoryCard/CategoryCard';
+import CategoryExplorer from '@/components/CategoryExplorer/CategoryExplorer';
 
 export default function Home() {
   // Estados para los límites de cada sección
@@ -65,6 +66,9 @@ export default function Home() {
           onLimitChange={setMostCommentedLimit}
         />
       </div>
+
+      {/* Sección de Explorar por Categorías */}
+      <CategoryExplorer />
 
       {/* Sección de Búsqueda - Hero Mejorado */}
       <SearchHero />
