@@ -264,7 +264,7 @@ function BusquedaPageContent({ searchParams }: { searchParams: URLSearchParams |
         }
       }
     }
-  }, [searchParams, session, userType, subscriptionStatus, subscriptionData?.subscription_expires_at, search, filters.category]);
+  }, [searchParams, session, userType, subscriptionStatus, subscriptionData?.subscription_expires_at, search, filters.category, loading, statusLoading]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
