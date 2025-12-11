@@ -30,7 +30,7 @@ export default function SearchHero() {
 
         {/* Descripción */}
         <p className="text-base md:text-lg text-gray-600 mb-8 leading-relaxed max-w-2xl mx-auto px-4">
-          Busca entre miles de artículos especializados en estética profesional. 
+          Busca entre miles de publicaciones especializadas en estética profesional. 
           Encuentra tratamientos, técnicas, productos y experiencias compartidas por expertos.
         </p>
 
@@ -52,7 +52,7 @@ export default function SearchHero() {
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
             />
           </svg>
-          <span>Buscar Artículos</span>
+          <span>Buscar Publicaciones</span>
         </Link>
       </div>
     </div>

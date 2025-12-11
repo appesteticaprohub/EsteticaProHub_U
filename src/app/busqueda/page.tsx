@@ -389,8 +389,143 @@ export default function BusquedaPage() {
         </p>
       </div>
 
+      {/* Error */}
+      {searchError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p className="text-red-600">{searchError}</p>
+        </div>
+      )}
+
+      {/* Resultados */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm mb-8">
+        {results.total > 0 && (
+          <div className="mb-4 text-gray-600">
+            {results.total} {results.total === 1 ? 'resultado encontrado' : 'resultados encontrados'}
+          </div>
+        )}
+
+        {results.posts.length === 0 && !searchLoading && (
+          <div className="text-center py-12">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <h3 className="mt-4 text-lg font-medium text-gray-900">No se encontraron resultados</h3>
+            <p className="mt-2 text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+          </div>
+        )}
+
+        {/* Grid de resultados */}
+        <div className="grid grid-cols-1 gap-6">
+          {results.posts.map((post) => (
+            <div key={post.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <Link href={`/post/${post.id}`}>
+                <h3 className="text-xl font-semibold text-gray-800 hover:text-blue-600 mb-2 break-words">
+                  {post.title}
+                </h3>
+              </Link>
+              
+              <p className="text-gray-600 mb-3 break-words">
+                {truncateText(post.content, 150)}
+              </p>
+
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                {post.author && (
+                  <span>
+                    Por: <span className="font-medium">{post.author.full_name || post.author.email}</span>
+                  </span>
+                )}
+                
+                {post.category && (
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                    {categorias.find(c => c.value === post.category)?.label || post.category}
+                  </span>
+                )}
+                
+                <span>{formatDate(post.created_at)}</span>
+                
+                <span>👁️ {post.views_count}</span>
+                <span>❤️ {post.likes_count}</span>
+                <span>💬 {post.comments_count}</span>
+              </div>
+
+              <Link 
+                href={`/post/${post.id}`}
+                className="inline-block mt-3 text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Leer más →
+              </Link>
+            </div>
+          ))}
+        </div>
+
+        {/* Paginación */}
+        {results.totalPages > 1 && (
+          <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-sm text-gray-600">
+              Mostrando {((filters.page - 1) * 20) + 1} a {Math.min(filters.page * 20, results.total)} de {results.total} resultados
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(filters.page - 1)}
+                disabled={filters.page === 1 || searchLoading}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Anterior
+              </button>
+              
+              {/* Números de página */}
+              <div className="flex gap-1">
+                {Array.from({ length: Math.min(5, results.totalPages) }, (_, i) => {
+                  const pageNum = filters.page <= 3 
+                    ? i + 1 
+                    : filters.page >= results.totalPages - 2 
+                    ? results.totalPages - 4 + i 
+                    : filters.page - 2 + i;
+                  
+                  if (pageNum < 1 || pageNum > results.totalPages) return null;
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      disabled={searchLoading}
+                      className={`px-3 py-2 text-sm rounded-md transition-colors disabled:cursor-not-allowed ${
+                        pageNum === filters.page
+                          ? 'bg-blue-600 text-white'
+                          : 'border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button
+                onClick={() => handlePageChange(filters.page + 1)}
+                disabled={filters.page === results.totalPages || searchLoading}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Formulario de búsqueda */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm mb-6">
+      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
         <form onSubmit={handleSearch} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Título */}
@@ -547,141 +682,6 @@ export default function BusquedaPage() {
             </button>
           </div>
         </form>
-      </div>
-
-      {/* Error */}
-      {searchError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <p className="text-red-600">{searchError}</p>
-        </div>
-      )}
-
-      {/* Resultados */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-        {results.total > 0 && (
-          <div className="mb-4 text-gray-600">
-            {results.total} {results.total === 1 ? 'resultado encontrado' : 'resultados encontrados'}
-          </div>
-        )}
-
-        {results.posts.length === 0 && !searchLoading && (
-          <div className="text-center py-12">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No se encontraron resultados</h3>
-            <p className="mt-2 text-gray-500">Intenta ajustar los filtros de búsqueda</p>
-          </div>
-        )}
-
-        {/* Grid de resultados */}
-        <div className="grid grid-cols-1 gap-6">
-          {results.posts.map((post) => (
-            <div key={post.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <Link href={`/post/${post.id}`}>
-                <h3 className="text-xl font-semibold text-gray-800 hover:text-blue-600 mb-2 break-words">
-                  {post.title}
-                </h3>
-              </Link>
-              
-              <p className="text-gray-600 mb-3 break-words">
-                {truncateText(post.content, 150)}
-              </p>
-
-              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                {post.author && (
-                  <span>
-                    Por: <span className="font-medium">{post.author.full_name || post.author.email}</span>
-                  </span>
-                )}
-                
-                {post.category && (
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                    {categorias.find(c => c.value === post.category)?.label || post.category}
-                  </span>
-                )}
-                
-                <span>{formatDate(post.created_at)}</span>
-                
-                <span>👁️ {post.views_count}</span>
-                <span>❤️ {post.likes_count}</span>
-                <span>💬 {post.comments_count}</span>
-              </div>
-
-              <Link 
-                href={`/post/${post.id}`}
-                className="inline-block mt-3 text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Leer más →
-              </Link>
-            </div>
-          ))}
-        </div>
-
-        {/* Paginación */}
-        {results.totalPages > 1 && (
-          <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-gray-600">
-              Mostrando {((filters.page - 1) * 20) + 1} a {Math.min(filters.page * 20, results.total)} de {results.total} resultados
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePageChange(filters.page - 1)}
-                disabled={filters.page === 1 || searchLoading}
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Anterior
-              </button>
-              
-              {/* Números de página */}
-              <div className="flex gap-1">
-                {Array.from({ length: Math.min(5, results.totalPages) }, (_, i) => {
-                  const pageNum = filters.page <= 3 
-                    ? i + 1 
-                    : filters.page >= results.totalPages - 2 
-                    ? results.totalPages - 4 + i 
-                    : filters.page - 2 + i;
-                  
-                  if (pageNum < 1 || pageNum > results.totalPages) return null;
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      disabled={searchLoading}
-                      className={`px-3 py-2 text-sm rounded-md transition-colors disabled:cursor-not-allowed ${
-                        pageNum === filters.page
-                          ? 'bg-blue-600 text-white'
-                          : 'border border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
-              
-              <button
-                onClick={() => handlePageChange(filters.page + 1)}
-                disabled={filters.page === results.totalPages || searchLoading}
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </main>
   );
