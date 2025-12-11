@@ -243,7 +243,7 @@ const newPreviews: PreviewImage[] = imageFiles.map(file => {
                   type="button"
                   onClick={() => handleRemovePreview(index)}
                   disabled={disabled}
-                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-opacity disabled:opacity-50"
                   title="Eliminar imagen"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
