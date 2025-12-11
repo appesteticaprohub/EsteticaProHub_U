@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
+
 
 interface ImageGalleryProps {
   images: string[]
@@ -10,36 +11,93 @@ interface ImageGalleryProps {
 
 export default function ImageGallery({ images, alt = 'Post image' }: ImageGalleryProps) {
   const [selectedImage, setSelectedImage] = useState<number | null>(null)
+  const [modalHistoryKey, setModalHistoryKey] = useState<string | null>(null)
+
+  // Función interna para cerrar modal
+const handleCloseModal = useCallback((fromHistoryBack: boolean = false) => {
+  if (selectedImage === null) return
+  
+  setSelectedImage(null)
+  
+  // Solo hacer history.back() si NO viene del botón de cerrar manual
+  if (!fromHistoryBack && modalHistoryKey && window.history.state?.modalKey === modalHistoryKey) {
+    window.history.back()
+  }
+  
+  setModalHistoryKey(null)
+}, [selectedImage, modalHistoryKey])
+
+// Función para eventos de click (para el onClick del div y botones)
+const closeModal = useCallback((e?: React.MouseEvent) => {
+  if (e) e.stopPropagation?.()
+  handleCloseModal(false) // false porque es cierre manual
+}, [handleCloseModal])
+
+  // Función optimizada para abrir modal
+  const openModal = useCallback((index: number) => {
+    const historyKey = `modal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    
+    // Agregar entrada al historial sin cambiar URL
+    window.history.pushState(
+      { modalKey: historyKey, modalOpen: true },
+      '',
+      window.location.pathname + window.location.search
+    )
+    
+    setModalHistoryKey(historyKey)
+    setSelectedImage(index)
+  }, [])
+
+  // Manejar evento popstate (botón atrás)
+  useEffect(() => {
+    if (selectedImage === null || !modalHistoryKey) return
+
+    const handlePopState = (event: PopStateEvent) => {
+  // Si el state no contiene nuestra modal key, significa que el usuario presionó atrás
+  if (!event.state?.modalKey || event.state.modalKey !== modalHistoryKey) {
+    // Pasamos true para indicar que viene del history back
+    handleCloseModal(true)
+  }
+}
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [selectedImage, modalHistoryKey])
+
+  // Cleanup al desmontar componente
+  useEffect(() => {
+    return () => {
+      if (modalHistoryKey && window.history.state?.modalKey === modalHistoryKey) {
+        setSelectedImage(null)
+        setModalHistoryKey(null)
+      }
+    }
+  }, [modalHistoryKey])
 
   if (!images || images.length === 0) {
     return null
   }
 
-  const openModal = (index: number) => {
-    setSelectedImage(index)
-  }
-
-  const closeModal = () => {
-    setSelectedImage(null)
-  }
-
-  const nextImage = () => {
+  const nextImage = useCallback(() => {
     if (selectedImage !== null && selectedImage < images.length - 1) {
       setSelectedImage(selectedImage + 1)
     }
-  }
+  }, [selectedImage, images.length])
 
-  const prevImage = () => {
+  const prevImage = useCallback(() => {
     if (selectedImage !== null && selectedImage > 0) {
       setSelectedImage(selectedImage - 1)
     }
-  }
+  }, [selectedImage])
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowRight') nextImage()
-    if (e.key === 'ArrowLeft') prevImage()
-    if (e.key === 'Escape') closeModal()
-  }
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  if (e.key === 'ArrowRight') nextImage()
+  if (e.key === 'ArrowLeft') prevImage()
+  if (e.key === 'Escape') handleCloseModal(false) // false porque es cierre manual
+}, [nextImage, prevImage, handleCloseModal])
 
   return (
     <>
