@@ -179,56 +179,44 @@ export async function createOrGetPayPalProduct() {
 
 export async function createOrGetPayPalSubscriptionPlan(dynamicPrice?: string) {
   try {
-    const accessToken = await getPayPalAccessToken();
-    
-    // Obtener o crear el producto
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const targetPrice = dynamicPrice || PAYPAL_CONFIG.amount;
+
+    // 1. Buscar PAYPAL_PLAN_ID guardado en app_settings
+    console.log('🔍 Buscando PAYPAL_PLAN_ID en app_settings...');
+    const { data: planSetting } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'PAYPAL_PLAN_ID')
+      .single();
+
+    if (planSetting?.value) {
+      console.log('✅ Plan existente encontrado en BD:', planSetting.value);
+      return { id: planSetting.value };
+    }
+
+    console.log('⚠️ No hay plan guardado, creando uno nuevo...');
+
+    // 2. Obtener o crear el producto
     console.log('🛍️ Obteniendo producto PayPal...');
     const product = await createOrGetPayPalProduct();
-    
+
     console.log('🛍️ Respuesta del producto:', JSON.stringify(product, null, 2));
-    
+
     if (product.error || !product.id) {
       console.error('❌ Error con producto:', product);
       return { error: 'Failed to get/create product', details: product };
     }
-    
+
     console.log('✅ Producto disponible con ID:', product.id);
-    
-    // Buscar plan existente para este producto
-    console.log('🔍 Buscando plan existente...');
-    
-    try {
-      const searchResponse = await fetch(`${PAYPAL_BASE_URL}/v1/billing/plans?product_id=${product.id}&page_size=20`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
 
-      if (searchResponse.ok) {
-        const searchData = await searchResponse.json();
-        const targetPrice = dynamicPrice || PAYPAL_CONFIG.amount;
-        const existingPlan = searchData.plans?.find(
-          (plan: { id: string; name: string; status: string; billing_cycles?: Array<{ pricing_scheme?: { fixed_price?: { value: string } } }> }) => plan.name === "EsteticaProHub Premium Monthly" &&
-                        plan.status === "ACTIVE" &&
-                        plan.billing_cycles?.[0]?.pricing_scheme?.fixed_price?.value === targetPrice
-        );
-
-        if (existingPlan) {
-          console.log('✅ Plan existente encontrado:', existingPlan.id);
-          return existingPlan;
-        }
-      } else {
-        const errorText = await searchResponse.text();
-        console.log('⚠️ Error buscando planes:', searchResponse.status, errorText);
-      }
-    } catch (searchError) {
-      console.log('⚠️ Error buscando planes existentes:', searchError);
-    }
-
-    // Si no existe, crear nuevo plan
-    console.log('📋 Creando nuevo plan...');
+    // 3. Crear nuevo plan
+    console.log('📋 Creando nuevo plan con precio:', targetPrice);
     const plan = {
       product_id: product.id,
       name: "EsteticaProHub Premium Monthly",
@@ -244,7 +232,7 @@ export async function createOrGetPayPalSubscriptionPlan(dynamicPrice?: string) {
         total_cycles: 0,
         pricing_scheme: {
           fixed_price: {
-            value: dynamicPrice || PAYPAL_CONFIG.amount,
+            value: targetPrice,
             currency_code: PAYPAL_CONFIG.currency
           }
         }
@@ -256,6 +244,7 @@ export async function createOrGetPayPalSubscriptionPlan(dynamicPrice?: string) {
       }
     };
 
+    const accessToken = await getPayPalAccessToken();
     const response = await fetch(`${PAYPAL_BASE_URL}/v1/billing/plans`, {
       method: 'POST',
       headers: {
@@ -273,6 +262,19 @@ export async function createOrGetPayPalSubscriptionPlan(dynamicPrice?: string) {
 
     const newPlan = await response.json();
     console.log('✅ Plan creado:', newPlan.id);
+
+    // 4. Guardar el nuevo plan ID en app_settings
+    const { error: saveError } = await supabase
+      .from('app_settings')
+      .update({ value: newPlan.id })
+      .eq('key', 'PAYPAL_PLAN_ID');
+
+    if (saveError) {
+      console.error('⚠️ Error guardando PAYPAL_PLAN_ID en BD:', saveError);
+    } else {
+      console.log('✅ PAYPAL_PLAN_ID guardado en BD:', newPlan.id);
+    }
+
     return newPlan;
   } catch (error) {
     console.error('💥 Error en createOrGetPayPalSubscriptionPlan:', error);
