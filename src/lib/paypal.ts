@@ -57,9 +57,11 @@ async function getPayPalAccessToken(): Promise<string> {
 }
 
 // Crear pago en PayPal
-export async function createPayPalPayment(externalReference: string) {
+export async function createPayPalPayment(externalReference: string, dynamicPrice?: string) {
   const accessToken = await getPayPalAccessToken();
   
+  const amount = dynamicPrice || PAYPAL_CONFIG.amount;
+
   const payment = {
     intent: 'sale',
     payer: {
@@ -71,7 +73,7 @@ export async function createPayPalPayment(externalReference: string) {
     },
     transactions: [{
       amount: {
-        total: PAYPAL_CONFIG.amount,
+        total: amount,
         currency: PAYPAL_CONFIG.currency
       },
       description: 'Suscripción Premium EsteticaProHub',

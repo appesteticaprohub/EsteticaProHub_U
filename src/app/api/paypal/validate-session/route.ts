@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Validar si ya fue usada
-    if (session.user_id) {
+    // Validar si ya fue usada (solo bloquear si ya está en estado 'used')
+    if (session.status === 'used') {
       return NextResponse.json(
         { isValid: false, error: 'Esta sesión de pago ya ha sido utilizada' },
         { status: 400 }

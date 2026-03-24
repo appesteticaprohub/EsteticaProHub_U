@@ -236,7 +236,9 @@ useEffect(() => {
         // Usar una verificación más robusta del estado de autenticación
         const checkUserAndProcessRenewal = async () => {
           try {
-            const response = await fetch('/api/auth/session');
+            const response = await fetch('/api/auth/session', {
+              credentials: 'include'
+            });
             const sessionData = await response.json();
             
             console.log('🔍 Verificando sesión de usuario:', sessionData);

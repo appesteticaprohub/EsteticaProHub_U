@@ -32,10 +32,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar que la sesión tenga user_id (fue asociada en signup)
-    if (!session.user_id) {
+    // Verificar que la sesión esté en estado válido para marcar como usada
+    if (!['paid'].includes(session.status)) {
       return NextResponse.json(
-        { error: 'Session not associated with user' },
+        { error: 'Session cannot be marked as used in its current state' },
         { status: 400 }
       );
     }

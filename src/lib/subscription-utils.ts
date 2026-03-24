@@ -12,7 +12,7 @@ export function isSubscriptionExpired(expiresAt: string | null): boolean {
 
 export async function updateExpiredSubscription(userId: string) {
   const { createServerSupabaseAdminClient } = await import('./server-supabase')
-  const supabase = createServerSupabaseAdminClient()
+  const supabase = await createServerSupabaseAdminClient()
   
   // Primero obtener el perfil completo para verificar si necesitamos cancelar en PayPal
   const { data: profile } = await supabase
@@ -137,7 +137,7 @@ export async function getUserProfileForMiddleware(userId: string) {
 
 export async function updatePaymentFailed(userId: string, retryCount: number = 0) {
   const { createServerSupabaseAdminClient } = await import('./server-supabase')
-  const supabase = createServerSupabaseAdminClient()
+  const supabase = await createServerSupabaseAdminClient()
   
   const now = new Date()
   
@@ -161,7 +161,7 @@ export async function updatePaymentFailed(userId: string, retryCount: number = 0
 
 export async function activateGracePeriod(userId: string, graceDays: number = 7) {
   const { createServerSupabaseAdminClient } = await import('./server-supabase')
-  const supabase = createServerSupabaseAdminClient()
+  const supabase = await createServerSupabaseAdminClient()
   
   const gracePeriodEnd = new Date()
   gracePeriodEnd.setDate(gracePeriodEnd.getDate() + graceDays)
@@ -223,7 +223,7 @@ export async function getPaymentRetryInfo(userId: string) {
 
 export async function updateSuspendedStatus(userId: string) {
   const { createServerSupabaseAdminClient } = await import('./server-supabase')
-  const supabase = createServerSupabaseAdminClient()
+  const supabase = await createServerSupabaseAdminClient()
   
   const { error } = await supabase
     .from('profiles')
@@ -241,7 +241,7 @@ export async function updateSuspendedStatus(userId: string) {
 
 export async function cancelSubscription(userId: string) {
   const { createServerSupabaseAdminClient } = await import('./server-supabase')
-  const supabase = createServerSupabaseAdminClient()
+  const supabase = await createServerSupabaseAdminClient()
   
   const { error } = await supabase
     .from('profiles')
@@ -263,7 +263,7 @@ export async function cancelSubscription(userId: string) {
 
 export async function reactivateSubscription(userId: string) {
   const { createServerSupabaseAdminClient } = await import('./server-supabase')
-  const supabase = createServerSupabaseAdminClient()
+  const supabase = await createServerSupabaseAdminClient()
   
   const { error } = await supabase
     .from('profiles')

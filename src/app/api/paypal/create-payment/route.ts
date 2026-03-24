@@ -188,8 +188,8 @@ export async function POST() {
     } else {
       // ==================== FLUJO DE PAGO ÚNICO (EXISTENTE) ====================
       
-      // Crear pago en PayPal
-      const paypalPayment = await createPayPalPayment(externalReference);
+      // Crear pago en PayPal con precio dinámico
+      const paypalPayment = await createPayPalPayment(externalReference, dynamicPrice);
 
       if (paypalPayment.error) {
         console.error('PayPal error:', paypalPayment.error);

@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const profileUpdateData = {
       subscription_status: 'Active',
       subscription_expires_at: subscription_expires_at,
-      auto_renewal_enabled: true,
+      auto_renewal_enabled: session.subscription_type === 'recurring',
       // Resetear campos de problemas de pago
       payment_retry_count: 0,
       last_payment_attempt: null,

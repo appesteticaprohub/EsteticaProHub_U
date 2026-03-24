@@ -321,7 +321,7 @@ const savePreferences = async () => {
                     </button>
                   )}
 
-                  {subscriptionStatus === 'Active' && (
+                  {subscriptionStatus === 'Active' && subscriptionData.auto_renewal_enabled && (
                     <button
                       onClick={() => setShowCancelModal(true)}
                       className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
