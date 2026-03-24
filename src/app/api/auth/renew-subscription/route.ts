@@ -53,10 +53,11 @@ export async function POST(request: NextRequest) {
       subscription_status: 'Active',
       subscription_expires_at: subscription_expires_at,
       auto_renewal_enabled: session.subscription_type === 'recurring',
-      // Resetear campos de problemas de pago
       payment_retry_count: 0,
       last_payment_attempt: null,
-      grace_period_ends: null
+      grace_period_ends: null,
+      last_payment_amount: session.amount ?? null,
+      last_payment_date: new Date().toISOString()
     } as Record<string, unknown>
 
     // Transferir paypal_subscription_id si existe en la sesión
