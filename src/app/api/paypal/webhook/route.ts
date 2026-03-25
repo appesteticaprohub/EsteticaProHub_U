@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyPayPalPayment } from '@/lib/paypal';
+import { capturePayPalOrder } from '@/lib/paypal';
 import { createServerSupabaseAdminClient } from '@/lib/server-supabase';
 import { NotificationService } from '@/lib/notification-service';
 
@@ -113,29 +113,9 @@ const webhookData = JSON.parse(rawBody);
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       } else {
 
-      // Verificar el pago en PayPal
-      const paypalPayment = await verifyPayPalPayment(paymentId);
-      
-      if (paypalPayment.state !== 'approved') {
-        console.error('Payment not approved:', paypalPayment.state);
-        return NextResponse.json({ error: 'Payment not approved' }, { status: 400 });
-      }
-
-      // Actualizar payment session a 'paid'
-      const { error } = await supabase
-        .from('payment_sessions')
-        .update({ 
-          status: 'paid',
-          paypal_payment_id: paymentId
-        })
-        .eq('external_reference', customField);
-
-      if (error) {
-        console.error('Database error:', error);
-        return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
-      }
-
-      console.log(`Payment session ${customField} marked as paid`);
+      // Con API v2 el pago ya fue capturado en execute-payment
+      // El webhook PAYMENT.CAPTURE.COMPLETED es informativo
+      console.log(`✅ Payment capture confirmed via webhook for session ${customField}`);
       return NextResponse.json({ message: 'Payment confirmed' });
       }
     }
