@@ -205,9 +205,10 @@ export async function POST() {
         .update({ paypal_payment_id: paypalPayment.id })
         .eq('external_reference', externalReference);
 
-      // Encontrar URL de aprobación de PayPal
+      // Encontrar URL de aprobación de PayPal (API v2 usa 'approve')
+      console.log('🔗 Links recibidos de PayPal:', JSON.stringify(paypalPayment.links, null, 2));
       const approvalUrl = paypalPayment.links?.find(
-        (link: { rel: string; href: string }) => link.rel === 'approval_url'
+        (link: { rel: string; href: string }) => link.rel === 'approve'
       )?.href;
 
       return NextResponse.json({

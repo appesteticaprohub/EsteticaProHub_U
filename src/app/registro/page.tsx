@@ -138,26 +138,24 @@ useEffect(() => {
     console.log('🔍 Validando pago/suscripción para ref:', paymentRef);
     console.log('🔍 Parámetros URL:', Object.fromEntries(searchParams.entries()));
 
-    // Verificar si es un pago único (parámetros tradicionales de PayPal)
-    const paymentId = searchParams.get('paymentId');
-    const payerId = searchParams.get('PayerID');
+    // Verificar si es un pago único API v2 (PayPal devuelve ?token=orderID)
+    const orderID = searchParams.get('token');
 
     // Verificar si es una suscripción (parámetros de PayPal subscription)
     const subscriptionId = searchParams.get('subscription_id');
     const baToken = searchParams.get('ba_token');
 
     console.log('💳 Tipo de pago detectado:', {
-      paymentId,
-      payerId,
+      orderID,
       subscriptionId,
       baToken,
-      isOneTimePayment: !!(paymentId && payerId),
+      isOneTimePayment: !!(orderID && !subscriptionId),
       isSubscription: !!(subscriptionId || baToken)
     });
 
-    // FLUJO PARA PAGOS ÚNICOS
-    if (paymentId && payerId) {
-      console.log('💰 Procesando pago único...');
+    // FLUJO PARA PAGOS ÚNICOS API v2
+    if (orderID && !subscriptionId) {
+      console.log('💰 Procesando pago único API v2, orderID:', orderID);
       try {
         const executeResponse = await fetch('/api/paypal/execute-payment', {
           method: 'POST',
@@ -165,8 +163,7 @@ useEffect(() => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            paymentId: paymentId,
-            payerId: payerId,
+            paymentId: orderID,
             externalReference: paymentRef
           }),
         });
@@ -174,6 +171,8 @@ useEffect(() => {
         console.log('💰 Respuesta execute-payment:', executeResponse.status);
 
         if (!executeResponse.ok) {
+          const errorData = await executeResponse.json();
+          console.error('❌ Error en execute-payment:', errorData);
           setPaymentError('Error al confirmar el pago');
           return;
         }

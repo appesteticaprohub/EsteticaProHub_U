@@ -62,47 +62,50 @@ export async function createPayPalPayment(externalReference: string, dynamicPric
   
   const amount = dynamicPrice || PAYPAL_CONFIG.amount;
 
-  const payment = {
-    intent: 'sale',
-    payer: {
-      payment_method: 'paypal'
-    },
-    redirect_urls: {
-      return_url: `${PAYPAL_CONFIG.baseUrl}/registro?ref=${externalReference}`,
-      cancel_url: `${PAYPAL_CONFIG.baseUrl}/suscripcion?cancelled=true`
-    },
-    transactions: [{
+  const order = {
+    intent: 'CAPTURE',
+    purchase_units: [{
       amount: {
-        total: amount,
-        currency: PAYPAL_CONFIG.currency
+        currency_code: PAYPAL_CONFIG.currency,
+        value: amount
       },
       description: 'Suscripción Premium EsteticaProHub',
-      custom: externalReference
-    }]
+      custom_id: externalReference
+    }],
+    application_context: {
+      brand_name: 'EsteticaProHub',
+      locale: 'es-CO',
+      landing_page: 'BILLING',
+      shipping_preference: 'NO_SHIPPING',
+      user_action: 'PAY_NOW',
+      return_url: `${PAYPAL_CONFIG.baseUrl}/registro?ref=${externalReference}`,
+      cancel_url: `${PAYPAL_CONFIG.baseUrl}/suscripcion?cancelled=true`
+    }
   };
 
-  const response = await fetch(`${PAYPAL_BASE_URL}/v1/payments/payment`, {
+  const response = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${accessToken}`,
     },
-    body: JSON.stringify(payment),
+    body: JSON.stringify(order),
   });
 
   return response.json();
 }
 
 // Verificar pago en PayPal
-export async function verifyPayPalPayment(paymentId: string) {
+export async function capturePayPalOrder(orderID: string) {
   const accessToken = await getPayPalAccessToken();
   
-  const response = await fetch(`${PAYPAL_BASE_URL}/v1/payments/payment/${paymentId}`, {
-    method: 'GET',
+  const response = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders/${orderID}/capture`, {
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${accessToken}`,
     },
+    body: JSON.stringify({}),
   });
 
   return response.json();

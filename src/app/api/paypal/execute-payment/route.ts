@@ -1,33 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { verifyPayPalSubscription } from '@/lib/paypal';
+import { verifyPayPalSubscription, capturePayPalOrder } from '@/lib/paypal';
 import { isAutoRenewalEnabled } from '@/lib/settings';
-
-// Función para obtener token de acceso
-async function getPayPalAccessToken(): Promise<string> {
-  const PAYPAL_BASE_URL = process.env.PAYPAL_ENVIRONMENT === 'production' 
-    ? 'https://api.paypal.com'
-    : 'https://api.sandbox.paypal.com';
-
-  const auth = Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString('base64');
-  
-  const response = await fetch(`${PAYPAL_BASE_URL}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${auth}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
-  });
-
-  const data = await response.json();
-  return data.access_token;
-}
 
 export async function POST(request: NextRequest) {
   try {
-    const { paymentId, payerId, externalReference, subscriptionId } = await request.json();
-    console.log('Received params:', { paymentId, payerId, externalReference, subscriptionId });
+    const { paymentId, externalReference, subscriptionId } = await request.json();
+    console.log('Received params:', { paymentId, externalReference, subscriptionId });
 
     if (!externalReference || (!paymentId && !subscriptionId)) {
       return NextResponse.json(
@@ -97,41 +76,17 @@ export async function POST(request: NextRequest) {
       });
 
     } else if (!isAutoRenewal && paymentId) {
-      // ==================== FLUJO DE PAGO ÚNICO (EXISTENTE) ====================
-      console.log('Processing one-time payment:', paymentId);
+      // ==================== FLUJO DE PAGO ÚNICO API v2 ====================
+      console.log('💰 Processing one-time payment (API v2):', paymentId);
 
-      if (!payerId) {
+      // Capturar la orden en PayPal API v2
+      const capturedOrder = await capturePayPalOrder(paymentId);
+      console.log('💰 PayPal capture response:', JSON.stringify(capturedOrder, null, 2));
+
+      if (capturedOrder.status !== 'COMPLETED') {
+        console.error('❌ Order not completed:', capturedOrder.status);
         return NextResponse.json(
-          { error: 'Missing payerId for one-time payment' },
-          { status: 400 }
-        );
-      }
-
-      const accessToken = await getPayPalAccessToken();
-
-      const executePayload = {
-        payer_id: payerId
-      };
-
-      const PAYPAL_BASE_URL = process.env.PAYPAL_ENVIRONMENT === 'production' 
-        ? 'https://api.paypal.com'
-        : 'https://api.sandbox.paypal.com';
-
-      const executeResponse = await fetch(`${PAYPAL_BASE_URL}/v1/payments/payment/${paymentId}/execute`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(executePayload),
-      });
-
-      const executedPayment = await executeResponse.json();
-      console.log('PayPal execution response:', executedPayment);
-
-      if (executedPayment.state !== 'approved') {
-        return NextResponse.json(
-          { error: 'Payment not approved' },
+          { error: 'Payment not completed', details: capturedOrder.status },
           { status: 400 }
         );
       }
@@ -153,6 +108,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      console.log('✅ Pago único completado y sesión actualizada');
       return NextResponse.json({ success: true, message: 'Payment confirmed' });
 
     } else {
