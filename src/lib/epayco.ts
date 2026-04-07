@@ -69,6 +69,7 @@ export function buildEpaycoCheckoutParams(params: {
     p_url_confirmation: `${EPAYCO_CONFIG.baseUrl}/api/epayco/webhook`,
     p_confirm_method: 'POST',
     p_extra1: externalReference,
+    p_public_key: EPAYCO_CONFIG.publicKey,
   };
 }
 

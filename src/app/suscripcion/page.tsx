@@ -76,7 +76,7 @@ export default function Suscripcion() {
 
       // Abrir lightbox de ePayco
       const handler = window.ePayco.checkout.configure({
-        key: params.p_key,
+        key: params.p_public_key,
         test: params.p_test_request === '1' ? 'true' : 'false',
       });
 
