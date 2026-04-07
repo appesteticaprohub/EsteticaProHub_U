@@ -53,8 +53,22 @@ export default function Suscripcion() {
 
       const data = await response.json();
 
-      if (data.success && data.approval_url) {
-        window.location.href = data.approval_url;
+      if (data.success && data.checkout_params) {
+        // Crear formulario dinámico y enviarlo como POST a ePayco
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'https://checkout.epayco.co/payment.cgi';
+
+        Object.entries(data.checkout_params).forEach(([key, value]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = value as string;
+          form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
       } else {
         setIsProcessing(false);
         alert('Error al crear el pago. Por favor intenta de nuevo.');

@@ -1,7 +1,7 @@
 // src/app/api/epayco/create-payment/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { generateExternalReference, getDynamicPrice, buildEpaycoCheckoutUrl } from '@/lib/epayco';
+import { generateExternalReference, getDynamicPrice, buildEpaycoCheckoutParams } from '@/lib/epayco';
 
 export async function POST() {
   try {
@@ -40,19 +40,19 @@ export async function POST() {
     );
     }
 
-    // Construir URL del checkout de ePayco
-    const checkoutUrl = buildEpaycoCheckoutUrl({
+    // Construir parámetros del checkout de ePayco
+    const checkoutParams = buildEpaycoCheckoutParams({
       externalReference,
       amount: dynamicPrice,
     });
 
     console.log('✅ Payment session creada:', externalReference);
     console.log('✅ Precio:', dynamicPrice);
-    console.log('✅ Checkout URL generada');
+    console.log('✅ Checkout params generados');
 
     return NextResponse.json({
       success: true,
-      approval_url: checkoutUrl,
+      checkout_params: checkoutParams,
       external_reference: externalReference,
     });
 

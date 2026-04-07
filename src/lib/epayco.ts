@@ -47,16 +47,17 @@ export async function getDynamicPrice(): Promise<string> {
 }
 
 // Construir parámetros del checkout de ePayco
-export function buildEpaycoCheckoutUrl(params: {
+// Construir parámetros del checkout de ePayco para envío POST
+export function buildEpaycoCheckoutParams(params: {
   externalReference: string;
   amount: string;
   description?: string;
-}): string {
+}): Record<string, string> {
   const { externalReference, amount, description } = params;
 
-  const checkoutParams = new URLSearchParams({
+  return {
     p_cust_id_cliente: EPAYCO_CONFIG.pCustId,
-    p_key: EPAYCO_CONFIG.publicKey,
+    p_key: EPAYCO_CONFIG.pKey,
     p_id_invoice: externalReference,
     p_description: description || 'Suscripción Premium EsteticaProHub - 1 mes',
     p_amount: amount,
@@ -68,9 +69,7 @@ export function buildEpaycoCheckoutUrl(params: {
     p_url_confirmation: `${EPAYCO_CONFIG.baseUrl}/api/epayco/webhook`,
     p_confirm_method: 'POST',
     p_extra1: externalReference,
-  });
-
-  return `https://checkout.epayco.co/payment.cgi?${checkoutParams.toString()}`;
+  };
 }
 
 // Verificar firma del webhook de ePayco
