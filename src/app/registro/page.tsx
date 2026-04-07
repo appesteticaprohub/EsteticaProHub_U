@@ -32,7 +32,7 @@ function RegistroContent() {
   const router = useRouter();
   const [isRenewal, setIsRenewal] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [, setRenewalProcessed] = useState<boolean>(false);
+  const [renewalProcessed, setRenewalProcessed] = useState<boolean>(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -98,7 +98,7 @@ const handleDateChange = (field: 'day' | 'month' | 'year', value: string) => {
         console.log('✅ Renovación procesada exitosamente');
         
         // Marcar payment session como usada
-        await fetch('/api/paypal/mark-session-used', {
+        await fetch('/api/epayco/mark-session-used', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -128,123 +128,34 @@ const handleDateChange = (field: 'day' | 'month' | 'year', value: string) => {
   }, [router, setPaymentError, setRenewalProcessed, setMessage]);
 
   // Validar payment session al cargar la página
-useEffect(() => {
-  const validatePayment = async () => {
-    if (!paymentRef) {
-      setPaymentError('No se encontró referencia de pago válida');
-      return;
-    }
-
-    console.log('🔍 Validando pago/suscripción para ref:', paymentRef);
-    console.log('🔍 Parámetros URL:', Object.fromEntries(searchParams.entries()));
-
-    // Verificar si es un pago único API v2 (PayPal devuelve ?token=orderID)
-    const orderID = searchParams.get('token');
-
-    // Verificar si es una suscripción (parámetros de PayPal subscription)
-    const subscriptionId = searchParams.get('subscription_id');
-    const baToken = searchParams.get('ba_token');
-
-    console.log('💳 Tipo de pago detectado:', {
-      orderID,
-      subscriptionId,
-      baToken,
-      isOneTimePayment: !!(orderID && !subscriptionId),
-      isSubscription: !!(subscriptionId || baToken)
-    });
-
-    // FLUJO PARA PAGOS ÚNICOS API v2
-    if (orderID && !subscriptionId) {
-      console.log('💰 Procesando pago único API v2, orderID:', orderID);
-      try {
-        const executeResponse = await fetch('/api/paypal/execute-payment', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            paymentId: orderID,
-            externalReference: paymentRef
-          }),
-        });
-
-        console.log('💰 Respuesta execute-payment:', executeResponse.status);
-
-        if (!executeResponse.ok) {
-          const errorData = await executeResponse.json();
-          console.error('❌ Error en execute-payment:', errorData);
-          setPaymentError('Error al confirmar el pago');
-          return;
-        }
-      } catch (error) {
-        console.error('❌ Error ejecutando pago:', error);
-        setPaymentError('Error al confirmar el pago');
+  useEffect(() => {
+    const validatePayment = async () => {
+      if (!paymentRef) {
+        setPaymentError('No se encontró referencia de pago válida');
         return;
       }
-    }
 
-    // FLUJO PARA SUSCRIPCIONES
-    else if (subscriptionId || baToken) {
-      console.log('🔄 Procesando suscripción aprobada...');
+      console.log('🔍 Validando pago ePayco para ref:', paymentRef);
+
       try {
-        // Ejecutar aprobación de suscripción
-        const executeResponse = await fetch('/api/paypal/execute-payment', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            subscriptionId: subscriptionId,
-            baToken: baToken,
-            externalReference: paymentRef,
-            type: 'subscription'
-          }),
-        });
+        const response = await fetch(`/api/epayco/validate-session?ref=${paymentRef}`);
+        const data = await response.json();
 
-        console.log('🔄 Respuesta execute-subscription:', executeResponse.status);
+        console.log('🔍 Respuesta validate-session:', data);
 
-        if (!executeResponse.ok) {
-          const errorData = await executeResponse.json();
-          console.error('❌ Error en execute-subscription:', errorData);
-          setPaymentError('Error al confirmar la suscripción');
-          return;
-        }
+        if (data.isValid) {
+          console.log('✅ Pago validado correctamente');
+          setPaymentValidated(true);
 
-        const responseData = await executeResponse.json();
-        console.log('✅ Suscripción procesada:', responseData);
-      } catch (error) {
-        console.error('❌ Error ejecutando suscripción:', error);
-        setPaymentError('Error al confirmar la suscripción');
-        return;
-      }
-    }
-
-    // Validar payment session (común para ambos flujos)
-    console.log('🔍 Validando sesión de pago...');
-    try {
-      const response = await fetch(`/api/paypal/validate-session?ref=${paymentRef}`);
-      const data = await response.json();
-
-      console.log('🔍 Respuesta validate-session:', data);
-
-      if (data.isValid) {
-        console.log('✅ Pago/suscripción validada correctamente');
-        setPaymentValidated(true);
-        
-        // NUEVA LÓGICA: Verificar si es renovación de usuario existente
-        // Usar una verificación más robusta del estado de autenticación
-        const checkUserAndProcessRenewal = async () => {
+          // Verificar si es renovación de usuario existente
           try {
-            const response = await fetch('/api/auth/session', {
+            const sessionResponse = await fetch('/api/auth/session', {
               credentials: 'include'
             });
-            const sessionData = await response.json();
-            
-            console.log('🔍 Verificando sesión de usuario:', sessionData);
-            
+            const sessionData = await sessionResponse.json();
+
             if (sessionData.data && sessionData.data.user) {
-              console.log('🔄 Usuario autenticado detectado - procesando renovación');
-              console.log('🔄 Usuario:', sessionData.data.user.email);
+              console.log('🔄 Usuario autenticado - procesando renovación');
               setIsRenewal(true);
               await processRenewal(paymentRef);
             } else {
@@ -252,23 +163,19 @@ useEffect(() => {
             }
           } catch (error) {
             console.error('❌ Error verificando sesión:', error);
-            console.log('👤 Asumiendo usuario no autenticado - flujo de registro normal');
           }
-        };
-        
-        await checkUserAndProcessRenewal();
-      } else {
-        console.error('❌ Sesión inválida:', data.error);
-        setPaymentError(data.error || 'Sesión de pago inválida');
+        } else {
+          console.error('❌ Sesión inválida:', data.error);
+          setPaymentError(data.error || 'Sesión de pago inválida');
+        }
+      } catch (error) {
+        console.error('❌ Error validando sesión:', error);
+        setPaymentError('Error al validar el pago');
       }
-    } catch (error) {
-      console.error('❌ Error validando sesión:', error);
-      setPaymentError('Error al validar el pago');
-    }
-  };
+    };
 
-  validatePayment();
-}, [paymentRef, searchParams, processRenewal]);
+    validatePayment();
+  }, [paymentRef, processRenewal]);
 
 const handleSubmit = async (e: React.FormEvent) =>  {
   e.preventDefault();
@@ -306,7 +213,7 @@ const handleSubmit = async (e: React.FormEvent) =>  {
     } else {
       // Marcar payment session como usada
       if (paymentRef) {
-        await fetch('/api/paypal/mark-session-used', {
+        await fetch('/api/epayco/mark-session-used', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

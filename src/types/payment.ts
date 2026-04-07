@@ -3,6 +3,7 @@ export interface PaymentSession {
   external_reference: string;
   paypal_payment_id?: string;
   paypal_subscription_id?: string; // NUEVO: Para suscripciones
+  epayco_transaction_id?: string;
   status: 'pending' | 'paid' | 'used' | 'expired' | 'active_subscription' | 'cancelled_subscription'; // NUEVOS estados
   amount: number;
   created_at: string;

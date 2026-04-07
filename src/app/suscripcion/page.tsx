@@ -13,7 +13,7 @@ export default function Suscripcion() {
   const detectMode = async () => {
     try {
       // Obtener configuración de auto-renewal
-      const configResponse = await fetch('/api/paypal/config');
+      const configResponse = await fetch('/api/epayco/config');
       if (configResponse.ok) {
         const config = await configResponse.json();
         setIsAutoRenewal(config.autoRenewal);
@@ -39,12 +39,12 @@ export default function Suscripcion() {
 }, []);
 
   const handleSuscripcion = async () => {
-    if (isProcessing) return; // Prevenir doble clic
+    if (isProcessing) return;
     
     setIsProcessing(true);
     
     try {
-      const response = await fetch('/api/paypal/create-payment', {
+      const response = await fetch('/api/epayco/create-payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -54,7 +54,6 @@ export default function Suscripcion() {
       const data = await response.json();
 
       if (data.success && data.approval_url) {
-        // Mantener el spinner visible hasta la redirección
         window.location.href = data.approval_url;
       } else {
         setIsProcessing(false);
