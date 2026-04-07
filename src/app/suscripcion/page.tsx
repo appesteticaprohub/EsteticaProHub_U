@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 declare global {
   interface Window {
@@ -13,22 +14,27 @@ declare global {
   }
 }
 
-export default function Suscripcion() {
+function SuscripcionContent() {
   const [loading, setLoading] = useState(true);
   const [subscriptionPrice, setSubscriptionPrice] = useState(10.00);
   const [isProcessing, setIsProcessing] = useState(false);
   const [externalReference, setExternalReference] = useState<string | null>(null);
   const [sdkReady, setSdkReady] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Cargar SDK de ePayco
+    const error = searchParams.get('payment_error');
+    if (error) setPaymentError(decodeURIComponent(error));
+  }, [searchParams]);
+
+  useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://checkout.epayco.co/checkout.js';
     script.async = true;
     script.onload = () => setSdkReady(true);
     document.body.appendChild(script);
 
-    // Obtener configuración y precio
     const init = async () => {
       try {
         const priceResponse = await fetch('/api/epayco/config');
@@ -56,7 +62,6 @@ export default function Suscripcion() {
     setIsProcessing(true);
 
     try {
-      // Crear payment session en backend
       const response = await fetch('/api/epayco/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -74,7 +79,6 @@ export default function Suscripcion() {
 
       const params = data.checkout_params;
 
-      // Abrir lightbox de ePayco
       const handler = window.ePayco.checkout.configure({
         key: params.p_public_key,
         test: params.p_test_request === '1' ? 'true' : 'false',
@@ -119,6 +123,12 @@ export default function Suscripcion() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
       <div className="max-w-4xl mx-auto">
+        {paymentError && (
+          <div className="max-w-2xl mx-auto mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center">
+            <p className="font-semibold">⚠️ {paymentError}</p>
+            <p className="text-sm mt-1">Por favor intenta de nuevo.</p>
+          </div>
+        )}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
             ¡Hazte <span className="text-blue-600">Premium</span> Hoy!
@@ -197,5 +207,17 @@ export default function Suscripcion() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function Suscripcion() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <SuscripcionContent />
+    </Suspense>
   );
 }

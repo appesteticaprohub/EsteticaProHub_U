@@ -131,7 +131,7 @@ const handleDateChange = (field: 'day' | 'month' | 'year', value: string) => {
   useEffect(() => {
     const validatePayment = async () => {
       if (!paymentRef) {
-        setPaymentError('No se encontró referencia de pago válida');
+        router.replace('/suscripcion');
         return;
       }
 
@@ -147,7 +147,6 @@ const handleDateChange = (field: 'day' | 'month' | 'year', value: string) => {
           console.log('✅ Pago validado correctamente');
           setPaymentValidated(true);
 
-          // Verificar si es renovación de usuario existente
           try {
             const sessionResponse = await fetch('/api/auth/session', {
               credentials: 'include'
@@ -166,11 +165,11 @@ const handleDateChange = (field: 'day' | 'month' | 'year', value: string) => {
           }
         } else {
           console.error('❌ Sesión inválida:', data.error);
-          setPaymentError(data.error || 'Sesión de pago inválida');
+          router.replace(`/suscripcion?payment_error=${encodeURIComponent(data.error || 'Pago no completado')}`);
         }
       } catch (error) {
         console.error('❌ Error validando sesión:', error);
-        setPaymentError('Error al validar el pago');
+        router.replace('/suscripcion?payment_error=Error+al+validar+el+pago');
       }
     };
 
