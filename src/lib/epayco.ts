@@ -56,7 +56,7 @@ export function buildEpaycoCheckoutUrl(params: {
 
   const checkoutParams = new URLSearchParams({
     p_cust_id_cliente: EPAYCO_CONFIG.pCustId,
-    p_key: EPAYCO_CONFIG.pKey,
+    p_key: EPAYCO_CONFIG.publicKey,
     p_id_invoice: externalReference,
     p_description: description || 'Suscripción Premium EsteticaProHub - 1 mes',
     p_amount: amount,
