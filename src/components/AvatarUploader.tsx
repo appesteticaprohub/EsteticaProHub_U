@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import Image from 'next/image'
+import AvatarCropper from '@/components/AvatarCropper'
 
 interface AvatarUploaderProps {
   currentAvatarUrl: string | null
@@ -25,6 +26,7 @@ export default function AvatarUploader({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [cropperSrc, setCropperSrc] = useState<string | null>(null)
 
   const getInitials = (name: string | null, email: string) => {
     if (name && name.trim()) {
@@ -41,8 +43,7 @@ export default function AvatarUploader({
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validaciones en el cliente
-    const maxSize = 5 * 1024 * 1024 // 5MB
+    const maxSize = 5 * 1024 * 1024
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 
     if (!allowedTypes.includes(file.type)) {
@@ -56,19 +57,31 @@ export default function AvatarUploader({
     }
 
     setError(null)
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setCropperSrc(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const handleCropConfirm = async (blob: Blob) => {
+    setCropperSrc(null)
     setUploading(true)
+    setError(null)
 
     try {
-      // Crear preview
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+      const croppedFile = new File([blob], 'avatar.webp', { type: 'image/webp' })
 
-      // Subir archivo
+      const previewObjectUrl = URL.createObjectURL(blob)
+      setPreviewUrl(previewObjectUrl)
+
       const formData = new FormData()
-      formData.append('avatar', file)
+      formData.append('avatar', croppedFile)
 
       const response = await fetch('/api/profile/avatar/upload', {
         method: 'POST',
@@ -81,6 +94,7 @@ export default function AvatarUploader({
         throw new Error(result.error || 'Error al subir avatar')
       }
 
+      URL.revokeObjectURL(previewObjectUrl)
       onUploadSuccess(result.data.avatar_url)
       setPreviewUrl(null)
     } catch (err) {
@@ -88,9 +102,6 @@ export default function AvatarUploader({
       setPreviewUrl(null)
     } finally {
       setUploading(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
     }
   }
 
@@ -193,6 +204,18 @@ export default function AvatarUploader({
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
           {error}
         </div>
+      )}
+
+      {/* Modal de recorte */}
+      {cropperSrc && (
+        <AvatarCropper
+          imageSrc={cropperSrc}
+          onConfirm={handleCropConfirm}
+          onCancel={() => {
+            setCropperSrc(null)
+            setError(null)
+          }}
+        />
       )}
 
       {/* Modal de confirmación */}
