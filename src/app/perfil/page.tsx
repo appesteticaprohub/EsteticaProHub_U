@@ -22,10 +22,6 @@ export default function MiPerfil() {
   const { user, signOut, loading, avatarUrl, fullName, specialty, country, updateAvatar } = useAuth()
   const { subscriptionStatus, subscriptionData, loading: statusLoading } = useSubscriptionStatus()
   const router = useRouter()
-  // 🔍 DEBUG TEMPORAL
-  console.log('Debug - subscriptionData:', subscriptionData)
-  console.log('Debug - subscriptionStatus:', subscriptionStatus)
-  console.log('Debug - statusLoading:', statusLoading)
   const [showPaymentRecoveryModal, setShowPaymentRecoveryModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'perfil' | 'notificaciones'>('perfil')
