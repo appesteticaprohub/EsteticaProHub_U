@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/server-supabase'
 import { Comment } from '@/types/api'
 import { createSocialNotification, createMentionNotifications } from '@/lib/social-notification-service'
 import { hasValidSubscriptionAccess } from '@/lib/subscription-utils'
+import { sanitizeHTMLServer } from '@/lib/html-sanitizer'
 
 
 // Función para extraer menciones del contenido
@@ -226,6 +227,15 @@ export async function POST(
       )
     }
 
+    const sanitizedContent = sanitizeHTMLServer(content);
+
+    if (!sanitizedContent.trim()) {
+      return NextResponse.json(
+        { data: null, error: 'El contenido del comentario no es válido' },
+        { status: 400 }
+      )
+    }
+
     const supabase = await createServerSupabaseClient()
     
     // Obtener el usuario autenticado
@@ -270,7 +280,7 @@ export async function POST(
       .insert({
         post_id: id,
         user_id: user.id,
-        content: content.trim(),
+        content: sanitizedContent,
         parent_id: parent_id || null
       })
       .select(`
@@ -331,7 +341,7 @@ export async function POST(
       .single()
 
     // Extraer menciones del contenido
-    const mentionedNames = extractMentions(content.trim())
+    const mentionedNames = extractMentions(sanitizedContent)
     
     const mentionedUserIds = await getUserIdsByNames(mentionedNames, supabase)
 

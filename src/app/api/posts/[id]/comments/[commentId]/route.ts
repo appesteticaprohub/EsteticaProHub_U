@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/server-supabase'
 import { Comment } from '@/types/api'
 import { hasValidSubscriptionAccess } from '@/lib/subscription-utils'
+import { sanitizeHTMLServer } from '@/lib/html-sanitizer'
 
 export async function PUT(
   request: NextRequest,
@@ -15,6 +16,15 @@ export async function PUT(
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
         { data: null, error: 'El contenido del comentario es requerido' },
+        { status: 400 }
+      )
+    }
+
+    const sanitizedContent = sanitizeHTMLServer(content);
+
+    if (!sanitizedContent.trim()) {
+      return NextResponse.json(
+        { data: null, error: 'El contenido del comentario no es válido' },
         { status: 400 }
       )
     }
@@ -67,7 +77,7 @@ export async function PUT(
     const { data: commentData, error: updateError } = await supabase
       .from('comments')
       .update({
-        content: content.trim()
+        content: sanitizedContent
       })
       .eq('id', commentId)
       .select(`

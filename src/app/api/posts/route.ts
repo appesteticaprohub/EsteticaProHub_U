@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/server-supabase'
 import { isValidImageUrl } from '@/lib/storage-client'
+import { sanitizeHTMLServer } from '@/lib/html-sanitizer'
 
 export async function GET(request: NextRequest) {
   try {
@@ -73,6 +74,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const sanitizedTitle = title.trim();
+    const sanitizedContent = sanitizeHTMLServer(content);
+
+    if (!sanitizedContent.trim()) {
+      return NextResponse.json(
+        { data: null, error: 'El contenido del post no es válido' },
+        { status: 400 }
+      )
+    }
+
     // Validar imágenes si se enviaron
     if (images && Array.isArray(images)) {
       const { data: settings } = await supabase
@@ -107,8 +118,8 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('posts')
       .insert({
-        title,
-        content,
+        title: sanitizedTitle,
+        content: sanitizedContent,
         category,
         author_id: user.id, // ← siempre de la sesión, nunca del body
         created_at: now,

@@ -5,6 +5,20 @@
  * Previene XSS y otras vulnerabilidades
  */
 
+import sanitizeHtml from 'sanitize-html';
+
+const SERVER_ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'b', 'i', 'div'];
+const SERVER_ALLOWED_ATTRIBUTES = {};
+
+export function sanitizeHTMLServer(html: string): string {
+  if (!html) return '';
+  return sanitizeHtml(html, {
+    allowedTags: SERVER_ALLOWED_TAGS,
+    allowedAttributes: SERVER_ALLOWED_ATTRIBUTES,
+    disallowedTagsMode: 'discard'
+  });
+}
+
 const ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'b', 'i', 'div'];
 const ALLOWED_ATTRIBUTES: Record<string, string[]> = {};
 
