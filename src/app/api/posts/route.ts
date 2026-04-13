@@ -52,11 +52,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
-    const body = await request.json()
-    
-    const { title, content, category, authorId, images } = body
 
-    if (!title || !content || !authorId) {
+    // Obtener usuario de la sesión activa — nunca del body
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { data: null, error: 'No autorizado' },
+        { status: 401 }
+      )
+    }
+
+    const body = await request.json()
+    const { title, content, category, images } = body
+
+    if (!title || !content) {
       return NextResponse.json(
         { data: null, error: 'Missing required fields' },
         { status: 400 }
@@ -65,7 +75,6 @@ export async function POST(request: NextRequest) {
 
     // Validar imágenes si se enviaron
     if (images && Array.isArray(images)) {
-      // Obtener configuración de imágenes
       const { data: settings } = await supabase
         .from('app_settings')
         .select('value')
@@ -75,7 +84,6 @@ export async function POST(request: NextRequest) {
       if (settings) {
         const { max_images_per_post } = settings.value
 
-        // Validar cantidad
         if (images.length > max_images_per_post) {
           return NextResponse.json(
             { data: null, error: `Máximo ${max_images_per_post} imágenes por post` },
@@ -83,7 +91,6 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        // Validar que todas las URLs sean válidas
         for (const url of images) {
           if (!isValidImageUrl(url)) {
             return NextResponse.json(
@@ -95,16 +102,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Obtener la hora actual en UTC correctamente
     const now = new Date().toISOString()
-    
+
     const { data, error } = await supabase
       .from('posts')
       .insert({
         title,
         content,
         category,
-        author_id: authorId,
+        author_id: user.id, // ← siempre de la sesión, nunca del body
         created_at: now,
         images: images || []
       })
