@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient, getCurrentUser } from '@/lib/server-supabase'
+import { createServerSupabaseClient, createDataClient, getCurrentUser } from '@/lib/server-supabase'
 import { cookies } from 'next/headers'
 
 export async function GET(
@@ -7,11 +7,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createServerSupabaseClient()
+    const dataClient = createDataClient()
     const { user } = await getCurrentUser()
     const { id } = await params
-
-    const { data, error } = await supabase
+    const { data, error } = await dataClient
       .from('posts')
       .select(`
         *,

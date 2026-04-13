@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/server-supabase'
+import { createServerSupabaseClient, createDataClient } from '@/lib/server-supabase'
 import { isValidImageUrl } from '@/lib/storage-client'
 import { sanitizeHTMLServer } from '@/lib/html-sanitizer'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabase = createDataClient()
     const { searchParams } = new URL(request.url)
     
     // Parámetros de query

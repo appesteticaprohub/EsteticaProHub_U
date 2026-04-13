@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient, getCurrentUser } from '@/lib/server-supabase'
+import { createServerSupabaseClient, createDataClient, getCurrentUser } from '@/lib/server-supabase'
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
+    const dataClient = createDataClient()
     const { searchParams } = new URL(request.url)
     
     // Verificar autenticación
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
       // ⚡ USAR BÚSQUEDA MEJORADA
       console.log('🔍 Usando búsqueda de texto mejorada')
       
-      query = supabase
+      query = dataClient
         .from('posts')
         .select(`
           *,
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
       // 🔍 Búsqueda tradicional para filtros sin texto
       console.log('🔍 Usando búsqueda tradicional')
       
-      query = supabase
+      query = dataClient
         .from('posts')
         .select(`
           *,
@@ -144,11 +145,11 @@ export async function GET(request: NextRequest) {
     // ✅ OPTIMIZACIÓN: Filtro de autor usando índice
     if (hasAuthorSearch) {
       // Primero buscar autores que coincidan
-      const { data: matchingProfiles } = await supabase
+      const { data: matchingProfiles } = await dataClient
         .from('profiles')
         .select('id')
         .or(`full_name.ilike.%${author}%,email.ilike.%${author}%`)
-        .limit(100) // Limitar para evitar queries muy grandes
+        .limit(100)
 
       if (matchingProfiles && matchingProfiles.length > 0) {
         const authorIds = matchingProfiles.map(p => p.id)

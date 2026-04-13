@@ -68,19 +68,8 @@ export function isUserBanned(profile: { is_banned?: boolean } | null): boolean {
 }
 
 export async function getUserProfile(userId: string) {
-  const cookieStore = await cookies()
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const { createServerSupabaseAdminClient } = await import('./server-supabase')
+  const supabase = createServerSupabaseAdminClient()
   
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -98,19 +87,8 @@ export async function getUserProfile(userId: string) {
 
 // Función optimizada específica para middleware - solo campos necesarios
 export async function getUserProfileForMiddleware(userId: string) {
-  const cookieStore = await cookies()
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const { createServerSupabaseAdminClient } = await import('./server-supabase')
+  const supabase = createServerSupabaseAdminClient()
   
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -193,19 +171,8 @@ export function isInGracePeriod(gracePeriodEnd: string | null): boolean {
 }
 
 export async function getPaymentRetryInfo(userId: string) {
-  const cookieStore = await cookies()
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const { createServerSupabaseAdminClient } = await import('./server-supabase')
+  const supabase = createServerSupabaseAdminClient()
   
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -295,29 +262,16 @@ export async function reactivateSubscription(userId: string) {
 
 // Función helper para detectar si hubo cambio de precio desde el último pago
 export async function hasPriceChangedSinceLastPayment(userId: string): Promise<boolean> {
-  const cookieStore = await cookies()
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const { createServerSupabaseAdminClient } = await import('./server-supabase')
+  const supabase = createServerSupabaseAdminClient()
   
   try {
-    // Obtener el precio actual del sistema
     const { data: settings } = await supabase
       .from('app_settings')
       .select('value')
       .eq('key', 'SUBSCRIPTION_PRICE')
       .single()
     
-    // Obtener el último precio que pagó el usuario
     const { data: profile } = await supabase
       .from('profiles')
       .select('last_payment_amount')
@@ -349,19 +303,8 @@ export async function hasPriceChangedSinceLastPayment(userId: string): Promise<b
 
 // Función helper para validar acceso válido (backend)
 export async function hasValidSubscriptionAccess(userId: string): Promise<boolean> {
-  const cookieStore = await cookies()
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const { createServerSupabaseAdminClient } = await import('./server-supabase')
+  const supabase = createServerSupabaseAdminClient()
   
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -371,37 +314,32 @@ export async function hasValidSubscriptionAccess(userId: string): Promise<boolea
   
   if (error || !profile) return false
   
-  // Usuario con suscripción activa
   if (profile.subscription_status === 'Active') return true
   
-  // Usuario cancelado pero con fecha válida
   if (profile.subscription_status === 'Cancelled' && profile.subscription_expires_at) {
     const now = new Date()
     const expirationDate = new Date(profile.subscription_expires_at)
     return now <= expirationDate
   }
 
-  // Usuario con pago fallido pero con fecha válida
-if (profile.subscription_status === 'Payment_Failed' && profile.subscription_expires_at) {
-  const now = new Date()
-  const expirationDate = new Date(profile.subscription_expires_at)
-  return now <= expirationDate
-}
+  if (profile.subscription_status === 'Payment_Failed' && profile.subscription_expires_at) {
+    const now = new Date()
+    const expirationDate = new Date(profile.subscription_expires_at)
+    return now <= expirationDate
+  }
 
-// Usuario en período de gracia pero con fecha válida
-if (profile.subscription_status === 'Grace_Period' && profile.subscription_expires_at) {
-  const now = new Date()
-  const expirationDate = new Date(profile.subscription_expires_at)
-  return now <= expirationDate
-}
+  if (profile.subscription_status === 'Grace_Period' && profile.subscription_expires_at) {
+    const now = new Date()
+    const expirationDate = new Date(profile.subscription_expires_at)
+    return now <= expirationDate
+  }
   
-  // Usuario suspendido pero con fecha válida
   if (profile.subscription_status === 'Suspended' && profile.subscription_expires_at) {
     const now = new Date()
     const expirationDate = new Date(profile.subscription_expires_at)
     return now <= expirationDate
   }
-  // Usuario cancelado por cambio de precio pero con fecha válida
+
   if (profile.subscription_status === 'Price_Change_Cancelled' && profile.subscription_expires_at) {
     const now = new Date()
     const expirationDate = new Date(profile.subscription_expires_at)

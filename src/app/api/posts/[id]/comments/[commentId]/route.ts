@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/server-supabase'
+import { createServerSupabaseClient, createDataClient } from '@/lib/server-supabase'
 import { Comment } from '@/types/api'
 import { hasValidSubscriptionAccess } from '@/lib/subscription-utils'
 import { sanitizeHTMLServer } from '@/lib/html-sanitizer'
@@ -30,6 +30,7 @@ export async function PUT(
     }
 
     const supabase = await createServerSupabaseClient()
+    const dataClient = createDataClient()
     
     // Obtener el usuario autenticado
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -74,7 +75,7 @@ export async function PUT(
     }
 
     // Actualizar el comentario
-    const { data: commentData, error: updateError } = await supabase
+    const { data: commentData, error: updateError } = await dataClient
       .from('comments')
       .update({
         content: sanitizedContent

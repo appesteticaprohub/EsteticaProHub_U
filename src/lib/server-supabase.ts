@@ -7,7 +7,7 @@ export async function createServerSupabaseClient() {
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       cookies: {
         getAll() {
@@ -20,8 +20,6 @@ export async function createServerSupabaseClient() {
             )
           } catch {
             // El método `setAll` fue llamado desde un componente Server.
-            // Esto puede ser ignorado si tienes middleware refrescando
-            // las cookies del usuario.
           }
         },
       },
@@ -51,6 +49,21 @@ export async function getCurrentUser() {
   } catch (error) {
     return { user: null, error }
   }
+}
+
+// Cliente para queries de datos que necesitan bypasear RLS completamente
+// Usar cuando se necesiten joins con profiles u otras tablas protegidas
+export function createDataClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
 }
 
 // Cliente admin que bypassa RLS - solo para operaciones del sistema

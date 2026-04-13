@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/server-supabase'
+import { createServerSupabaseClient, createDataClient } from '@/lib/server-supabase'
 import { Comment } from '@/types/api'
 import { createSocialNotification, createMentionNotifications } from '@/lib/social-notification-service'
 import { hasValidSubscriptionAccess } from '@/lib/subscription-utils'
@@ -22,7 +22,7 @@ function extractMentions(content: string): string[] {
 }
 
 // Función para obtener IDs de usuarios por nombres
-async function getUserIdsByNames(names: string[], supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>): Promise<string[]> {
+async function getUserIdsByNames(names: string[], supabase: ReturnType<typeof createDataClient>): Promise<string[]> {
   if (names.length === 0) return []
 
   const { data, error } = await supabase
@@ -48,7 +48,7 @@ export async function GET(
     const cursor = searchParams.get('cursor') // Cursor = created_at del último comentario
     const limit = 20 // Número de comentarios principales por página
     
-    const supabase = await createServerSupabaseClient()
+    const supabase = createDataClient()
     
     // Construir query base para comentarios principales (parent_id = NULL)
     let query = supabase
@@ -237,6 +237,7 @@ export async function POST(
     }
 
     const supabase = await createServerSupabaseClient()
+    const dataClient = createDataClient()
     
     // Obtener el usuario autenticado
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -343,7 +344,7 @@ export async function POST(
     // Extraer menciones del contenido
     const mentionedNames = extractMentions(sanitizedContent)
     
-    const mentionedUserIds = await getUserIdsByNames(mentionedNames, supabase)
+    const mentionedUserIds = await getUserIdsByNames(mentionedNames, dataClient)
 
     // Crear notificaciones según el caso
     if (postData && commenterProfile) {
