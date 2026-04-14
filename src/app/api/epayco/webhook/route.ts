@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
         .update({
           status: 'paid',
           epayco_transaction_id: transactionId,
+          payer_email: data.x_email || null,
         })
         .eq('external_reference', externalReference);
 
