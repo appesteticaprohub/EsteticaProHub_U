@@ -127,49 +127,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (!data?.user?.id) return
 
-    console.log('🔄 Iniciando escucha Realtime para usuario:', data.user?.id)
-
     const subscription = supabase
-      .channel('user_profile_changes')
+      .channel(`profile_realtime_${data.user.id}`)
       .on('postgres_changes', {
-        event: 'UPDATE',
+        event: '*',
         schema: 'public',
-        table: 'profiles',
-        filter: `id=eq.${data.user?.id}`
-      }, (payload) => {
-        const newProfile = payload.new
-        const oldProfile = payload.old
-        
-        console.log('🔄 Cambio detectado en tiempo real:', {
-          de: oldProfile.subscription_status,
-          a: newProfile.subscription_status,
-          campos: newProfile
-        })
-        
-        // ⚡ Actualizar estado inmediatamente
-        mutateAuth(currentData => currentData ? ({
-          ...currentData,
-          subscriptionStatus: newProfile.subscription_status,
-          isBanned: newProfile.is_banned,
-          avatarUrl: newProfile.avatar_url,
-          fullName: newProfile.full_name,
-          specialty: newProfile.specialty,
-          country: newProfile.country
-        }) : currentData, false)
-        
-        // 🚨 ACCIONES AUTOMÁTICAS
-        if (newProfile.is_banned && !oldProfile.is_banned) {
-          console.log('🚫 Usuario baneado - redirigiendo...')
-          window.location.href = '/banned'
-        }
+        table: 'profiles_realtime',
+        filter: `id=eq.${data.user.id}`
+      }, () => {
+        // La tabla solo es señal de disparo — los datos reales vienen de la API
+        mutateAuth()
       })
       .subscribe()
 
     return () => {
-      console.log('🔄 Desconectando Realtime para usuario:', data.user?.id)
       subscription.unsubscribe()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.user?.id, mutateAuth])
 
   // ✅ LISTENER PARA EVENTOS PERSONALIZADOS DE ACTUALIZACIÓN
