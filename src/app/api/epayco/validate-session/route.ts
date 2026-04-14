@@ -1,4 +1,3 @@
-// src/app/api/epayco/validate-session/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -32,7 +31,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verificar expiración
     if (new Date() > new Date(session.expires_at)) {
       if (session.status === 'pending') {
         await supabase
@@ -40,14 +38,12 @@ export async function GET(request: NextRequest) {
           .update({ status: 'expired' })
           .eq('external_reference', externalReference);
       }
-
       return NextResponse.json(
         { isValid: false, error: 'La sesión de pago ha expirado' },
         { status: 400 }
       );
     }
 
-    // Verificar que ya fue usada
     if (session.status === 'used') {
       return NextResponse.json(
         { isValid: false, error: 'Esta sesión de pago ya fue utilizada' },
@@ -55,7 +51,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verificar que el pago fue confirmado
     if (session.status !== 'paid') {
       return NextResponse.json(
         { isValid: false, error: 'El pago no ha sido confirmado aún' },
@@ -63,8 +58,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Determinar si el payer_email corresponde a un usuario existente
+    let isExistingUser = false;
+    let payerEmail: string | null = session.payer_email || null;
+
+    if (payerEmail) {
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id, subscription_status')
+        .eq('email', payerEmail)
+        .maybeSingle();
+
+      isExistingUser = !!existingProfile;
+    }
+
     return NextResponse.json({
       isValid: true,
+      payer_email: payerEmail,
+      is_existing_user: isExistingUser,
       session: {
         amount: session.amount,
         created_at: session.created_at,
@@ -73,7 +84,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('💥 Error validando sesión:', error);
+    console.error('Error validando sesión:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
