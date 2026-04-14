@@ -13,13 +13,6 @@ export async function POST(request: NextRequest) {
 
     console.log('🔔 ePayco Webhook recibido:', JSON.stringify(data, null, 2));
 
-    console.log('📧 Campos de email disponibles:', {
-      x_email: data.x_email,
-      x_customer_email: data.x_customer_email,
-      x_billing_email: data.x_billing_email,
-      x_payer_email: data.x_payer_email,
-    });
-
     // Verificar firma
     const isValid = verifyEpaycoSignature(data);
     if (!isValid) {
@@ -68,7 +61,7 @@ export async function POST(request: NextRequest) {
         .update({
           status: 'paid',
           epayco_transaction_id: transactionId,
-          payer_email: data.x_email || null,
+          payer_email: data.x_customer_email || null,
         })
         .eq('external_reference', externalReference);
 
