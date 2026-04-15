@@ -141,7 +141,6 @@ export async function DELETE(
 
     const supabase = await createServerSupabaseClient()
     
-    // Obtener el usuario autenticado
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
@@ -151,7 +150,6 @@ export async function DELETE(
       )
     }
 
-    // Verificar que el usuario tiene acceso válido (Active o Cancelled con fecha válida)
     const hasAccess = await hasValidSubscriptionAccess(user.id)
 
     if (!hasAccess) {
@@ -161,7 +159,6 @@ export async function DELETE(
       )
     }
 
-    // Verificar que el comentario existe y pertenece al usuario
     const { data: existingComment, error: commentError } = await supabase
       .from('comments')
       .select('id, user_id, post_id, is_deleted')
@@ -190,7 +187,7 @@ export async function DELETE(
       )
     }
 
-    // Soft delete: marcar como eliminado
+    // Soft delete: marcar como eliminado (sin tocar comments_count)
     const { error: deleteError } = await supabase
       .from('comments')
       .update({
@@ -205,26 +202,6 @@ export async function DELETE(
         { data: null, error: 'Error al eliminar el comentario' },
         { status: 500 }
       )
-    }
-
-    // Decrementar el contador de comentarios del post
-    const { data: currentPost } = await supabase
-      .from('posts')
-      .select('comments_count')
-      .eq('id', id)
-      .single()
-
-    if (currentPost && currentPost.comments_count > 0) {
-      const { error: updateError } = await supabase
-        .from('posts')
-        .update({ 
-          comments_count: currentPost.comments_count - 1
-        })
-        .eq('id', id)
-
-      if (updateError) {
-        console.error('Error updating comments count:', updateError)
-      }
     }
 
     return NextResponse.json({ data: { success: true }, error: null })
