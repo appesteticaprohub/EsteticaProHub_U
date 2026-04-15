@@ -4,6 +4,7 @@
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRegistro } from '@/hooks/useRegistro';
+import PaymentPendingScreen from '@/components/PaymentPendingScreen';
 import SpecialtySelect from '@/components/SpecialtySelect';
 import CountrySelect from '@/components/CountrySelect';
 import DateSelect from '@/components/DateSelect';
@@ -18,12 +19,15 @@ function RegistroContent() {
     loading,
     message,
     showPassword,
+    pendingEmail,
     handleInputChange,
     handleSelectChange,
     handleDateChange,
     handleSubmitNewUser,
     handleSubmitLogin,
     setShowPassword,
+    handlePaymentConfirmed,
+    handlePaymentRejected,
   } = useRegistro(paymentRef);
 
   if (flow === 'loading') {
@@ -34,6 +38,17 @@ function RegistroContent() {
           <p className="text-gray-600">Validando tu pago...</p>
         </div>
       </main>
+    );
+  }
+
+  if (flow === 'pending') {
+    return (
+      <PaymentPendingScreen
+        paymentRef={paymentRef!}
+        payerEmail={pendingEmail}
+        onConfirmed={handlePaymentConfirmed}
+        onRejected={handlePaymentRejected}
+      />
     );
   }
 

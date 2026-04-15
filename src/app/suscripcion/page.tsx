@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 declare global {
   interface Window {
@@ -22,6 +23,7 @@ function SuscripcionContent() {
   const [sdkReady, setSdkReady] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const searchParams = useSearchParams();
+  const { user, subscriptionStatus } = useAuth();
 
   useEffect(() => {
     const error = searchParams.get('payment_error');
@@ -62,16 +64,29 @@ function SuscripcionContent() {
     setIsProcessing(true);
 
     try {
+      // Determinar flow_type según estado del usuario
+      let flowType = 'new_user';
+      let userId: string | null = null;
+
+      if (user) {
+        userId = user.id;
+        flowType = 'renewal';
+      }
+
       const response = await fetch('/api/epayco/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          flow_type: flowType,
+          user_id: userId,
+        }),
       });
 
       const data = await response.json();
 
       if (!data.success || !data.checkout_params) {
         setIsProcessing(false);
-        alert('Error al crear el pago. Por favor intenta de nuevo.');
         return;
       }
 
@@ -105,7 +120,6 @@ function SuscripcionContent() {
     } catch (error) {
       setIsProcessing(false);
       console.error('Error:', error);
-      alert('Error inesperado. Por favor intenta de nuevo.');
     }
   };
 

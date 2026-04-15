@@ -1,5 +1,13 @@
+// src/app/api/epayco/validate-session/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,10 +21,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = getSupabaseAdmin();
 
     const { data: session, error } = await supabase
       .from('payment_sessions')
@@ -31,6 +36,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Sesión expirada por tiempo
     if (new Date() > new Date(session.expires_at)) {
       if (session.status === 'pending') {
         await supabase
@@ -44,6 +50,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Sesión ya utilizada
     if (session.status === 'used') {
       return NextResponse.json(
         { isValid: false, error: 'Esta sesión de pago ya fue utilizada' },
@@ -51,37 +58,64 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (session.status !== 'paid') {
-      return NextResponse.json(
-        { isValid: false, error: 'El pago no ha sido confirmado aún' },
-        { status: 400 }
-      );
+    // Pago pendiente — retornar estado especial sin redirigir a error
+    if (session.status === 'pending') {
+      const payerEmail = session.payer_email || null;
+
+      // Determinar is_existing_user si ya tenemos el email
+      let isExistingUser = false;
+      if (payerEmail) {
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', payerEmail)
+          .maybeSingle();
+        isExistingUser = !!existingProfile;
+      }
+
+      return NextResponse.json({
+        isValid: false,
+        isPending: true,
+        payer_email: payerEmail,
+        is_existing_user: isExistingUser,
+        flow_type: session.flow_type || null,
+        error: 'Pago en proceso',
+      });
     }
 
-    // Determinar si el payer_email corresponde a un usuario existente
-    let isExistingUser = false;
-    let payerEmail: string | null = session.payer_email || null;
+    // Pago confirmado (paid)
+    if (session.status === 'paid') {
+      const payerEmail = session.payer_email || null;
 
-    if (payerEmail) {
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id, subscription_status')
-        .eq('email', payerEmail)
-        .maybeSingle();
+      let isExistingUser = false;
+      if (payerEmail) {
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id, subscription_status')
+          .eq('email', payerEmail)
+          .maybeSingle();
+        isExistingUser = !!existingProfile;
+      }
 
-      isExistingUser = !!existingProfile;
+      return NextResponse.json({
+        isValid: true,
+        isPending: false,
+        payer_email: payerEmail,
+        is_existing_user: isExistingUser,
+        flow_type: session.flow_type || null,
+        session: {
+          amount: session.amount,
+          created_at: session.created_at,
+          external_reference: session.external_reference,
+        },
+      });
     }
 
-    return NextResponse.json({
-      isValid: true,
-      payer_email: payerEmail,
-      is_existing_user: isExistingUser,
-      session: {
-        amount: session.amount,
-        created_at: session.created_at,
-        external_reference: session.external_reference,
-      },
-    });
+    // Cualquier otro estado (expired, etc.)
+    return NextResponse.json(
+      { isValid: false, error: 'El pago no pudo ser procesado' },
+      { status: 400 }
+    );
 
   } catch (error) {
     console.error('Error validando sesión:', error);

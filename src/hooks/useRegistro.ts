@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
-export type RegistroFlow = 'loading' | 'new_user' | 'existing_user' | 'renewal';
+export type RegistroFlow = 'loading' | 'new_user' | 'existing_user' | 'renewal' | 'pending';
 
 export interface RegistroFormData {
   nombre: string;
@@ -26,12 +26,15 @@ export interface UseRegistroReturn {
   message: { type: 'success' | 'error'; text: string } | null;
   showPassword: boolean;
   paymentValidated: boolean | null;
+  pendingEmail: string | null;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSelectChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   handleDateChange: (field: 'day' | 'month' | 'year', value: string) => void;
   handleSubmitNewUser: (e: React.FormEvent) => void;
   handleSubmitLogin: (e: React.FormEvent) => void;
   setShowPassword: (value: boolean) => void;
+  handlePaymentConfirmed: (isExistingUser: boolean) => void;
+  handlePaymentRejected: () => void;
 }
 
 export function useRegistro(paymentRef: string | null): UseRegistroReturn {
@@ -43,6 +46,7 @@ export function useRegistro(paymentRef: string | null): UseRegistroReturn {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<RegistroFormData>({
     nombre: '',
@@ -125,6 +129,13 @@ export function useRegistro(paymentRef: string | null): UseRegistroReturn {
       try {
         const response = await fetch(`/api/epayco/validate-session?ref=${paymentRef}`);
         const data = await response.json();
+
+        // Pago pendiente (PSE u otro método asíncrono)
+        if (data.isPending) {
+          setPendingEmail(data.payer_email || null);
+          setFlow('pending');
+          return;
+        }
 
         if (!data.isValid) {
           router.replace(`/suscripcion?payment_error=${encodeURIComponent(data.error || 'Pago no completado')}`);
@@ -233,6 +244,22 @@ export function useRegistro(paymentRef: string | null): UseRegistroReturn {
   }
 };
 
+const handlePaymentConfirmed = useCallback((isExistingUser: boolean) => {
+    setPaymentValidated(true);
+    if (formData.email) {
+      // email ya prellenado desde pendingEmail
+    }
+    if (isExistingUser) {
+      setFlow('existing_user');
+    } else {
+      setFlow('new_user');
+    }
+  }, [formData.email]);
+
+  const handlePaymentRejected = useCallback(() => {
+    router.replace('/suscripcion?payment_error=Tu+pago+PSE+fue+rechazado.+Por+favor+intenta+de+nuevo.');
+  }, [router]);
+
   return {
     flow,
     formData,
@@ -240,11 +267,14 @@ export function useRegistro(paymentRef: string | null): UseRegistroReturn {
     message,
     showPassword,
     paymentValidated,
+    pendingEmail,
     handleInputChange,
     handleSelectChange,
     handleDateChange,
     handleSubmitNewUser,
     handleSubmitLogin,
     setShowPassword,
+    handlePaymentConfirmed,
+    handlePaymentRejected,
   };
 }
