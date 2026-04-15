@@ -52,6 +52,15 @@ export async function GET(request: NextRequest) {
 
     // Sesión ya utilizada
     if (session.status === 'used') {
+      // Si era renovación de usuario logueado, redirigir a perfil en lugar de error
+      if (session.flow_type === 'renewal') {
+        return NextResponse.json({
+          isValid: false,
+          isCompleted: true,
+          redirectTo: '/perfil',
+          error: 'Sesión ya procesada',
+        });
+      }
       return NextResponse.json(
         { isValid: false, error: 'Esta sesión de pago ya fue utilizada' },
         { status: 400 }

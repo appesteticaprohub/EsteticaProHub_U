@@ -138,6 +138,12 @@ export function useRegistro(paymentRef: string | null): UseRegistroReturn {
         }
 
         if (!data.isValid) {
+          // Sesión ya procesada exitosamente — redirigir a destino
+          if (data.isCompleted && data.redirectTo) {
+            router.replace(data.redirectTo);
+            return;
+          }
+          // Error real
           router.replace(`/suscripcion?payment_error=${encodeURIComponent(data.error || 'Pago no completado')}`);
           return;
         }

@@ -69,12 +69,12 @@ async function processRenewal(supabase: ReturnType<typeof getSupabaseAdmin>, ses
     const { sendEmailWithTemplate } = await import('@/lib/resend');
     const userName = currentProfile.full_name || currentProfile.email.split('@')[0];
     await sendEmailWithTemplate(
-      'payment_confirmed_pse',
+      'payment_confirmed_pse_renewal',
       currentProfile.email,
       userId,
       {
         nombre: userName,
-        app_url: (process.env.NEXT_PUBLIC_BASE_URL || 'https://esteticaprohub.com').replace(/\/$/, '') + '/',
+        app_url: (process.env.NEXT_PUBLIC_BASE_URL || 'https://esteticaprohub.com').replace(/\/$/, ''),
       }
     );
   } catch (emailError) {
