@@ -36,7 +36,7 @@ export interface UseRegistroReturn {
 
 export function useRegistro(paymentRef: string | null): UseRegistroReturn {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, signIn } = useAuth();
 
   const [flow, setFlow] = useState<RegistroFlow>('loading');
   const [paymentValidated, setPaymentValidated] = useState<boolean | null>(null);
@@ -209,39 +209,29 @@ export function useRegistro(paymentRef: string | null): UseRegistroReturn {
   };
 
   const handleSubmitLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!paymentValidated) return;
+  e.preventDefault();
+  if (!paymentValidated) return;
 
-    setLoading(true);
-    setMessage(null);
+  setLoading(true);
+  setMessage(null);
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.contraseña,
-        }),
-      });
+  try {
+    const { error } = await signIn(formData.email, formData.contraseña);
 
-      const data = await response.json();
-
-      if (!response.ok || data.error) {
-        setMessage({ type: 'error', text: 'Contraseña incorrecta. Intenta de nuevo.' });
-        return;
-      }
-
-      // Login exitoso → procesar renovación
-      await processRenewal(paymentRef!);
-
-    } catch {
-      setMessage({ type: 'error', text: 'Error inesperado. Por favor intenta de nuevo.' });
-    } finally {
-      setLoading(false);
+    if (error) {
+      setMessage({ type: 'error', text: 'Contraseña incorrecta. Intenta de nuevo.' });
+      return;
     }
-  };
+
+    // Login exitoso + AuthContext hidratado → procesar renovación
+    await processRenewal(paymentRef!);
+
+  } catch {
+    setMessage({ type: 'error', text: 'Error inesperado. Por favor intenta de nuevo.' });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return {
     flow,
