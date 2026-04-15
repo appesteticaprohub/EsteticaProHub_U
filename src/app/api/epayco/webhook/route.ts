@@ -74,7 +74,7 @@ async function processRenewal(supabase: ReturnType<typeof getSupabaseAdmin>, ses
       userId,
       {
         nombre: userName,
-        app_url: process.env.NEXT_PUBLIC_BASE_URL || 'https://esteticaprohub.com/',
+        app_url: (process.env.NEXT_PUBLIC_BASE_URL || 'https://esteticaprohub.com').replace(/\/$/, '') + '/',
       }
     );
   } catch (emailError) {
@@ -99,8 +99,8 @@ async function processAsyncRegistration(
   }
 
   const externalReference = session.external_reference as string;
-  const appUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://esteticaprohub.com/';
-  const registroUrl = `${appUrl}registro?ref=${externalReference}`;
+  const appUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://esteticaprohub.com').replace(/\/$/, '');
+  const registroUrl = `${appUrl}/registro?ref=${externalReference}`;
 
   // Verificar si el email ya existe en BD independientemente del flow_type guardado
   let isExistingUser = flowType === 'existing_user';
