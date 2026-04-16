@@ -24,7 +24,12 @@ export async function GET(request: NextRequest) {
       }
 
       // Parsear el valor si es string JSON
-      const value = typeof data.value === 'string' ? JSON.parse(data.value) : data.value
+      let value = data.value
+      try {
+        value = typeof data.value === 'string' ? JSON.parse(data.value) : data.value
+      } catch {
+        value = data.value
+      }
       return NextResponse.json({ data: value, error: null })
     }
 
@@ -42,8 +47,12 @@ export async function GET(request: NextRequest) {
 
     // Convertir array a objeto para fácil acceso y parsear valores JSON
     const settings = data.reduce((acc, item) => {
-      const value = typeof item.value === 'string' ? JSON.parse(item.value) : item.value
-      acc[item.key] = value
+      try {
+        const value = typeof item.value === 'string' ? JSON.parse(item.value) : item.value
+        acc[item.key] = value
+      } catch {
+        acc[item.key] = item.value
+      }
       return acc
     }, {} as AppSettings)
 
