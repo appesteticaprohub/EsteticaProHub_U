@@ -203,6 +203,12 @@ async function processRejection(
   return true;
 }
 
+function isPaymentPSE(data: Record<string, string>): boolean {
+  const franchise = (data.x_franchise || '').toUpperCase();
+  const paymentMethod = (data.x_payment_method || '').toUpperCase();
+  return franchise === 'PSE' || paymentMethod === 'PSE';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -266,20 +272,25 @@ export async function POST(request: NextRequest) {
       // Sesión actualizada — obtener versión fresca con payer_email
       const updatedSession = { ...session, payer_email: payerEmail, status: 'paid' };
 
+      const isPSE = isPaymentPSE(data);
+
       // Ejecutar flujo según tipo
       if (flowType === 'renewal' && session.user_id) {
         // Flujo 3: usuario logueado — activar directamente
-        await processRenewal(supabase, updatedSession);
-        await supabase
-          .from('payment_sessions')
-          .update({ status: 'used' })
-          .eq('external_reference', externalReference);
+        // Solo PSE activa por webhook — tarjeta ya fue activada en /registro
+        if (isPSE) {
+          await processRenewal(supabase, updatedSession);
+          await supabase
+            .from('payment_sessions')
+            .update({ status: 'used' })
+            .eq('external_reference', externalReference);
+        }
       } else if (flowType === 'existing_user' || flowType === 'new_user') {
-        // Flujos 1 y 2: usuario sin sesión — enviar email con link
-        await processAsyncRegistration(supabase, updatedSession, flowType);
-        // La sesión queda en 'paid' hasta que el usuario complete el registro
+        // Flujos 1 y 2: solo PSE envía email — tarjeta ya redirigió al usuario
+        if (isPSE) {
+          await processAsyncRegistration(supabase, updatedSession, flowType);
+        }
       } else {
-        // Fallback: comportamiento anterior — solo marcar como paid
         console.log('⚠️ flow_type desconocido o null — sesión marcada como paid solamente');
       }
 
