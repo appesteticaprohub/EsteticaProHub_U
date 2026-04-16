@@ -11,18 +11,18 @@ interface SpecialtySelectProps {
 }
 
 const SPECIALTIES = [
-  { value: 'cosmetología', label: 'Cosmetología' },
-  { value: 'cosmiatría', label: 'Cosmiatría' },
-  { value: 'medicina_estetica', label: 'Medicina Estética' },
-  { value: 'esteticista', label: 'Esteticista' },
-  { value: 'enfermería', label: 'Enfermería' },
-  { value: 'masoterapia', label: 'Masoterapia' },
-  { value: 'medicina_general', label: 'Medicina general' },
-  { value: 'cirugía_plástica', label: 'Cirugía plástica' },
-  { value: 'fisioterapia', label: 'Fisioterapia' },
-  { value: 'terapias_holísticas', label: 'Terapias holísticas' },
-  { value: 'spa_manager', label: 'Spa manager' },
-  { value: 'dermatología', label: 'Dermatología' }
+  { value: 'Cosmetología', label: 'Cosmetología' },
+  { value: 'Cosmiatría', label: 'Cosmiatría' },
+  { value: 'Medicina Estética', label: 'Medicina Estética' },
+  { value: 'Esteticista', label: 'Esteticista' },
+  { value: 'Enfermería', label: 'Enfermería' },
+  { value: 'Masoterapia', label: 'Masoterapia' },
+  { value: 'Medicina General', label: 'Medicina General' },
+  { value: 'Cirugía Plástica', label: 'Cirugía Plástica' },
+  { value: 'Fisioterapia', label: 'Fisioterapia' },
+  { value: 'Terapias Holísticas', label: 'Terapias Holísticas' },
+  { value: 'Spa Manager', label: 'Spa Manager' },
+  { value: 'Dermatología', label: 'Dermatología' }
 ];
 
 export default function SpecialtySelect({

@@ -11,26 +11,26 @@ interface CountrySelectProps {
 }
 
 const LATIN_AMERICAN_COUNTRIES = [
-  { value: 'argentina', label: 'Argentina' },
-  { value: 'bolivia', label: 'Bolivia' },
-  { value: 'brasil', label: 'Brasil' },
-  { value: 'chile', label: 'Chile' },
-  { value: 'colombia', label: 'Colombia' },
-  { value: 'costa_rica', label: 'Costa Rica' },
-  { value: 'cuba', label: 'Cuba' },
-  { value: 'ecuador', label: 'Ecuador' },
-  { value: 'el_salvador', label: 'El Salvador' },
-  { value: 'guatemala', label: 'Guatemala' },
-  { value: 'honduras', label: 'Honduras' },
-  { value: 'mexico', label: 'México' },
-  { value: 'nicaragua', label: 'Nicaragua' },
-  { value: 'panama', label: 'Panamá' },
-  { value: 'paraguay', label: 'Paraguay' },
-  { value: 'peru', label: 'Perú' },
-  { value: 'puerto_rico', label: 'Puerto Rico' },
-  { value: 'republica_dominicana', label: 'República Dominicana' },
-  { value: 'uruguay', label: 'Uruguay' },
-  { value: 'venezuela', label: 'Venezuela' }
+  { value: 'Argentina', label: 'Argentina' },
+  { value: 'Bolivia', label: 'Bolivia' },
+  { value: 'Brasil', label: 'Brasil' },
+  { value: 'Chile', label: 'Chile' },
+  { value: 'Colombia', label: 'Colombia' },
+  { value: 'Costa Rica', label: 'Costa Rica' },
+  { value: 'Cuba', label: 'Cuba' },
+  { value: 'Ecuador', label: 'Ecuador' },
+  { value: 'El Salvador', label: 'El Salvador' },
+  { value: 'Guatemala', label: 'Guatemala' },
+  { value: 'Honduras', label: 'Honduras' },
+  { value: 'México', label: 'México' },
+  { value: 'Nicaragua', label: 'Nicaragua' },
+  { value: 'Panamá', label: 'Panamá' },
+  { value: 'Paraguay', label: 'Paraguay' },
+  { value: 'Perú', label: 'Perú' },
+  { value: 'Puerto Rico', label: 'Puerto Rico' },
+  { value: 'República Dominicana', label: 'República Dominicana' },
+  { value: 'Uruguay', label: 'Uruguay' },
+  { value: 'Venezuela', label: 'Venezuela' }
 ];
 
 export default function CountrySelect({
